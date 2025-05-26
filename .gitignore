@@ -1,0 +1,22 @@
+# lazy.nvim関連
+lazy-lock.json
+
+# プラグインディレクトリ（lazy.nvimが管理）
+# ※プラグイン設定ファイルは管理対象、実際のプラグインファイルは除外
+**/lazy/*
+
+# ログファイル
+*.log
+
+# 一時ファイル
+*.tmp
+*.swp
+*.swo
+*~
+
+# OS固有
+.DS_Store
+Thumbs.db
+
+# その他
+debug.log
