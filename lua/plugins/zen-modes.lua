@@ -53,7 +53,7 @@ return {
       })
       
       -- Obsidian Zoomスタイル機能を読み込み
-      require('obsidian-zoom')
+      require('user-plugins.obsidian-zoom')
     end,
     keys = {
       { "<leader>dp", function() require('dropbar.api').pick() end, desc = "パンくずリストナビ" },

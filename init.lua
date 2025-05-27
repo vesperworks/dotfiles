@@ -45,3 +45,7 @@ vim.keymap.set(
   "<cmd>Telescope oldfiles<cr>",
   { desc = "最近開いたファイル (oldfiles)" }
 )
+
+-- User plugins (markdown helper, obsidian zoom etc.)
+require('user-plugins.markdown-helper').setup_keymaps()
+require('user-plugins.obsidian-zoom')
