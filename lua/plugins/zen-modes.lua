@@ -1,4 +1,65 @@
 return {
+  -- dropbar.nvim - パンくずリスト付きIDE風breadcrumbs
+  {
+    "Bekaboo/dropbar.nvim",
+    event = "BufReadPost",
+    config = function()
+      local dropbar = require('dropbar')
+      
+      -- Markdown用のカスタム設定
+      dropbar.setup({
+        bar = {
+          hover = true,
+          sources = function(buf, _)
+            local sources = require('dropbar.sources')
+            local utils = require('dropbar.utils')
+            if vim.bo[buf].ft == 'markdown' then
+              return {
+                sources.path,
+                sources.markdown,
+                sources.treesitter,
+              }
+            end
+            return {
+              sources.path,
+              utils.source.fallback({
+                sources.lsp,
+                sources.treesitter,
+              }),
+            }
+          end,
+        },
+        menu = {
+          -- パンくずリストメニューの設定
+          quick_navigation = true,
+          entry = {
+            padding = {
+              left = 1,
+              right = 1,
+            },
+          },
+          keymaps = {
+            ['q'] = '<C-w>q',
+            ['<Esc>'] = '<C-w>q',
+            ['<CR>'] = function()
+              local menu = require('dropbar.utils').menu.get_current()
+              if menu then
+                local cursor = vim.api.nvim_win_get_cursor(menu.win)
+                menu:click_on(cursor[1], nil, 1, 'l')
+              end
+            end,
+          },
+        },
+      })
+      
+      -- Obsidian Zoomスタイル機能を読み込み
+      require('obsidian-zoom')
+    end,
+    keys = {
+      { "<leader>dp", function() require('dropbar.api').pick() end, desc = "パンくずリストナビ" },
+    },
+  },
+
   -- zen-mode.nvim - 安定したZenモード
   {
     "folke/zen-mode.nvim",
@@ -52,6 +113,7 @@ return {
     opts = {
       keep_cursor_position = true,
       enable_notifications = false,
+      enable_horizontal_scroll = false, -- 横軸の動きを無効化
     },
   },
 }
