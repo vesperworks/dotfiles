@@ -99,7 +99,7 @@ vim.api.nvim_create_autocmd("FileType", {
       buffer = true, 
       desc = "リストズーム" 
     })
-    vim.keymap.set("n", "<leader>zu", M.unzoom, { 
+    vim.keymap.set("n", "<leader>ZZ", M.unzoom, { 
       buffer = true, 
       desc = "ズーム解除" 
     })

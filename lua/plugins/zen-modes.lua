@@ -1,22 +1,37 @@
 return {
-  -- true-zen.nvim - Narrow(ズーム)機能のみ使用
+  -- zen-mode.nvim - 安定したZenモード
   {
-    "pocco81/true-zen.nvim",
+    "folke/zen-mode.nvim",
     keys = {
-      { "<leader>zn", "<cmd>TZNarrow<cr>", desc = "ズーム (Narrow)", mode = "n" },
-      { "<leader>zn", ":'<,'>TZNarrow<cr>", desc = "選択範囲ズーム", mode = "v" },
+      { "<leader>zm", "<cmd>ZenMode<cr>", desc = "Zen Mode トグル" },
     },
     opts = {
-      modes = {
-        narrow = {
-          folds_style = "informative",
-          run_ataraxis = false, -- ataraxisを無効化してエラー回避
-          callbacks = {
-            open_pre = nil,
-            open_pos = nil,
-            close_pre = nil,
-            close_pos = nil,
-          },
+      window = {
+        backdrop = 0.95, -- シェード背景
+        width = 120, -- 幅
+        height = 1, -- 高さ (1 = 100%)
+        options = {
+          signcolumn = "no", -- サインカラム無効
+          number = false, -- 行番号無効
+          relativenumber = false, -- 相対行番号無効
+          cursorline = false, -- カーソル行ハイライト無効
+          cursorcolumn = false, -- カーソル列ハイライト無効
+          foldcolumn = "0", -- fold列無効
+          list = false, -- 空白文字無効
+        },
+      },
+      plugins = {
+        options = {
+          enabled = true,
+          ruler = false, -- ルーラー無効
+          showcmd = false, -- コマンド表示無効
+        },
+        twilight = { enabled = true }, -- twilight連携
+        gitsigns = { enabled = false }, -- gitsigns無効
+        tmux = { enabled = false }, -- tmux連携無効
+        kitty = {
+          enabled = false,
+          font = "+4", -- フォントサイズ増加
         },
       },
     },
