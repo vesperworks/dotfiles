@@ -31,16 +31,25 @@ end
 local function get_heading_section_end(bufnr, start_row, level)
   local total_lines = vim.api.nvim_buf_line_count(bufnr)
   
-  for line_num = start_row + 1, total_lines - 1 do
-    local line = vim.api.nvim_buf_get_lines(bufnr, line_num, line_num + 1, false)[1] or ""
-    local line_level = get_heading_level(bufnr, line_num)
+  -- デバッグ情報
+  print(string.format("DEBUG: get_heading_section_end - start: %d, level: %d", start_row, level))
+  
+  for line_num = start_row + 1, total_lines do
+    local line = vim.api.nvim_buf_get_lines(bufnr, line_num - 1, line_num, false)[1] or ""
+    local line_level = get_heading_level(bufnr, line_num - 1)
     
-    -- 同じかより高いレベルの見出しが見つかったら終了
+    if line_level > 0 then
+      print(string.format("DEBUG: 見出し発見 line %d: '%s', level: %d", line_num, line:gsub('%s+', ' '), line_level))
+    end
+    
+    -- 同じかより高いレベルの見出しが見つかったら、その手前で終了
     if line_level > 0 and line_level <= level then
-      return line_num
+      print(string.format("DEBUG: 終了判定 - line %d で終了 (level %d <= %d)", line_num - 1, line_level, level))
+      return line_num - 1 -- 見出しの手前の行を返す
     end
   end
   
+  print(string.format("DEBUG: ファイル終端で終了 - line %d", total_lines))
   return total_lines
 end
 
@@ -114,14 +123,14 @@ local function get_heading_zoom_range(bufnr, cursor_row)
   if parent_heading then
     -- 親見出しから現在の見出しセクションまで
     start_row = parent_heading.start_row
-    end_row = get_heading_section_end(bufnr, current_heading.start_row - 1, current_heading.level)
+    end_row = get_heading_section_end(bufnr, current_heading.start_row, current_heading.level)
     
     table.insert(breadcrumb, { text = parent_heading.text })
     table.insert(breadcrumb, { text = current_heading.text })
   else
     -- 現在の見出しセクション
     start_row = current_heading.start_row
-    end_row = get_heading_section_end(bufnr, current_heading.start_row - 1, current_heading.level)
+    end_row = get_heading_section_end(bufnr, current_heading.start_row, current_heading.level)
     
     table.insert(breadcrumb, { text = current_heading.text })
   end
@@ -207,6 +216,10 @@ local function get_list_item_end(bufnr, list_item)
   local total_lines = vim.api.nvim_buf_line_count(bufnr)
   local current_indent = list_item.indent_level
   
+  -- デバッグ情報
+  print(string.format("DEBUG: get_list_item_end - item: %s, indent: %d, start: %d", 
+    list_item.text, current_indent, list_item.start_row))
+  
   for line_num = item_end + 2, total_lines do
     local line_text = vim.api.nvim_buf_get_lines(bufnr, line_num - 1, line_num, false)[1] or ""
     
@@ -229,56 +242,51 @@ local function get_list_item_end(bufnr, list_item)
         end
       end
       
+      print(string.format("DEBUG: 検査中 line %d: '%s', indent: %d", line_num, line_text:gsub('%s+', ' '), line_indent))
+      
       -- 同じかより浅いインデントのリスト項目が見つかったら終了
       if line_indent <= current_indent then
+        print(string.format("DEBUG: 終了判定 - line %d で終了 (indent %d <= %d)", line_num - 1, line_indent, current_indent))
         return line_num - 1
       end
     else
       -- リスト項目でない行が見つかったら終了
+      print(string.format("DEBUG: 非リスト行で終了 - line %d: '%s'", line_num - 1, line_text:gsub('%s+', ' ')))
       return line_num - 1
     end
     
     ::continue::
   end
   
+  print(string.format("DEBUG: ファイル終端で終了 - line %d", total_lines))
   return total_lines
 end
 
--- リストズーム範囲を取得（修正版：次のリストを含まないように）
+-- リストズーム範囲を取得（修正版：現在の項目とその子項目のみ）
 local function get_list_zoom_range(bufnr, hierarchy)
   if not hierarchy or #hierarchy == 0 then
     return nil
   end
   
-  -- 現在のリスト項目を取得
+  -- 現在のリスト項目を取得（カーソル位置の項目）
   local current_item = hierarchy[#hierarchy]
   
-  -- 1つ上の親があれば、その範囲を取得
-  if #hierarchy > 1 then
-    local parent_item = hierarchy[#hierarchy - 1]
-    
-    -- 親項目の開始から、親項目全体の終了まで（兄弟項目は含まない）
-    local start_row = parent_item.start_row
-    local end_row = get_list_item_end(bufnr, parent_item) -- 親項目の終了を使用
-    
-    return {
-      start_row = start_row,
-      end_row = end_row,
-      breadcrumb = hierarchy,
-      type = "list"
-    }
-  else
-    -- トップレベルの場合、そのリスト項目とその子項目
-    local start_row = current_item.start_row
-    local end_row = get_list_item_end(bufnr, current_item)
-    
-    return {
-      start_row = start_row,
-      end_row = end_row,
-      breadcrumb = hierarchy,
-      type = "list"
-    }
+  -- 現在の項目とその子項目の範囲を取得
+  local start_row = current_item.start_row
+  local end_row = get_list_item_end(bufnr, current_item)
+  
+  -- パンくずリストは現在の項目まで含める
+  local breadcrumb = {}
+  for i, item in ipairs(hierarchy) do
+    table.insert(breadcrumb, { text = item.text })
   end
+  
+  return {
+    start_row = start_row,
+    end_row = end_row,
+    breadcrumb = breadcrumb,
+    type = "list"
+  }
 end
 
 -- 親リストの範囲を取得（Obsidian Zoom風）
@@ -355,6 +363,7 @@ function M.zoom_current_list()
   show_breadcrumb(range.breadcrumb)
   
   local zoom_type = range.type == "heading" and "見出し" or "リスト"
+  print(string.format("DEBUG: ズーム範囲 - start: %d, end: %d, type: %s", start_line, end_line, zoom_type))
   vim.notify(string.format("🔍 %sズーム開始 (行 %d-%d)", zoom_type, start_line, end_line), vim.log.levels.INFO)
 end
 
