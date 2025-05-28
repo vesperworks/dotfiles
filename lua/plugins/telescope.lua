@@ -16,5 +16,10 @@ return {
       },
     }
     require("telescope").load_extension("fzf")
+    
+    -- キーマッピング設定
+    local builtin = require('telescope.builtin')
+    vim.keymap.set('n', '<D-p>', builtin.commands, { desc = "コマンド検索" })
+    vim.keymap.set('n', '<D-S-p>', builtin.find_files, { desc = "ファイル検索" })
   end,
 }
