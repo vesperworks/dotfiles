@@ -24,9 +24,12 @@ return {
     vim.keymap.set('n', '<D-C-j>', function() require('mini.move').move_line('down') end, { desc = 'Move line down (Cmd-Ctrl-j)' })
     vim.keymap.set('n', '<D-C-k>', function() require('mini.move').move_line('up') end, { desc = 'Move line up (Cmd-Ctrl-k)' })
     
-    -- nモードでの左右移動: Tab/Shift-Tab
-    vim.keymap.set('n', '<Tab>', function() require('mini.move').move_line('right') end, { desc = 'Move line right (Tab)' })
-    vim.keymap.set('n', '<S-Tab>', function() require('mini.move').move_line('left') end, { desc = 'Move line left (Shift-Tab)' })
+    -- nモードでの左右移動: Cmd-Ctrl-h/l
+    vim.keymap.set('n', '<D-C-h>', function() require('mini.move').move_line('left') end, { desc = 'Move line left (Cmd-Ctrl-h)' })
+    vim.keymap.set('n', '<D-C-l>', function() require('mini.move').move_line('right') end, { desc = 'Move line right (Cmd-Ctrl-l)' })
+    
+    -- ctrl-iを明示的に復元（jump forward）
+    vim.keymap.set('n', '<C-i>', '<C-i>', { desc = 'Jump forward', noremap = true })
 
     -- ビジュアルモードでも同様のキーバインド
     vim.keymap.set('v', '<D-C-n>', function() require('mini.move').move_selection('down') end, { desc = 'Move selection down (Cmd-Ctrl-n)' })
@@ -34,7 +37,7 @@ return {
     vim.keymap.set('v', '<D-C-j>', function() require('mini.move').move_selection('down') end, { desc = 'Move selection down (Cmd-Ctrl-j)' })
     vim.keymap.set('v', '<D-C-k>', function() require('mini.move').move_selection('up') end, { desc = 'Move selection up (Cmd-Ctrl-k)' })
     
-    vim.keymap.set('v', '<Tab>', function() require('mini.move').move_selection('right') end, { desc = 'Move selection right (Tab)' })
-    vim.keymap.set('v', '<S-Tab>', function() require('mini.move').move_selection('left') end, { desc = 'Move selection left (Shift-Tab)' })
+    vim.keymap.set('v', '<D-C-h>', function() require('mini.move').move_selection('left') end, { desc = 'Move selection left (Cmd-Ctrl-h)' })
+    vim.keymap.set('v', '<D-C-l>', function() require('mini.move').move_selection('right') end, { desc = 'Move selection right (Cmd-Ctrl-l)' })
   end,
 }

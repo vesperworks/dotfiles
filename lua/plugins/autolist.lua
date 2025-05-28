@@ -30,7 +30,7 @@ return {
       map("n", "o",  "o<cmd>AutolistNewBullet<CR>")
       map("n", "O",  "O<cmd>AutolistNewBulletBefore<CR>")
       map("n", "<CR>", "<cmd>AutolistToggleCheckbox<CR><CR>")
-      map("n", "<C-r>", "<cmd>AutolistRecalculate<CR>")
+      map("n", "<leader>r", "<cmd>AutolistRecalculate<CR>")
       -- 再計算系
       map("n", ">>", ">><cmd>AutolistRecalculate<CR>")
       map("n", "<<", "<<<cmd>AutolistRecalculate<CR>")
