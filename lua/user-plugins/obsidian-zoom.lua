@@ -9,6 +9,8 @@ local zoom_state = {
   original_folds = nil,
   zoom_range = nil,
   breadcrumb_stack = {}, -- パンくずリストのスタック
+  original_scrolloff = nil, -- 元のscrolloff値を保存
+  augroup = nil, -- 自動中央寄せ用autocmdグループ
 }
 
 -- 見出しレベルを取得
@@ -31,25 +33,16 @@ end
 local function get_heading_section_end(bufnr, start_row, level)
   local total_lines = vim.api.nvim_buf_line_count(bufnr)
   
-  -- デバッグ情報
-  print(string.format("DEBUG: get_heading_section_end - start: %d, level: %d", start_row, level))
-  
   for line_num = start_row + 1, total_lines do
     local line = vim.api.nvim_buf_get_lines(bufnr, line_num - 1, line_num, false)[1] or ""
     local line_level = get_heading_level(bufnr, line_num - 1)
     
-    if line_level > 0 then
-      print(string.format("DEBUG: 見出し発見 line %d: '%s', level: %d", line_num, line:gsub('%s+', ' '), line_level))
-    end
-    
     -- 同じかより高いレベルの見出しが見つかったら、その手前で終了
     if line_level > 0 and line_level <= level then
-      print(string.format("DEBUG: 終了判定 - line %d で終了 (level %d <= %d)", line_num - 1, line_level, level))
       return line_num - 1 -- 見出しの手前の行を返す
     end
   end
   
-  print(string.format("DEBUG: ファイル終端で終了 - line %d", total_lines))
   return total_lines
 end
 
@@ -101,7 +94,6 @@ local function get_heading_zoom_range(bufnr, cursor_row)
   end
   
   if #headings == 0 then
-    vim.notify("見出しが見つかりません", vim.log.levels.WARN)
     return nil
   end
   
@@ -209,16 +201,10 @@ local function get_list_item_end(bufnr, list_item)
   
   local root = tree:root()
   
-  -- 現在のリスト項目ノードから子項目を含む範囲を計算
   local _, _, item_end, _ = list_item.node:range()
   
-  -- 同じインデントレベルまたはより深いインデントの次の行まで
   local total_lines = vim.api.nvim_buf_line_count(bufnr)
   local current_indent = list_item.indent_level
-  
-  -- デバッグ情報
-  print(string.format("DEBUG: get_list_item_end - item: %s, indent: %d, start: %d", 
-    list_item.text, current_indent, list_item.start_row))
   
   for line_num = item_end + 2, total_lines do
     local line_text = vim.api.nvim_buf_get_lines(bufnr, line_num - 1, line_num, false)[1] or ""
@@ -230,7 +216,6 @@ local function get_list_item_end(bufnr, list_item)
     
     -- リスト項目かチェック
     if line_text:match("^%s*[-*+]%s") then
-      -- インデントレベルを計算
       local line_indent = 0
       for char in line_text:gmatch(".") do
         if char == " " then
@@ -242,23 +227,18 @@ local function get_list_item_end(bufnr, list_item)
         end
       end
       
-      print(string.format("DEBUG: 検査中 line %d: '%s', indent: %d", line_num, line_text:gsub('%s+', ' '), line_indent))
-      
       -- 同じかより浅いインデントのリスト項目が見つかったら終了
       if line_indent <= current_indent then
-        print(string.format("DEBUG: 終了判定 - line %d で終了 (indent %d <= %d)", line_num - 1, line_indent, current_indent))
         return line_num - 1
       end
     else
       -- リスト項目でない行が見つかったら終了
-      print(string.format("DEBUG: 非リスト行で終了 - line %d: '%s'", line_num - 1, line_text:gsub('%s+', ' ')))
       return line_num - 1
     end
     
     ::continue::
   end
   
-  print(string.format("DEBUG: ファイル終端で終了 - line %d", total_lines))
   return total_lines
 end
 
@@ -302,33 +282,16 @@ local function get_zoom_range(bufnr, cursor_row)
   return get_heading_zoom_range(bufnr, cursor_row)
 end
 
--- パンくずリストを表示
-local function show_breadcrumb(breadcrumb)
-  if not breadcrumb or #breadcrumb == 0 then
-    return
-  end
-  
-  local breadcrumb_parts = {}
-  for i, item in ipairs(breadcrumb) do
-    table.insert(breadcrumb_parts, item.text:sub(1, 30)) -- 30文字まで
-  end
-  
-  local breadcrumb_text = table.concat(breadcrumb_parts, " › ")
-  vim.notify("📍 " .. breadcrumb_text, vim.log.levels.INFO)
-end
-
--- ズーム実行（Obsidian風）
+-- ズーム実行（Obsidian風, 中央寄せ機能付き）
 function M.zoom_current_list()
   local bufnr = vim.api.nvim_get_current_buf()
   
   if zoom_state.is_zoomed then
-    vim.notify("既にズーム中です。<leader>ZZ でズーム解除してください", vim.log.levels.WARN)
     return
   end
   
   local range = get_zoom_range(bufnr, vim.api.nvim_win_get_cursor(0)[1] - 1)
   if not range then
-    vim.notify("ズーム可能な範囲が見つかりません", vim.log.levels.WARN)
     return
   end
   
@@ -350,6 +313,29 @@ function M.zoom_current_list()
     vim.cmd(string.format("%d,%d fold", end_line + 1, total_lines))
   end
   
+  -- 中央寄せ機能を設定
+  local original_scrolloff = vim.opt_local.scrolloff:get()
+  zoom_state.original_scrolloff = original_scrolloff
+  vim.opt_local.scrolloff = 999
+  
+  -- カーソル移動時に自動中央寄せを設定
+  local augroup = vim.api.nvim_create_augroup("ZoomCenterMode", { clear = true })
+  vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
+    group = augroup,
+    buffer = vim.api.nvim_get_current_buf(),
+    callback = function()
+      if zoom_state.is_zoomed then
+        local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
+        if zoom_state.zoom_range and 
+           cursor_line >= zoom_state.zoom_range.start_row and 
+           cursor_line <= zoom_state.zoom_range.end_row then
+          vim.cmd("normal! zz")
+        end
+      end
+    end,
+  })
+  zoom_state.augroup = augroup
+  
   -- カーソルを範囲の最初に移動
   vim.api.nvim_win_set_cursor(0, {start_line, 0})
   vim.cmd("normal! zz")
@@ -358,24 +344,27 @@ function M.zoom_current_list()
   zoom_state.is_zoomed = true
   zoom_state.zoom_range = range
   zoom_state.breadcrumb_stack = range.breadcrumb
-  
-  -- パンくずリストを表示
-  show_breadcrumb(range.breadcrumb)
-  
-  local zoom_type = range.type == "heading" and "見出し" or "リスト"
-  print(string.format("DEBUG: ズーム範囲 - start: %d, end: %d, type: %s", start_line, end_line, zoom_type))
-  vim.notify(string.format("🔍 %sズーム開始 (行 %d-%d)", zoom_type, start_line, end_line), vim.log.levels.INFO)
 end
 
 -- ズーム解除
 function M.unzoom()
   if not zoom_state.is_zoomed then
-    vim.notify("ズーム中ではありません", vim.log.levels.WARN)
     return
   end
   
   -- 全てのfoldを削除
   vim.cmd("normal! zR")
+  
+  -- 自動中央寄せのautocmdを削除
+  if zoom_state.augroup then
+    vim.api.nvim_del_augroup_by_id(zoom_state.augroup)
+    zoom_state.augroup = nil
+  end
+  
+  -- scrolloffを元に戻す
+  if zoom_state.original_scrolloff then
+    vim.opt_local.scrolloff = zoom_state.original_scrolloff
+  end
   
   -- 元のview状態を復元（可能であれば）
   if zoom_state.original_folds then
@@ -387,22 +376,32 @@ function M.unzoom()
   zoom_state.original_folds = nil
   zoom_state.zoom_range = nil
   zoom_state.breadcrumb_stack = {}
-  
-  vim.notify("🔍 ズーム解除", vim.log.levels.INFO)
+  zoom_state.original_scrolloff = nil
+  zoom_state.augroup = nil
 end
 
--- パンくずリストを再表示
+-- パンくずリスト表示
 function M.show_current_breadcrumb()
   if zoom_state.is_zoomed and zoom_state.breadcrumb_stack then
-    show_breadcrumb(zoom_state.breadcrumb_stack)
+    local breadcrumb_parts = {}
+    for i, item in ipairs(zoom_state.breadcrumb_stack) do
+      table.insert(breadcrumb_parts, item.text:sub(1, 30))
+    end
+    
+    local breadcrumb_text = table.concat(breadcrumb_parts, " › ")
+    vim.notify("📍 " .. breadcrumb_text, vim.log.levels.INFO)
   else
     local bufnr = vim.api.nvim_get_current_buf()
     local cursor_row = vim.api.nvim_win_get_cursor(0)[1] - 1
     local range = get_zoom_range(bufnr, cursor_row)
     if range and range.breadcrumb then
-      show_breadcrumb(range.breadcrumb)
-    else
-      vim.notify("現在の位置にパンくずリストはありません", vim.log.levels.INFO)
+      local breadcrumb_parts = {}
+      for i, item in ipairs(range.breadcrumb) do
+        table.insert(breadcrumb_parts, item.text:sub(1, 30))
+      end
+      
+      local breadcrumb_text = table.concat(breadcrumb_parts, " › ")
+      vim.notify("📍 " .. breadcrumb_text, vim.log.levels.INFO)
     end
   end
 end
