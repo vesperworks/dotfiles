@@ -29,7 +29,8 @@ return {
       -- Normal-mode
       map("n", "o",  "o<cmd>AutolistNewBullet<CR>")
       map("n", "O",  "O<cmd>AutolistNewBulletBefore<CR>")
-      map("n", "<CR>", "<cmd>AutolistToggleCheckbox<CR><CR>")
+      -- Enterキーで3状態循環（独自機能）
+      map("n", "<CR>", function() require('user-plugins.markdown-helper').toggle_checkbox_state() end)
       map("n", "<leader>r", "<cmd>AutolistRecalculate<CR>")
       -- 再計算系
       map("n", ">>", ">><cmd>AutolistRecalculate<CR>")

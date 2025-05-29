@@ -80,7 +80,7 @@ function M.toggle_checkbox()
   vim.api.nvim_win_set_cursor(0, {row, new_col})
 end
 
--- チェックボックスの完了状態を切り替える関数
+-- チェックボックスの完了状態を切り替える関数（未完了 → 実行中 → 完了 → 未完了）
 function M.toggle_checkbox_state()
   local current_line = vim.api.nvim_get_current_line()
   local cursor_pos = vim.api.nvim_win_get_cursor(0)
@@ -88,14 +88,24 @@ function M.toggle_checkbox_state()
   
   local new_line
   
-  if string.match(current_line, "^%s*[%*%-]%s*%[ %]") then
-    -- 未完了 → 完了
-    new_line = string.gsub(current_line, "(%[)( )(%])", "%1x%3")
+  -- デバッグ用（削除可能）
+  -- print("Current line: '" .. current_line .. "'")
+  
+  if string.match(current_line, "^%s*[%*%-]%s*%[%s%]") then
+    -- 未完了 → 実行中 (スペースを確実にマッチ)
+    new_line = string.gsub(current_line, "(%[)%s(%])", "%1-%2")
+    -- print("未完了 → 実行中")
+  elseif string.match(current_line, "^%s*[%*%-]%s*%[%-%]") then
+    -- 実行中 → 完了
+    new_line = string.gsub(current_line, "(%[)%-(%])", "%1x%2")
+    -- print("実行中 → 完了")
   elseif string.match(current_line, "^%s*[%*%-]%s*%[x%]") then
     -- 完了 → 未完了
-    new_line = string.gsub(current_line, "(%[)(x)(%])", "%1 %3")
+    new_line = string.gsub(current_line, "(%[)x(%])", "%1 %2")
+    -- print("完了 → 未完了")
   else
     -- チェックボックスがない場合は何もしない
+    -- print("チェックボックスが見つかりません")
     return
   end
   
@@ -156,8 +166,9 @@ function M.setup_keymaps()
   vim.keymap.set('n', '<leader>c', M.toggle_checkbox, 
     vim.tbl_extend('force', opts, { desc = "Toggle checkbox" }))
   
-  vim.keymap.set('n', '<leader>x', M.toggle_checkbox_state, 
-    vim.tbl_extend('force', opts, { desc = "Toggle checkbox state" }))
+  -- Enterキーで3状態循環はautolist.luaで設定済み
+  -- vim.keymap.set('n', '<CR>', M.toggle_checkbox_state, 
+  --   vim.tbl_extend('force', opts, { desc = "Cycle checkbox state (□ → ▫ → ✓)" }))
   
   -- リストアイテム関連のキーマップ
   vim.keymap.set('n', '<leader>*', function()
@@ -178,6 +189,8 @@ function M.show_current_element()
     print("Header level " .. level)
   elseif string.match(current_line, "^%s*[%*%-]%s*%[ %]") then
     print("Unchecked checkbox")
+  elseif string.match(current_line, "^%s*[%*%-]%s*%[-%]") then
+    print("In-progress checkbox")
   elseif string.match(current_line, "^%s*[%*%-]%s*%[x%]") then
     print("Checked checkbox")
   elseif string.match(current_line, "^%s*[%*%-]%s") then
