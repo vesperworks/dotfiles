@@ -38,14 +38,6 @@ vim.opt.clipboard:append("unnamedplus")
 -- 次の飛び先も記録
 vim.opt.jumpoptions:append("stack")
 
--- どこか (after/plugin/keymaps.lua など) に追記
-vim.keymap.set(
-  "n",
-  "<leader>fo",
-  "<cmd>Telescope oldfiles<cr>",
-  { desc = "最近開いたファイル (oldfiles)" }
-)
-
 -- User plugins (markdown helper, obsidian zoom etc.)
 require('user-plugins.markdown-helper').setup_keymaps()
 require('user-plugins.obsidian-zoom')

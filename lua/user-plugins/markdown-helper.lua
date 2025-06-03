@@ -397,7 +397,7 @@ function M.setup_keymaps()
     vim.tbl_extend('force', opts, { desc = "Remove header" }))
   
   -- チェックボックス関連のキーマップ
-  vim.keymap.set('n', '<leader>c', M.toggle_checkbox, 
+  vim.keymap.set('n', '<leader>x', M.toggle_checkbox, 
     vim.tbl_extend('force', opts, { desc = "Toggle checkbox" }))
   
   -- リストアイテム関連のキーマップ
@@ -410,9 +410,9 @@ function M.setup_keymaps()
   end, vim.tbl_extend('force', opts, { desc = "Toggle bullet list (-)" }))
   
   -- Callout関連のキーマップ（Normal & Visual mode）
-  vim.keymap.set('n', '<C-.>', M.insert_callout, 
+  vim.keymap.set('n', '<leader>c', M.insert_callout, 
     vim.tbl_extend('force', opts, { desc = "Insert/toggle/remove Callout" }))
-  vim.keymap.set('v', '<C-.>', M.insert_callout, 
+  vim.keymap.set('v', '<leader>c', M.insert_callout, 
     vim.tbl_extend('force', opts, { desc = "Insert/toggle/remove Callout (Visual)" }))
 end
 

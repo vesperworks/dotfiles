@@ -145,7 +145,9 @@ return {
     end
     
     -- キーマッピング設定
-    vim.keymap.set('n', '<D-p>', commands_picker, { desc = "コマンド検索 (Cmd+P)" })
-    vim.keymap.set('n', '<D-o>', builtin.find_files, { desc = "ファイル検索 (Cmd+O)" })
+    vim.keymap.set('n', '<leader>p', commands_picker, { desc = "コマンド検索 (Leader+P)" })
+    vim.keymap.set('n', '<leader>o', builtin.oldfiles, { desc = "最近開いたファイル (Leader+O)" })
+    vim.keymap.set('n', '<leader>k', builtin.keymaps, { desc = "キーマップ検索 (Leader+K)" })
+    vim.keymap.set('n', '<leader>f', builtin.find_files, { desc = "ファイル検索 (Leader+F)" })
   end,
 }
