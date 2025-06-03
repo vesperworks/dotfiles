@@ -140,25 +140,41 @@ function M.insert_list_item(marker)
   vim.api.nvim_win_set_cursor(0, {row, new_col})
 end
 
--- Calloutメイン関数
+-- Calloutメイン関数（Visual mode修正版）
 function M.insert_callout()
   local start_row, end_row
   
-  -- Visual modeの判定と範囲取得
+  -- Visual modeの判定と範囲取得を改善
   local mode = vim.fn.mode()
   if mode == 'v' or mode == 'V' or mode == '\022' then
     -- Visual mode: 選択範囲を取得
-    local start_pos = vim.fn.getpos("'<")
-    local end_pos = vim.fn.getpos("'>")
+    -- まず Visual mode を終了してからマークを取得
+    -- ❗️ 安全なVisual mode終了方法を試す
+    print("Debug: About to exit Visual mode using feedkeys instead of vim.cmd")
     
-    local start_line = start_pos[2]
-    local end_line = end_pos[2]
+    -- 📟 Visual mode終了前にバッファの状態を確認
+    local cursor_before = vim.api.nvim_win_get_cursor(0)
+    print(string.format("Debug: Cursor before escape: [%d, %d]", cursor_before[1], cursor_before[2]))
     
-    -- Visual modeを終了
-    vim.cmd('normal! \\<Esc>')
+    -- 選択範囲の最初の行を確認（Visual mode終了前）
+    local visual_start_line = vim.fn.line("'<")
+    if visual_start_line > 0 then
+      local pre_escape_line = vim.api.nvim_buf_get_lines(0, visual_start_line - 1, visual_start_line, false)[1] or ""
+      print(string.format("Debug: Line %d BEFORE escape: [%s] (length: %d)", visual_start_line, pre_escape_line, #pre_escape_line))
+    end
+    
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<Esc>', true, false, true), 'n', true)
+    -- vim.cmd('normal! <Esc>') -- ← この方法が問題の原因かも
+    
+    -- マークから選択範囲を取得
+    local start_line = vim.fn.line("'<")
+    local end_line = vim.fn.line("'>")
+    
+    print("Debug: Visual mode marks - start_line=" .. start_line .. ", end_line=" .. end_line)
     
     -- マークが無効な場合のフォールバック
     if start_line == 0 or end_line == 0 then
+      print("Debug: Visual marks invalid, using current line")
       local cursor_pos = vim.api.nvim_win_get_cursor(0)
       start_row = cursor_pos[1]
       end_row = cursor_pos[1]
@@ -168,6 +184,7 @@ function M.insert_callout()
       
       -- 行番号の順序を修正
       if start_row > end_row then
+        print("Debug: Swapping start_row and end_row")
         start_row, end_row = end_row, start_row
       end
     end
@@ -176,18 +193,38 @@ function M.insert_callout()
     local cursor_pos = vim.api.nvim_win_get_cursor(0)
     start_row = cursor_pos[1]
     end_row = cursor_pos[1]
+    print("Debug: Normal mode - start_row=" .. start_row .. ", end_row=" .. end_row)
   end
+  
+  print("Debug: Final range - start_row=" .. start_row .. ", end_row=" .. end_row)
   
   -- 総行数チェック
   local total_lines = vim.api.nvim_buf_line_count(0)
+  print("Debug: Total buffer lines=" .. total_lines)
   
   -- 行番号の有効性をチェック
   if start_row < 1 or end_row > total_lines or start_row > end_row then
+    print("Error: Invalid line numbers - start_row=" .. start_row .. ", end_row=" .. end_row .. ", total_lines=" .. total_lines)
     return
   end
   
   -- 選択範囲の行を取得
   local lines = vim.api.nvim_buf_get_lines(0, start_row - 1, end_row, false)
+  print("Debug: Retrieved " .. #lines .. " lines")
+  
+  -- 📟 デバッグ強化: 各行の詳細情報を出力
+  for i, line in ipairs(lines) do
+    print(string.format("Debug: Line %d: [%s] (length: %d)", i, line, #line))
+    
+    -- 各文字を16進数で表示（制御文字チェック）
+    local hex_chars = {}
+    for j = 1, #line do
+      local char = line:sub(j, j)
+      local byte_val = string.byte(char)
+      table.insert(hex_chars, string.format("%02x(%s)", byte_val, char))
+    end
+    print(string.format("Debug: Line %d hex: %s", i, table.concat(hex_chars, " ")))
+  end
   
   -- 既にcalloutかどうかをチェック
   local has_callout = false
@@ -291,13 +328,17 @@ function M.change_callout_type(start_row, end_row)
   end)
 end
 
--- 新しいCalloutを作成する関数
+-- 新しいCalloutを作成する関数（デバッグ強化版）
 function M.create_new_callout(start_row, end_row)
+  print("Debug: create_new_callout called with start_row=" .. start_row .. ", end_row=" .. end_row)
+  
   -- バッファ情報チェック
   local total_lines = vim.api.nvim_buf_line_count(0)
+  print("Debug: Buffer has " .. total_lines .. " lines")
   
   -- 行番号の妥当性を再チェック
   if start_row < 1 or end_row > total_lines or start_row > end_row then
+    print("Error: Invalid parameters in create_new_callout")
     return
   end
   
@@ -321,7 +362,11 @@ function M.create_new_callout(start_row, end_row)
     if not choice then return end
     
     local callout_type = choice[1]
+    print("Debug: Selected callout type: " .. callout_type)
+    
     local lines = vim.api.nvim_buf_get_lines(0, start_row - 1, end_row, false)
+    print("Debug: Retrieved " .. #lines .. " lines for processing")
+    
     local new_lines = {}
     
     -- 共通のインデントを検出
@@ -363,14 +408,21 @@ function M.create_new_callout(start_row, end_row)
       end
     end
     
+    print("Debug: Created " .. #new_lines .. " new lines")
+    print("Debug: Attempting to replace lines " .. (start_row - 1) .. " to " .. end_row)
+    
     -- 安全な行置換
     local success, err = pcall(function()
       vim.api.nvim_buf_set_lines(0, start_row - 1, end_row, false, new_lines)
     end)
     
     if not success then
+      print("Error in nvim_buf_set_lines: " .. tostring(err))
+      print("Debug: start_row-1=" .. (start_row-1) .. ", end_row=" .. end_row .. ", new_lines_count=" .. #new_lines)
       return
     end
+    
+    print("Debug: Successfully replaced lines")
     
     -- カーソルを適切な位置に移動
     if callout_type == "quote" then

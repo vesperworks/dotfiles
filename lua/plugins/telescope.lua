@@ -144,13 +144,8 @@ return {
       }):find()
     end
     
-    vim.keymap.set('n', '<D-p>', commands_picker, { desc = "コマンド検索" })
-    -- oldfilesはアイコン付きで表示
-    vim.keymap.set('n', '<D-S-p>', function()
-      builtin.oldfiles({
-        -- アイコンを有効にして分かりやすく
-        file_icons = true,
-      })
-    end, { desc = "最近のファイル" })
+    -- キーマッピング設定
+    vim.keymap.set('n', '<D-p>', commands_picker, { desc = "コマンド検索 (Cmd+P)" })
+    vim.keymap.set('n', '<D-o>', builtin.find_files, { desc = "ファイル検索 (Cmd+O)" })
   end,
 }

@@ -49,3 +49,8 @@ vim.keymap.set(
 -- User plugins (markdown helper, obsidian zoom etc.)
 require('user-plugins.markdown-helper').setup_keymaps()
 require('user-plugins.obsidian-zoom')
+
+-- Cmd+S で保存
+vim.keymap.set('n', '<C-s>', ':w<CR>', { desc = "ファイル保存", silent = true })
+vim.keymap.set('i', '<leader>s', '<Esc>:w<CR>a', { desc = "ファイル保存（挿入モード）", silent = true })
+vim.keymap.set('v', '<leader>s', '<Esc>:w<CR>gv', { desc = "ファイル保存（ビジュアルモード）", silent = true })

@@ -19,6 +19,18 @@ return {
             highlight = 'RenderMarkdownUnchecked',
           },
         },
+        
+        -- Callout設定を追加
+        callout = {
+          note = { raw = '[!note]', rendered = '󰋽 Note', highlight = 'RenderMarkdownInfo' },
+          warning = { raw = '[!warning]', rendered = '⚠ Warning', highlight = 'RenderMarkdownWarn' },
+          error = { raw = '[!error]', rendered = '󰅚 Error', highlight = 'RenderMarkdownError' },
+          info = { raw = '[!info]', rendered = '󰋽 Info', highlight = 'RenderMarkdownInfo' },
+          tip = { raw = '[!tip]', rendered = '💡 Tip', highlight = 'RenderMarkdownHint' },
+          success = { raw = '[!success]', rendered = '✅ Success', highlight = 'RenderMarkdownSuccess' },
+          question = { raw = '[!question]', rendered = '❓ Question', highlight = 'RenderMarkdownInfo' },
+          quote = { raw = '[!quote]', rendered = '💬 Quote', highlight = 'RenderMarkdownQuote' },
+        },
       }
       
       -- 完了済みタスクのハイライトグループを定義
@@ -36,6 +48,14 @@ return {
         fg = '#f9e2af',  -- 黄色っぽい色
         italic = true,   -- イタリック
       })
+      
+      -- Callout用のハイライトグループを定義
+      vim.api.nvim_set_hl(0, 'RenderMarkdownInfo', { fg = '#89b4fa', bold = true })
+      vim.api.nvim_set_hl(0, 'RenderMarkdownWarn', { fg = '#f9e2af', bold = true })
+      vim.api.nvim_set_hl(0, 'RenderMarkdownError', { fg = '#f38ba8', bold = true })
+      vim.api.nvim_set_hl(0, 'RenderMarkdownHint', { fg = '#a6e3a1', bold = true })
+      vim.api.nvim_set_hl(0, 'RenderMarkdownSuccess', { fg = '#a6e3a1', bold = true })
+      vim.api.nvim_set_hl(0, 'RenderMarkdownQuote', { fg = '#b4befe', bold = true })
       
       -- タスクのハイライトを適用するautocmd
       vim.api.nvim_create_autocmd("FileType", {
