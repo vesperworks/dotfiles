@@ -149,5 +149,6 @@ return {
     vim.keymap.set('n', '<leader>o', builtin.oldfiles, { desc = "最近開いたファイル (Leader+O)" })
     vim.keymap.set('n', '<leader>k', builtin.keymaps, { desc = "キーマップ検索 (Leader+K)" })
     vim.keymap.set('n', '<leader>f', builtin.find_files, { desc = "ファイル検索 (Leader+F)" })
+    vim.keymap.set('n', '<leader>g', builtin.live_grep, { desc = "テキスト検索 (Leader+G)" })
   end,
 }

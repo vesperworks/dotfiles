@@ -20,6 +20,9 @@ return {
       trigger = "",
       max_length = false,
     },
+    -- ラベル数を大幅増加: 4文字から26文字へ
+    -- QWERTYキーボード最適化、ホームポジション優先
+    labels = "asdfghjklqwertyuiopzxcvbnm",
     jump = {
       jumplist = true,
       pos = "start",
@@ -31,13 +34,13 @@ return {
       offset = nil,
     },
     label = {
-      uppercase = true,
+      uppercase = true,  -- 大文字も使用して実質52文字に
       exclude = "",
       current = true,
       after = true,
       before = false,
       style = "overlay",
-      reuse = "lowercase",
+      reuse = "lowercase",  -- 小文字ラベルの再利用でラベル数増加
       distance = true,
       min_pattern_length = 0,
       rainbow = {
@@ -97,7 +100,7 @@ return {
         jump = { register = false },
       },
       treesitter = {
-        labels = "abcdefghijklmnopqrstuvwxyz",
+        labels = "asdfghjklqwertyuiopzxcvbnm",
         jump = { pos = "range" },
         search = { incremental = false },
         label = { before = true, after = true, style = "inline" },
@@ -157,6 +160,8 @@ return {
         local flash = require("flash")
         
         flash.jump({
+          -- ラベル数を大幅増加
+          labels = "asdfghjklqwertyuiopzxcvbnm",
           matcher = function(win)
             local buf = vim.api.nvim_win_get_buf(win)
             local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
@@ -241,6 +246,60 @@ return {
         require("flash").toggle()
       end,
       desc = "Toggle Flash Search",
+    },
+    -- 真の2文字ラベル機能
+    {
+      "<leader>s",
+      mode = { "n", "x", "o" },
+      function()
+        local Flash = require("flash")
+        
+        -- 2文字ラベルのフォーマット関数
+        local function format(opts)
+          return {
+            { opts.match.label1, "FlashMatch" },
+            { opts.match.label2, "FlashLabel" },
+          }
+        end
+
+        Flash.jump({
+          search = { mode = "search" },
+          label = { 
+            after = false, 
+            before = { 0, 0 }, 
+            uppercase = false, 
+            format = format 
+          },
+          pattern = [[\<]],
+          action = function(match, state)
+            state:hide()
+            Flash.jump({
+              search = { max_length = 0 },
+              highlight = { matches = false },
+              label = { format = format },
+              matcher = function(win)
+                return vim.tbl_filter(function(m)
+                  return m.label == match.label and m.win == win
+                end, state.results)
+              end,
+              labeler = function(matches)
+                for _, m in ipairs(matches) do
+                  m.label = m.label2
+                end
+              end,
+            })
+          end,
+          labeler = function(matches, state)
+            local labels = state:labels()
+            for m, match in ipairs(matches) do
+              match.label1 = labels[math.floor((m - 1) / #labels) + 1]
+              match.label2 = labels[(m - 1) % #labels + 1]
+              match.label = match.label1
+            end
+          end,
+        })
+      end,
+      desc = "Flash 2-char Labels",
     },
   },
 }
