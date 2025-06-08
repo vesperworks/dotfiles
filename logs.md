@@ -1,5 +1,57 @@
 # Neovim Development Logs
 
+## 2025-06-08
+
+### `<leader>-` markdownリスト補完の複数行対応実装（完了）
+
+**問題:**
+- `<leader>-`でのmarkdownリスト補完が単一行のみの対応だった
+- Visual modeで複数行を選択してリストマーカーを一括適用したい要望
+- 初回のVisual mode選択時に範囲が正しく取得できない問題
+
+**解決策:**
+- `lua/user-plugins/markdown-helper.lua`の`insert_list_item()`関数を複数行対応に拡張
+- Visual mode中の現在の選択範囲を直接取得する方法に変更
+```lua
+-- Visual mode中の現在の選択範囲を直接取得
+local visual_start = vim.fn.getpos("v")  -- Visual mode開始位置
+local cursor_pos = vim.api.nvim_win_get_cursor(0)  -- 現在のカーソル位置
+
+start_row = visual_start[2]  -- 開始行
+end_row = cursor_pos[1]      -- 終了行
+
+-- 選択方向によって開始と終了を整理
+if start_row > end_row then
+  start_row, end_row = end_row, start_row
+end
+```
+
+**最終実装内容:**
+- Normal mode/Visual mode両対応のキーマッピング
+- Visual mode中の正確な範囲取得
+- 選択方向（上→下、下→上）の自動判定
+- インデント保持機能
+- 適切なカーソル位置調整
+
+**使用方法:**
+- **単一行**: `<leader>-`で現在行にリストマーカーを追加/削除
+- **複数行**: Visual mode (V) で複数行選択 → `<leader>-`で選択した全行に一括適用
+- **トグル動作**: リストマーカーがあれば削除、なければ追加
+
+**メリット:**
+- ノートテイキング時の効率が大幅向上
+- 大量のテキストを一括でリスト化可能
+- 既存の単一行機能は完全に保持
+- `<leader>*`も同時に複数行対応済み
+- 初回Visual mode選択から確実に動作
+
+**技術的解決:**
+- `vim.fn.getpos("'<")`と`vim.fn.getpos("'>")`の代わりに`vim.fn.getpos("v")`を使用
+- Visual mode中のリアルタイム選択範囲取得を実現
+- デバッグ機能を活用した段階的な問題解決
+
+---
+
 ## 2025-06-06
 
 ### tmux-thumbs システムクリップボード連携修正

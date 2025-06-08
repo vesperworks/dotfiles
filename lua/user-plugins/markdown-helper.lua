@@ -109,35 +109,82 @@ function M.toggle_checkbox_state()
   vim.api.nvim_win_set_cursor(0, cursor_pos)
 end
 
--- リストアイテムを追加する関数
+-- リストアイテムを追加する関数（複数行対応）
 function M.insert_list_item(marker)
   marker = marker or "*"
-  local current_line = vim.api.nvim_get_current_line()
-  local cursor_pos = vim.api.nvim_win_get_cursor(0)
-  local row = cursor_pos[1]
+  local start_row, end_row
   
-  local new_line
-  local cursor_offset = 0
+  -- Visual modeの判定と範囲取得
+  local mode = vim.fn.mode()
   
-  -- 既存のリストマーカーがある場合は削除、ない場合は追加
-  if string.match(current_line, "^%s*[%*%-]%s") then
-    -- 既にリストアイテムがある場合は削除
-    new_line = string.gsub(current_line, "^(%s*)[%*%-]%s*", "%1")
-    cursor_offset = -(current_line:len() - new_line:len())
+  if mode == 'v' or mode == 'V' or mode == '\022' then
+    -- Visual mode中の現在の選択範囲を直接取得
+    local visual_start = vim.fn.getpos("v")
+    local cursor_pos = vim.api.nvim_win_get_cursor(0)
+    
+    start_row = visual_start[2]
+    end_row = cursor_pos[1]
+    
+    -- 選択方向によって開始と終了を整理
+    if start_row > end_row then
+      start_row, end_row = end_row, start_row
+    end
+    
+    -- Visual modeを終了
+    vim.cmd('normal! \\<Esc>')
+    
+    -- 範囲が無効な場合のフォールバック
+    if start_row == 0 or end_row == 0 then
+      local cursor_pos_fallback = vim.api.nvim_win_get_cursor(0)
+      start_row = cursor_pos_fallback[1]
+      end_row = cursor_pos_fallback[1]
+    end
   else
-    -- リストアイテムがない場合は追加
-    local indent = string.match(current_line, "^(%s*)") or ""
-    local content = string.gsub(current_line, "^%s*", "")
-    new_line = indent .. marker .. " " .. content
-    cursor_offset = #marker + 1
+    -- Normal mode: 現在の行のみ
+    local cursor_pos = vim.api.nvim_win_get_cursor(0)
+    start_row = cursor_pos[1]
+    end_row = cursor_pos[1]
+  end
+  
+  -- 総行数チェック
+  local total_lines = vim.api.nvim_buf_line_count(0)
+  
+  -- 行番号の有効性をチェック
+  if start_row < 1 or end_row > total_lines or start_row > end_row then
+    return
+  end
+  
+  -- 選択範囲の行を取得
+  local lines = vim.api.nvim_buf_get_lines(0, start_row - 1, end_row, false)
+  local new_lines = {}
+  
+  -- 各行に対してリストアイテムの挿入/削除を実行
+  for _, line in ipairs(lines) do
+    local new_line
+    
+    -- 既存のリストマーカーがある場合は削除、ない場合は追加
+    if string.match(line, "^%s*[%*%-]%s") then
+      -- 既にリストアイテムがある場合は削除
+      new_line = string.gsub(line, "^(%s*)[%*%-]%s*", "%1")
+    else
+      -- リストアイテムがない場合は追加
+      local indent = string.match(line, "^(%s*)") or ""
+      local content = string.gsub(line, "^%s*", "")
+      new_line = indent .. marker .. " " .. content
+    end
+    
+    table.insert(new_lines, new_line)
   end
   
   -- 行を更新
-  vim.api.nvim_set_current_line(new_line)
+  vim.api.nvim_buf_set_lines(0, start_row - 1, end_row, false, new_lines)
   
-  -- カーソル位置を調整
-  local new_col = math.max(0, cursor_pos[2] + cursor_offset)
-  vim.api.nvim_win_set_cursor(0, {row, new_col})
+  -- カーソル位置を適切に調整（最初の行のリストマーカー後に移動）
+  if #new_lines > 0 then
+    local first_line = new_lines[1]
+    local marker_end = string.match(first_line, "^%s*" .. marker .. " ?()") or 1
+    vim.api.nvim_win_set_cursor(0, {start_row, marker_end})
+  end
 end
 
 -- Calloutメイン関数
@@ -147,29 +194,26 @@ function M.insert_callout()
   -- Visual modeの判定と範囲取得
   local mode = vim.fn.mode()
   if mode == 'v' or mode == 'V' or mode == '\022' then
-    -- Visual mode: 選択範囲を取得
-    local start_pos = vim.fn.getpos("'<")
-    local end_pos = vim.fn.getpos("'>")
+    -- Visual mode中の現在の選択範囲を直接取得
+    local visual_start = vim.fn.getpos("v")
+    local cursor_pos = vim.api.nvim_win_get_cursor(0)
     
-    local start_line = start_pos[2]
-    local end_line = end_pos[2]
+    start_row = visual_start[2]
+    end_row = cursor_pos[1]
+    
+    -- 選択方向によって開始と終了を整理
+    if start_row > end_row then
+      start_row, end_row = end_row, start_row
+    end
     
     -- Visual modeを終了
     vim.cmd('normal! \\<Esc>')
     
     -- マークが無効な場合のフォールバック
-    if start_line == 0 or end_line == 0 then
-      local cursor_pos = vim.api.nvim_win_get_cursor(0)
-      start_row = cursor_pos[1]
-      end_row = cursor_pos[1]
-    else
-      start_row = start_line
-      end_row = end_line
-      
-      -- 行番号の順序を修正
-      if start_row > end_row then
-        start_row, end_row = end_row, start_row
-      end
+    if start_row == 0 or end_row == 0 then
+      local cursor_pos_fallback = vim.api.nvim_win_get_cursor(0)
+      start_row = cursor_pos_fallback[1]
+      end_row = cursor_pos_fallback[1]
     end
   else
     -- Normal mode: 現在の行のみ
@@ -400,12 +444,12 @@ function M.setup_keymaps()
   vim.keymap.set('n', '<leader>x', M.toggle_checkbox, 
     vim.tbl_extend('force', opts, { desc = "Toggle checkbox" }))
   
-  -- リストアイテム関連のキーマップ
-  vim.keymap.set('n', '<leader>*', function()
+  -- リストアイテム関連のキーマップ（Normal & Visual mode）
+  vim.keymap.set({'n', 'v'}, '<leader>*', function()
     M.insert_list_item("*")
   end, vim.tbl_extend('force', opts, { desc = "Toggle bullet list (*)" }))
   
-  vim.keymap.set('n', '<leader>-', function()
+  vim.keymap.set({'n', 'v'}, '<leader>-', function()
     M.insert_list_item("-")
   end, vim.tbl_extend('force', opts, { desc = "Toggle bullet list (-)" }))
   
