@@ -1,6 +1,6 @@
 return {
   "epwalsh/obsidian.nvim",
-  enabled = false,
+  enabled = true,
   version = "*",
   lazy = true,
   ft = "markdown",
@@ -18,7 +18,7 @@ return {
     disable_frontmatter = true,
     completion = {
       nvim_cmp = true,
-      min_chars = 2,
+      min_chars = 1,  -- @一文字で補完開始
     },
 
     mappings = {

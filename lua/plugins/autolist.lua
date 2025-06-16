@@ -31,6 +31,8 @@ return {
       map("n", "O",  "O<cmd>AutolistNewBulletBefore<CR>")
       -- Enterキーで3状態循環（独自機能）
       map("n", "<CR>", function() require('user-plugins.markdown-helper').toggle_checkbox_state() end)
+      -- Visual modeでも3状態循環対応
+      map("v", "<CR>", function() require('user-plugins.markdown-helper').toggle_checkbox_state() end)
       map("n", "<leader>r", "<cmd>AutolistRecalculate<CR>")
       -- 再計算系
       map("n", ">>", ">><cmd>AutolistRecalculate<CR>")

@@ -46,7 +46,7 @@ local function get_heading_section_end(bufnr, start_row, level)
   return total_lines
 end
 
--- 見出しズーム範囲を取得
+-- 見出しズーム範囲を取得（修正版：現在の見出しレベル以下のみ）
 local function get_heading_zoom_range(bufnr, cursor_row)
   local parser = vim.treesitter.get_parser(bufnr, "markdown")
   if not parser then
@@ -97,35 +97,17 @@ local function get_heading_zoom_range(bufnr, cursor_row)
     return nil
   end
   
-  -- 最も近い見出しを取得
+  -- 最も近い見出しを取得（カーソル位置の見出し）
   local current_heading = headings[#headings]
   
-  -- 1つ上のレベルの見出しを探す
-  local parent_heading = nil
-  for i = #headings - 1, 1, -1 do
-    if headings[i].level < current_heading.level then
-      parent_heading = headings[i]
-      break
-    end
-  end
+  -- 現在の見出しレベル以下のみでズーム範囲を設定
+  local start_row = current_heading.start_row
+  local end_row = get_heading_section_end(bufnr, current_heading.start_row, current_heading.level)
   
-  local start_row, end_row
-  local breadcrumb = {}
-  
-  if parent_heading then
-    -- 親見出しから現在の見出しセクションまで
-    start_row = parent_heading.start_row
-    end_row = get_heading_section_end(bufnr, current_heading.start_row, current_heading.level)
-    
-    table.insert(breadcrumb, { text = parent_heading.text })
-    table.insert(breadcrumb, { text = current_heading.text })
-  else
-    -- 現在の見出しセクション
-    start_row = current_heading.start_row
-    end_row = get_heading_section_end(bufnr, current_heading.start_row, current_heading.level)
-    
-    table.insert(breadcrumb, { text = current_heading.text })
-  end
+  -- パンくずリストは現在の見出しのみ
+  local breadcrumb = {
+    { text = current_heading.text }
+  }
   
   return {
     start_row = start_row,
@@ -242,7 +224,7 @@ local function get_list_item_end(bufnr, list_item)
   return total_lines
 end
 
--- リストズーム範囲を取得（修正版：現在の項目とその子項目のみ）
+-- リストズーム範囲を取得（修正版：リストが所属する親見出しセクション全体）
 local function get_list_zoom_range(bufnr, hierarchy)
   if not hierarchy or #hierarchy == 0 then
     return nil
@@ -251,22 +233,86 @@ local function get_list_zoom_range(bufnr, hierarchy)
   -- 現在のリスト項目を取得（カーソル位置の項目）
   local current_item = hierarchy[#hierarchy]
   
-  -- 現在の項目とその子項目の範囲を取得
-  local start_row = current_item.start_row
-  local end_row = get_list_item_end(bufnr, current_item)
+  -- リストが所属する親見出しを探す
+  local parent_heading = nil
+  local cursor_row = current_item.start_row - 1 -- 0-indexed
   
-  -- パンくずリストは現在の項目まで含める
-  local breadcrumb = {}
-  for i, item in ipairs(hierarchy) do
-    table.insert(breadcrumb, { text = item.text })
+  -- カーソル位置より上の見出しを探す
+  local parser = vim.treesitter.get_parser(bufnr, "markdown")
+  if parser then
+    local tree = parser:parse()[1]
+    local root = tree:root()
+    
+    local query_text = [[
+      (atx_heading) @heading
+    ]]
+    
+    local ok, query = pcall(vim.treesitter.query.parse, "markdown", query_text)
+    if ok then
+      local headings = {}
+      
+      for id, node in query:iter_captures(root, bufnr, 0, -1) do
+        local start_row, _, end_row, _ = node:range()
+        if start_row < cursor_row then  -- カーソル位置より上の見出しのみ
+          local level = get_heading_level(bufnr, start_row)
+          if level > 0 then
+            local text = vim.api.nvim_buf_get_lines(bufnr, start_row, start_row + 1, false)[1] or ""
+            
+            table.insert(headings, {
+              level = level,
+              start_row = start_row + 1, -- 1-indexed
+              text = text:gsub("^#+%s*", ""):gsub("^=%s*", ""):gsub("^-+%s*", ""),
+              node = node
+            })
+          end
+        end
+      end
+      
+      -- 最も近い（最後の）見出しを親見出しとする
+      if #headings > 0 then
+        parent_heading = headings[#headings]
+      end
+    end
   end
   
-  return {
-    start_row = start_row,
-    end_row = end_row,
-    breadcrumb = breadcrumb,
-    type = "list"
-  }
+  if parent_heading then
+    -- 親見出しセクション全体をズーム範囲にする
+    local start_row = parent_heading.start_row
+    local end_row = get_heading_section_end(bufnr, parent_heading.start_row, parent_heading.level)
+    
+    -- パンくずリストは親見出し + 現在のリスト項目
+    local breadcrumb = {
+      { text = parent_heading.text }
+    }
+    -- 現在のリスト階層も追加
+    for i, item in ipairs(hierarchy) do
+      table.insert(breadcrumb, { text = item.text })
+    end
+    
+    return {
+      start_row = start_row,
+      end_row = end_row,
+      breadcrumb = breadcrumb,
+      type = "list_with_heading"
+    }
+  else
+    -- 親見出しが見つからない場合は従来通り
+    local current_item = hierarchy[#hierarchy]
+    local start_row = current_item.start_row
+    local end_row = get_list_item_end(bufnr, current_item)
+    
+    local breadcrumb = {}
+    for i, item in ipairs(hierarchy) do
+      table.insert(breadcrumb, { text = item.text })
+    end
+    
+    return {
+      start_row = start_row,
+      end_row = end_row,
+      breadcrumb = breadcrumb,
+      type = "list"
+    }
+  end
 end
 
 -- 親リストの範囲を取得（Obsidian Zoom風）

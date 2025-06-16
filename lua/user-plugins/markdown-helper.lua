@@ -82,31 +82,78 @@ end
 
 -- チェックボックスの完了状態を切り替える関数（未完了 → 実行中 → 完了 → 未完了）
 function M.toggle_checkbox_state()
-  local current_line = vim.api.nvim_get_current_line()
-  local cursor_pos = vim.api.nvim_win_get_cursor(0)
-  local row = cursor_pos[1]
+  local start_row, end_row
   
-  local new_line
+  -- Visual modeの判定と範囲取得
+  local mode = vim.fn.mode()
   
-  if string.match(current_line, "^%s*[%*%-]%s*%[%s%]") then
-    -- 未完了 → 実行中 (スペースを確実にマッチ)
-    new_line = string.gsub(current_line, "(%[)%s(%])", "%1-%2")
-  elseif string.match(current_line, "^%s*[%*%-]%s*%[%-%]") then
-    -- 実行中 → 完了
-    new_line = string.gsub(current_line, "(%[)%-(%])", "%1x%2")
-  elseif string.match(current_line, "^%s*[%*%-]%s*%[x%]") then
-    -- 完了 → 未完了
-    new_line = string.gsub(current_line, "(%[)x(%])", "%1 %2")
+  if mode == 'v' or mode == 'V' or mode == '\022' then
+    -- Visual mode中の現在の選択範囲を直接取得
+    local visual_start = vim.fn.getpos("v")
+    local cursor_pos = vim.api.nvim_win_get_cursor(0)
+    
+    start_row = visual_start[2]
+    end_row = cursor_pos[1]
+    
+    -- 選択方向によって開始と終了を整理
+    if start_row > end_row then
+      start_row, end_row = end_row, start_row
+    end
+    
+    -- Visual modeを終了
+    vim.cmd('normal! \\<Esc>')
+    
+    -- 範囲が無効な場合のフォールバック
+    if start_row == 0 or end_row == 0 then
+      local cursor_pos_fallback = vim.api.nvim_win_get_cursor(0)
+      start_row = cursor_pos_fallback[1]
+      end_row = cursor_pos_fallback[1]
+    end
   else
-    -- チェックボックスがない場合は何もしない
+    -- Normal mode: 現在の行のみ
+    local cursor_pos = vim.api.nvim_win_get_cursor(0)
+    start_row = cursor_pos[1]
+    end_row = cursor_pos[1]
+  end
+  
+  -- 総行数チェック
+  local total_lines = vim.api.nvim_buf_line_count(0)
+  
+  -- 行番号の有効性をチェック
+  if start_row < 1 or end_row > total_lines or start_row > end_row then
     return
   end
   
-  -- 行を更新
-  vim.api.nvim_set_current_line(new_line)
+  -- 選択範囲の行を取得
+  local lines = vim.api.nvim_buf_get_lines(0, start_row - 1, end_row, false)
+  local new_lines = {}
   
-  -- カーソル位置はそのまま
-  vim.api.nvim_win_set_cursor(0, cursor_pos)
+  -- 各行に対してチェックボックス状態変更を実行
+  for _, line in ipairs(lines) do
+    local new_line
+    
+    if string.match(line, "^%s*[%*%-]%s*%[%s%]") then
+      -- 未完了 → 実行中 (スペースを確実にマッチ)
+      new_line = string.gsub(line, "(%[)%s(%])", "%1-%2")
+    elseif string.match(line, "^%s*[%*%-]%s*%[%-%]") then
+      -- 実行中 → 完了
+      new_line = string.gsub(line, "(%[)%-(%])", "%1x%2")
+    elseif string.match(line, "^%s*[%*%-]%s*%[x%]") then
+      -- 完了 → 未完了
+      new_line = string.gsub(line, "(%[)x(%])", "%1 %2")
+    else
+      -- チェックボックスがない場合はそのまま
+      new_line = line
+    end
+    
+    table.insert(new_lines, new_line)
+  end
+  
+  -- 行を更新
+  vim.api.nvim_buf_set_lines(0, start_row - 1, end_row, false, new_lines)
+  
+  -- カーソル位置を適切に調整（最初の行に戻す）
+  vim.api.nvim_win_set_cursor(0, {start_row, 0})
 end
 
 -- リストアイテムを追加する関数（複数行対応）
@@ -287,25 +334,28 @@ end
 -- Calloutの種類を変更する関数
 function M.change_callout_type(start_row, end_row)
   local callout_types = {
-    { "note", "📝 Note" },
-    { "warning", "⚠️ Warning" },
-    { "error", "❌ Error" },
-    { "info", "ℹ️ Info" },
-    { "tip", "💡 Tip" },
-    { "success", "✅ Success" },
-    { "question", "❓ Question" },
-    { "quote", "💬 Quote (普通のクオート)" },
+    { "note", "📝 Note", "a" },
+    { "warning", "⚠️ Warning", "s" },
+    { "error", "❌ Error", "d" },
+    { "info", "ℹ️ Info", "f" },
+    { "tip", "💡 Tip", "g" },
+    { "success", "✅ Success", "h" },
+    { "question", "❓ Question", "j" },
+    { "quote", "💬 Quote (普通のクオート)", "k" },
+    { "code", "💻 Code Block", "c" },
   }
   
-  vim.ui.select(callout_types, {
-    prompt = "Calloutの種類を選択:",
-    format_item = function(item)
-      return item[2]
-    end,
-  }, function(choice)
+  M.show_callout_selection(callout_types, "Calloutの種類を選択:", function(choice)
     if not choice then return end
     
     local callout_type = choice[1]
+    
+    -- コードブロックの場合は専用関数を呼び出し
+    if callout_type == "code" then
+      M.insert_code_block()
+      return
+    end
+    
     local lines = vim.api.nvim_buf_get_lines(0, start_row - 1, end_row, false)
     local new_lines = {}
     
@@ -335,6 +385,156 @@ function M.change_callout_type(start_row, end_row)
   end)
 end
 
+-- コードブロックを挿入する関数
+function M.insert_code_block()
+  local start_row, end_row
+  
+  -- Visual modeの判定と範囲取得
+  local mode = vim.fn.mode()
+  if mode == 'v' or mode == 'V' or mode == '\022' then
+    -- Visual mode中の現在の選択範囲を直接取得
+    local visual_start = vim.fn.getpos("v")
+    local cursor_pos = vim.api.nvim_win_get_cursor(0)
+    
+    start_row = visual_start[2]
+    end_row = cursor_pos[1]
+    
+    -- 選択方向によって開始と終了を整理
+    if start_row > end_row then
+      start_row, end_row = end_row, start_row
+    end
+    
+    -- Visual modeを終了
+    vim.cmd('normal! \\<Esc>')
+    
+    -- マークが無効な場合のフォールバック
+    if start_row == 0 or end_row == 0 then
+      local cursor_pos_fallback = vim.api.nvim_win_get_cursor(0)
+      start_row = cursor_pos_fallback[1]
+      end_row = cursor_pos_fallback[1]
+    end
+  else
+    -- Normal mode: 現在の行のみ
+    local cursor_pos = vim.api.nvim_win_get_cursor(0)
+    start_row = cursor_pos[1]
+    end_row = cursor_pos[1]
+  end
+  
+  -- 選択した内容を取得
+  local lines = vim.api.nvim_buf_get_lines(0, start_row - 1, end_row, false)
+  local content = table.concat(lines, "\n")
+  
+  -- 共通のインデントを検出
+  local common_indent = ""
+  for _, line in ipairs(lines) do
+    if line ~= "" then
+      local indent = string.match(line, "^(%s*)")
+      if common_indent == "" or #indent < #common_indent then
+        common_indent = indent
+      end
+    end
+  end
+  
+  -- 言語選択
+  local languages = {
+    { "markdown", "📝 Markdown", "m" },
+    { "lua", "🌙 Lua", "l" },
+    { "javascript", "🟨 JavaScript", "j" },
+    { "typescript", "🔷 TypeScript", "t" },
+    { "python", "🐍 Python", "p" },
+    { "bash", "💻 Bash", "b" },
+    { "json", "📄 JSON", "n" },
+    { "yaml", "🔧 YAML", "y" },
+    { "css", "🎨 CSS", "c" },
+    { "html", "🌐 HTML", "h" },
+    { "", "⚪ No language", "" },
+  }
+  
+  M.show_language_selection(languages, "コードブロックの言語を選択:", function(choice)
+    if not choice then return end
+    
+    local language = choice[1]
+    local new_lines = {}
+    
+    -- コードブロック開始
+    table.insert(new_lines, common_indent .. "```" .. language)
+    
+    -- 選択された内容を追加（インデントを調整）
+    for _, line in ipairs(lines) do
+      if line == "" then
+        table.insert(new_lines, "")
+      else
+        local content_line = string.gsub(line, "^" .. common_indent, "")
+        table.insert(new_lines, common_indent .. content_line)
+      end
+    end
+    
+    -- コードブロック終了
+    table.insert(new_lines, common_indent .. "```")
+    
+    -- 行を置換
+    vim.api.nvim_buf_set_lines(0, start_row - 1, end_row, false, new_lines)
+    
+    -- カーソルをコードブロック内に移動
+    vim.api.nvim_win_set_cursor(0, {start_row + 1, #common_indent})
+  end)
+end
+
+-- 言語選択UI
+function M.show_language_selection(languages, prompt, callback)
+  -- メッセージを表示
+  local message_lines = { "💻 " .. prompt }
+  
+  for i, lang in ipairs(languages) do
+    local key = lang[3] ~= "" and lang[3] or "Space"
+    local display = lang[2]
+    table.insert(message_lines, string.format("  %s: %s", key, display))
+  end
+  
+  table.insert(message_lines, "")
+  table.insert(message_lines, "  Enter: No language (デフォルト) | Esc: キャンセル")
+  
+  -- メッセージを通知として表示
+  vim.notify(table.concat(message_lines, "\n"), vim.log.levels.INFO, { title = "Language Selection" })
+  
+  -- 一文字入力を待機
+  local char = vim.fn.getchar()
+  local input = vim.fn.nr2char(char)
+  
+  -- Enter（13）またはESC（27）の処理
+  if char == 13 then -- Enter
+    -- デフォルトで言語なしを選択
+    for _, lang in ipairs(languages) do
+      if lang[1] == "" then
+        callback(lang)
+        return
+      end
+    end
+  elseif char == 27 then -- ESC
+    callback(nil)
+    return
+  elseif char == 32 then -- Space
+    -- 言語なしを選択
+    for _, lang in ipairs(languages) do
+      if lang[1] == "" then
+        callback(lang)
+        return
+      end
+    end
+  end
+  
+  -- 入力されたキーに対応する言語を探す
+  for _, lang in ipairs(languages) do
+    if lang[3] == input then
+      callback(lang)
+      return
+    end
+  end
+  
+  -- 見つからない場合はキャンセル
+  callback(nil)
+end
+
 -- 新しいCalloutを作成する関数
 function M.create_new_callout(start_row, end_row)
   -- バッファ情報チェック
@@ -346,25 +546,27 @@ function M.create_new_callout(start_row, end_row)
   end
   
   local callout_types = {
-    { "note", "📝 Note" },
-    { "warning", "⚠️ Warning" },
-    { "error", "❌ Error" },
-    { "info", "ℹ️ Info" },
-    { "tip", "💡 Tip" },
-    { "success", "✅ Success" },
-    { "question", "❓ Question" },
-    { "quote", "💬 Quote (普通のクオート)" },
+    { "note", "📝 Note", "a" },
+    { "warning", "⚠️ Warning", "s" },
+    { "error", "❌ Error", "d" },
+    { "info", "ℹ️ Info", "f" },
+    { "tip", "💡 Tip", "g" },
+    { "success", "✅ Success", "h" },
+    { "question", "❓ Question", "j" },
+    { "quote", "💬 Quote (普通のクオート)", "k" },
+    { "code", "💻 Code Block", "c" },
   }
   
-  vim.ui.select(callout_types, {
-    prompt = "Calloutの種類を選択:",
-    format_item = function(item)
-      return item[2]
-    end,
-  }, function(choice)
+  M.show_callout_selection(callout_types, "Calloutの種類を選択:", function(choice)
     if not choice then return end
     
     local callout_type = choice[1]
+    
+    -- コードブロックの場合は専用関数を呼び出し
+    if callout_type == "code" then
+      M.insert_code_block()
+      return
+    end
     local lines = vim.api.nvim_buf_get_lines(0, start_row - 1, end_row, false)
     local new_lines = {}
     
@@ -423,6 +625,53 @@ function M.create_new_callout(start_row, end_row)
       vim.api.nvim_win_set_cursor(0, {start_row + 1, #(common_indent .. "> ")})
     end
   end)
+end
+
+-- Callout選択UI（asdfghjk;対応）
+function M.show_callout_selection(callout_types, prompt, callback)
+  -- メッセージを表示
+  local message_lines = { "🔟 " .. prompt }
+  
+  for i, callout in ipairs(callout_types) do
+    local key = callout[3] or tostring(i)
+    local display = callout[2]
+    table.insert(message_lines, string.format("  %s: %s", key, display))
+  end
+  
+  table.insert(message_lines, "")
+  table.insert(message_lines, "  Enter: Quote (デフォルト) | Esc: キャンセル")
+  
+  -- メッセージを通知として表示
+  vim.notify(table.concat(message_lines, "\n"), vim.log.levels.INFO, { title = "Callout Selection" })
+  
+  -- 一文字入力を待機
+  local char = vim.fn.getchar()
+  local input = vim.fn.nr2char(char)
+  
+  -- Enter（13）またはESC（27）の処理
+  if char == 13 then -- Enter
+    -- デフォルトでquoteを選択
+    for _, callout in ipairs(callout_types) do
+      if callout[1] == "quote" then
+        callback(callout)
+        return
+      end
+    end
+  elseif char == 27 then -- ESC
+    callback(nil)
+    return
+  end
+  
+  -- 入力されたキーに対応するcalloutを探す
+  for _, callout in ipairs(callout_types) do
+    if callout[3] == input then
+      callback(callout)
+      return
+    end
+  end
+  
+  -- 見つからない場合はキャンセル
+  callback(nil)
 end
 
 -- キーマップを設定する関数
