@@ -156,11 +156,18 @@ function M.toggle_checkbox_state()
       local old_state = old_line:match('%[([%s%-x])%]')
       local new_state = new_line:match('%[([%s%-x])%]')
       
+      -- デバッグ情報（必要時のみ有効化）
+      -- vim.notify(string.format("DEBUG: state change line=%d, old='%s', new='%s'", line_number, old_state or "nil", new_state or "nil"), vim.log.levels.DEBUG)
+      
       if old_state and new_state then
+        -- 状態文字を正規化（スペースを明示的に処理）
+        local normalized_old = old_state == ' ' and ' ' or old_state
+        local normalized_new = new_state == ' ' and ' ' or new_state
+        
         -- タスクタイマーに状態変更を通知
         local ok, timer = pcall(require, 'user-plugins.task-timer')
         if ok then
-          timer.on_checkbox_change(file_path, line_number, old_state, new_state, new_line)
+          timer.on_checkbox_change(file_path, line_number, normalized_old, normalized_new, new_line)
         end
       end
     end

@@ -257,7 +257,7 @@ return {
         -- 2文字ラベルのフォーマット関数
         local function format(opts)
           return {
-            { opts.match.label1, "FlashMatch" },
+            { opts.match.label1, "FlashLabel" },  -- 最初の文字もピンク色に統一
             { opts.match.label2, "FlashLabel" },
           }
         end

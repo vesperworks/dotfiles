@@ -11,7 +11,8 @@ return {
     workspaces = {
       {
         name = "main",
-        path = "~/Library/Mobile Documents/iCloud~md~obsidian/Documents/MainVault",
+        -- 環境変数OBSIDIAN_VAULTからパスを取得、フォールバックあり
+        path = vim.env.OBSIDIAN_VAULT or "~/Library/Mobile Documents/iCloud~md~obsidian/Documents/MainVault",
       },
     },
 

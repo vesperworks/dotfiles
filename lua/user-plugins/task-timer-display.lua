@@ -48,6 +48,9 @@ function M.update_buffer_display(bufnr, active_timers)
     return
   end
   
+  -- デバッグ情報（必要時のみ有効化）
+  -- vim.notify(string.format("DEBUG: update_buffer_display bufnr=%d, active_timers_count=%d", bufnr, vim.tbl_count(active_timers)), vim.log.levels.DEBUG)
+  
   -- 既存のvirtual textをクリア
   vim.api.nvim_buf_clear_namespace(bufnr, ns_id, 0, -1)
   
@@ -67,8 +70,10 @@ function M.update_buffer_display(bufnr, active_timers)
       if timer_data then
         local elapsed_text = M.format_elapsed_time(timer_data.start_time)
         
-        -- Virtual textとして経過時間を表示（markdown previewに影響しない設定）
+        -- Virtual textとして経過時間を表示（重複防止のためIDを設定）
+        local mark_id = timer_data.start_time + line_num -- ユニークなID生成
         local success, err = pcall(vim.api.nvim_buf_set_extmark, bufnr, ns_id, line_num - 1, -1, {
+          id = mark_id,  -- 重複防止のためIDを設定
           virt_text = {{ elapsed_text, 'DiagnosticWarn' }},
           virt_text_pos = 'eol',
           ephemeral = false,  -- ファイル保存時に消えない
