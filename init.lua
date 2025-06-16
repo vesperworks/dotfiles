@@ -42,6 +42,18 @@ vim.opt.jumpoptions:append("stack")
 require('user-plugins.markdown-helper').setup_keymaps()
 require('user-plugins.obsidian-zoom')
 
+-- タスクタイマーシステムを初期化
+local ok, task_timer = pcall(require, 'user-plugins.task-timer')
+if ok then
+  task_timer.setup()
+  
+  -- デバッグ用キーマップ
+  vim.keymap.set('n', '<leader>ta', function() task_timer.show_active_timers() end, 
+    { desc = "アクティブタイマー表示", silent = true })
+  vim.keymap.set('n', '<leader>tq', function() task_timer.stop_all_timers() end, 
+    { desc = "全タイマー停止", silent = true })
+end
+
 -- Cmd+S で保存
 vim.keymap.set('n', '<C-s>', ':w<CR>', { desc = "ファイル保存", silent = true })
 vim.keymap.set('i', '<leader>s', '<Esc>:w<CR>a', { desc = "ファイル保存（挿入モード）", silent = true })

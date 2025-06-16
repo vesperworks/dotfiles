@@ -5,19 +5,12 @@ return {
     dependencies = { "nvim-treesitter/nvim-treesitter" },
     config = function()
       require("render-markdown").setup {
-        -- オプション設定（必要に応じて）
+        -- オプション設定
         render_modes = { 'n', 'c', 't' },
         
-        -- チェックボックスの設定
+        -- チェックボックスの設定（文字消失問題を回避するため無効化）
         checkbox = {
-          checked = {
-            icon = '✓',
-            highlight = 'RenderMarkdownChecked',
-          },
-          unchecked = {
-            icon = '○',
-            highlight = 'RenderMarkdownUnchecked',
-          },
+          enabled = false,  -- シンプルに無効化
         },
         
         -- Callout設定を追加

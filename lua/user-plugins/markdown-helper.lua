@@ -124,12 +124,17 @@ function M.toggle_checkbox_state()
     return
   end
   
+  -- ファイルパスを取得
+  local file_path = vim.api.nvim_buf_get_name(0)
+  
   -- 選択範囲の行を取得
   local lines = vim.api.nvim_buf_get_lines(0, start_row - 1, end_row, false)
   local new_lines = {}
   
   -- 各行に対してチェックボックス状態変更を実行
-  for _, line in ipairs(lines) do
+  for i, line in ipairs(lines) do
+    local line_number = start_row + i - 1
+    local old_line = line
     local new_line
     
     if string.match(line, "^%s*[%*%-]%s*%[%s%]") then
@@ -144,6 +149,20 @@ function M.toggle_checkbox_state()
     else
       -- チェックボックスがない場合はそのまま
       new_line = line
+    end
+    
+    -- タイマー統合: 状態変更を検出してタイマーに通知
+    if old_line ~= new_line then
+      local old_state = old_line:match('%[([%s%-x])%]')
+      local new_state = new_line:match('%[([%s%-x])%]')
+      
+      if old_state and new_state then
+        -- タスクタイマーに状態変更を通知
+        local ok, timer = pcall(require, 'user-plugins.task-timer')
+        if ok then
+          timer.on_checkbox_change(file_path, line_number, old_state, new_state, new_line)
+        end
+      end
     end
     
     table.insert(new_lines, new_line)
