@@ -44,13 +44,13 @@ function M.setup()
   display.update_all_displays(active_timers)
 end
 
--- タイマー開始（安全版）
-function M.start_timer(task_id, file_path, line_number, task_content)
+-- タイマー開始（行番号除外版）
+function M.start_timer(task_id, file_path, task_content)
   active_timers[task_id] = {
     start_time = os.time(),
     file_path = file_path,
-    line_number = line_number,
     task_content = task_content
+    -- line_number は削除（文字列ベースなので不要）
   }
   
   -- 🔒 安全な単一タイマー保存（マージ機能付き）
@@ -77,24 +77,25 @@ function M.stop_timer(task_id)
     -- 🔒 安全な単一タイマー削除（マージ機能付き）
     storage.remove_timer_safe(task_id)
     
-    -- virtual textをクリア
+    -- virtual textをクリア（バッファ全体を更新）
     local bufnr = vim.fn.bufnr(timer_data.file_path)
     if bufnr ~= -1 then
-      display.clear_task_display(bufnr, timer_data.line_number)
+      display.update_buffer_display(bufnr, active_timers)
     end
   end
 end
 
--- チェックボックス状態変更時のコールバック
+-- チェックボックス状態変更時のコールバック（文字列ベース修正版）
 function M.on_checkbox_change(file_path, line_number, old_state, new_state, task_content)
-  local task_id = display.generate_task_id(file_path, line_number, task_content)
+  -- 新しい文字列ベースのタスクID生成
+  local task_id = display.generate_task_id(file_path, task_content)
   
   -- デバッグ情報（必要時のみ有効化）
   -- vim.notify(string.format("DEBUG: on_checkbox_change task_id=%s, old='%s', new='%s'", task_id, old_state, new_state), vim.log.levels.DEBUG)
   
   if new_state == '-' then
     -- 進行中状態になった場合、タイマー開始
-    M.start_timer(task_id, file_path, line_number, task_content)
+    M.start_timer(task_id, file_path, task_content)
   elseif old_state == '-' and new_state ~= '-' then
     -- 進行中状態から他の状態に変わった場合、タイマー停止
     M.stop_timer(task_id)
@@ -181,7 +182,7 @@ function M.show_active_timers()
     for task_id, timer_data in pairs(active_timers) do
       local elapsed_text = display.format_elapsed_time(timer_data.start_time)
       local file_name = vim.fn.fnamemodify(timer_data.file_path, ":t")
-      table.insert(messages, string.format("  • [%s:%d] %s %s", file_name, timer_data.line_number, timer_data.task_content:gsub("-.*%[.-%]", ""):gsub("^%s+", ""), elapsed_text))
+      table.insert(messages, string.format("  • [%s] %s %s", file_name, timer_data.task_content:gsub("-.*%[.-%]", ""):gsub("^%s+", ""), elapsed_text))
     end
     vim.notify(table.concat(messages, "\n"), vim.log.levels.INFO)
   end
@@ -228,12 +229,12 @@ function M.rescan_current_buffer()
   
   for line_num, line in ipairs(lines) do
     if line:match('-%s*%[%-%]') then
-      local task_id = display.generate_task_id(file_path, line_num, line)
+      local task_id = display.generate_task_id(file_path, line)
       found_tasks = found_tasks + 1
       
       if not active_timers[task_id] then
         -- タイマーがない進行中タスクを発見した場合、タイマーを開始
-        M.start_timer(task_id, file_path, line_num, line)
+        M.start_timer(task_id, file_path, line)
         active_tasks = active_tasks + 1
       end
     end
@@ -258,7 +259,7 @@ function M.debug_timer_comparison()
 === メモリ内タイマー ===", vim.log.levels.INFO)
   for task_id, timer_data in pairs(active_timers) do
     local file_name = vim.fn.fnamemodify(timer_data.file_path, ":t")
-    vim.notify(string.format("%s: [%s:%d]", task_id:sub(1, 20), file_name, timer_data.line_number), vim.log.levels.INFO)
+    vim.notify(string.format("%s: [%s]", task_id:sub(1, 20), file_name), vim.log.levels.INFO)
   end
   
   -- 保存済みタイマー一覧
@@ -266,7 +267,7 @@ function M.debug_timer_comparison()
 === 保存済みタイマー ===", vim.log.levels.INFO)
   for task_id, timer_data in pairs(saved_timers) do
     local file_name = vim.fn.fnamemodify(timer_data.file_path, ":t")
-    vim.notify(string.format("%s: [%s:%d]", task_id:sub(1, 20), file_name, timer_data.line_number), vim.log.levels.INFO)
+    vim.notify(string.format("%s: [%s]", task_id:sub(1, 20), file_name), vim.log.levels.INFO)
   end
 end
 
@@ -305,7 +306,6 @@ function M.show_raw_timer_data()
     for task_id, timer_data in pairs(parsed_data) do
       vim.notify(string.format("\n[%d] タスクID: %s", index, task_id:sub(1, 30)), vim.log.levels.INFO)
       vim.notify(string.format("    ファイルパス: %s", timer_data.file_path), vim.log.levels.INFO)
-      vim.notify(string.format("    行番号: %d", timer_data.line_number), vim.log.levels.INFO)
       vim.notify(string.format("    開始時刻: %d", timer_data.start_time), vim.log.levels.INFO)
       vim.notify(string.format("    タスク内容: %s", timer_data.task_content:sub(1, 60)), vim.log.levels.INFO)
       index = index + 1
@@ -392,8 +392,8 @@ function M.jump_to_active_timer()
       task_preview = vim.fn.strpart(task_preview, 0, vim.fn.byteidx(task_preview, 37)) .. "..."
     end
     
-    -- ユーザーに表示する選択肢テキスト
-    local display_text = string.format("%s %s [%s:%d]", elapsed_text, task_preview, file_name, timer_data.line_number)
+    -- ユーザーに表示する選択肢テキスト（line_number除外版）
+    local display_text = string.format("%s %s [%s]", elapsed_text, task_preview, file_name)
     
     table.insert(timer_options, display_text)
     timer_data_map[display_text] = timer_data
@@ -442,7 +442,6 @@ function M.show_timer_selection(timer_options, timer_data_map)
     local timer_data = timer_data_map[option]
     debug_log(string.format("🔍 %s: %s", key, option))
     debug_log(string.format("🔍   → フルパス: %s", timer_data.file_path))
-    debug_log(string.format("🔍   → 行番号: %d", timer_data.line_number))
   end
   
   -- 残りの項目がある場合は通知
@@ -478,15 +477,17 @@ function M.show_timer_selection(timer_options, timer_data_map)
   if selected_option then
     local selected_timer = timer_data_map[selected_option]
     if selected_timer then
-      M.jump_to_file_and_line(selected_timer.file_path, selected_timer.line_number)
+      -- 文字列ベースのジャンプ機能を使用
+      local task_id = display.generate_task_id(selected_timer.file_path, selected_timer.task_content)
+      M.jump_to_file_and_line_by_content(selected_timer.file_path, task_id)
     end
   else
     vim.notify("無効なキーです", vim.log.levels.WARN)
   end
 end
 
--- ファイルと行にジャンプするヘルパー関数（エラー修正版）
-function M.jump_to_file_and_line(file_path, line_number)
+-- 改良されたジャンプ機能（文字列検索ベース）
+function M.jump_to_file_and_line_by_content(file_path, task_id)
   -- ファイルが存在するかチェック
   if vim.fn.filereadable(file_path) == 0 then
     vim.notify(string.format("⚠️ ファイルが見つかりません: %s", file_path), vim.log.levels.ERROR)
@@ -505,28 +506,39 @@ function M.jump_to_file_and_line(file_path, line_number)
     if choice == 1 then
       -- 保存してジャンプ
       vim.cmd('write')
-    elseif choice == 2 then
-      -- 保存せずにジャンプ（変更を破棄）
-      -- 何もしないで続行
-    else
+    elseif choice == 3 then
       -- キャンセル
       vim.notify("ジャンプをキャンセルしました", vim.log.levels.INFO)
       return
     end
+    -- choice == 2 なら保存せずに続行
   end
   
-  -- ファイルを開く（未保存の変更があっても強制的に開く）
+  -- ファイルを開く
   vim.cmd('edit! ' .. vim.fn.fnameescape(file_path))
+  local bufnr = vim.api.nvim_get_current_buf()
   
-  -- 指定された行にジャンプ
-  vim.api.nvim_win_set_cursor(0, {line_number, 0})
+  -- 文字列ベースでタスクを検索
+  local line_number, found_line = display.find_task_by_content(bufnr, task_id)
   
-  -- ジャンプ先をハイライト（オプション）
-  vim.cmd('normal! zz')  -- 画面中央にスクロール
-  
-  -- 成功通知
-  local file_name = vim.fn.fnamemodify(file_path, ":t")
-  vim.notify(string.format("🎯 %s:%d にジャンプしました", file_name, line_number), vim.log.levels.INFO)
+  if line_number then
+    -- タスクが見つかった場合
+    vim.api.nvim_win_set_cursor(0, {line_number, 0})
+    vim.cmd('normal! zz')  -- 画面中央にスクロール
+    
+    local file_name = vim.fn.fnamemodify(file_path, ":t")
+    vim.notify(string.format("🎯 %s:%d にジャンプしました", file_name, line_number), vim.log.levels.INFO)
+  else
+    -- タスクが見つからない場合
+    vim.notify("⚠️ 該当するタスクが見つかりません（内容が変更された可能性があります）", vim.log.levels.WARN)
+    
+    -- タスク内容の一部を表示してヒントを提供
+    local timer_data = active_timers[task_id]
+    if timer_data then
+      local preview = timer_data.task_content:gsub("-.*%[.-%]", ""):gsub("^%s+", "")
+      vim.notify(string.format("探していたタスク: %s", preview:sub(1, 50)), vim.log.levels.INFO)
+    end
+  end
 end
 
 -- Insertモードから抜けた時のタイマー自動復元（デバッグ版）
@@ -545,7 +557,7 @@ function M.auto_restore_timers(bufnr)
   for line_num, line in ipairs(lines) do
     -- 進行中タスクを検出
     if line:match('-%s*%[%-%]') then
-      local task_id = display.generate_task_id(file_path, line_num, line)
+      local task_id = display.generate_task_id(file_path, line)
       
       -- デバッグ: 進行中タスク発見（ファイルパス付き）
       debug_log(string.format("🔍 進行中タスク発見: %d行目 - %s", line_num, task_id:sub(1, 20)))
@@ -562,7 +574,7 @@ function M.auto_restore_timers(bufnr)
           debug_log(string.format("🔍 保存済みタイマー復元: %s", task_id:sub(1, 20)))
         else
           -- 新規タイマーを開始
-          M.start_timer(task_id, file_path, line_num, line)
+          M.start_timer(task_id, file_path, line)
           new_timer_count = new_timer_count + 1
           debug_log(string.format("🔍 新規タイマー開始: %s", task_id:sub(1, 20)))
         end

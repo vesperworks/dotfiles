@@ -33,13 +33,52 @@ function M.format_elapsed_time(start_time)
   end
 end
 
--- タスクIDを生成（ファイルパス + 行番号 + タスク内容のハッシュ）
-function M.generate_task_id(file_path, line_number, task_content)
+-- タスクIDを生成（ファイルパス + タスク内容の文字列ベース）
+function M.generate_task_id(file_path, task_content)
   local file_name = vim.fn.fnamemodify(file_path, ":t")
-  -- gsub の戻り値を明示的に1つに制限
-  local normalized_content = (task_content:gsub("%s+", " "))
+  -- タスク内容を正規化（空白を統一、チェックボックス部分を除去）
+  local normalized_content = task_content
+    :gsub("%s+", " ")                    -- 連続空白を1つに
+    :gsub("^%s*-%s*%[.-%]%s*", "")        -- チェックボックス部分を除去
+    :gsub("^%s+", "")                    -- 先頭空白を除去
+    :gsub("%s+$", "")                    -- 末尾空白を除去
+  
+  -- より精密なハッシュ生成
   local content_hash = vim.fn.sha256(normalized_content)
-  return string.format("%s:%d:%s", file_name, line_number, content_hash:sub(1, 8))
+  return string.format("%s::%s", file_name, content_hash:sub(1, 12))
+end
+
+-- タスクを文字列で検索する新機能
+function M.find_task_by_content(bufnr, target_task_id)
+  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  local file_path = vim.api.nvim_buf_get_name(bufnr)
+  
+  -- 完全マッチを探す
+  for line_num, line in ipairs(lines) do
+    if line:match('-%s*%[%-%]') then
+      local current_task_id = M.generate_task_id(file_path, line)
+      if current_task_id == target_task_id then
+        return line_num, line
+      end
+    end
+  end
+  
+  -- 完全マッチがない場合、部分マッチを試行
+  local target_hash = target_task_id:match("::(.+)$")
+  if target_hash then
+    for line_num, line in ipairs(lines) do
+      if line:match('-%s*%[%-%]') then
+        local current_task_id = M.generate_task_id(file_path, line)
+        local current_hash = current_task_id:match("::(.+)$")
+        -- ハッシュの前半が一致する場合（部分マッチ）
+        if current_hash and target_hash:sub(1, 8) == current_hash:sub(1, 8) then
+          return line_num, line
+        end
+      end
+    end
+  end
+  
+  return nil, nil -- 見つからない場合
 end
 
 -- 特定バッファの表示更新
@@ -64,7 +103,7 @@ function M.update_buffer_display(bufnr, active_timers)
   for line_num, line in ipairs(lines) do
     -- 進行中タスク（- [-]）を検出
     if line:match('-%s*%[%-%]') then
-      local task_id = M.generate_task_id(file_path, line_num, line)
+      local task_id = M.generate_task_id(file_path, line)
       local timer_data = active_timers[task_id]
       
       if timer_data then

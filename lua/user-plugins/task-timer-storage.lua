@@ -65,10 +65,10 @@ function M.save_timers(timers)
   -- file_pathを環境変数と~で正規化してからJSONに保存
   local normalized_timers = {}
   for task_id, timer_data in pairs(timers) do
+    -- line_number は除外（文字列ベースなので不要）
     normalized_timers[task_id] = {
       start_time = timer_data.start_time,
       file_path = normalize_path_for_storage(timer_data.file_path),
-      line_number = timer_data.line_number,
       task_content = timer_data.task_content
     }
   end
@@ -86,7 +86,7 @@ function M.save_timers(timers)
   return false
 end
 
--- 🔒 安全な単一タイマー保存（マージ機能付き）
+-- 🔒 安全な単一タイマー保存（行番号除外版）
 function M.save_timer_safe(task_id, timer_data)
   -- 既存データを読み込み
   local existing_timers = M.load_timers()
@@ -95,8 +95,8 @@ function M.save_timer_safe(task_id, timer_data)
   existing_timers[task_id] = {
     start_time = timer_data.start_time,
     file_path = normalize_path_for_storage(timer_data.file_path),
-    line_number = timer_data.line_number,
     task_content = timer_data.task_content,
+    -- line_number は削除（文字列ベースなので不要）
     last_updated = os.time()  -- 更新時刻を記録
   }
   
@@ -129,8 +129,8 @@ function M.save_timers_internal(timers)
     normalized_timers[task_id] = {
       start_time = timer_data.start_time,
       file_path = normalize_path_for_storage(timer_data.file_path),
-      line_number = timer_data.line_number,
       task_content = timer_data.task_content,
+      -- line_number は削除（文字列ベースなので不要）
       last_updated = timer_data.last_updated or os.time()  -- 更新時刻を保持
     }
   end
@@ -213,10 +213,10 @@ function M.load_timers()
       -- file_pathを絶対パスに展開
       local expanded_timers = {}
       for task_id, timer_data in pairs(timers) do
+        -- line_number は除外（文字列ベースなので不要）
         expanded_timers[task_id] = {
           start_time = timer_data.start_time,
           file_path = expand_path_from_storage(timer_data.file_path),
-          line_number = timer_data.line_number,
           task_content = timer_data.task_content
         }
       end

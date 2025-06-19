@@ -506,59 +506,150 @@ function M.insert_code_block()
   end)
 end
 
--- 言語選択UI
+-- 汎用選択UI（Insert mode文字入力受付）
+function M.show_selection_buffer(options, prompt, default_key, callback)
+  -- 専用バッファ作成
+  local buf = vim.api.nvim_create_buf(false, true)
+  local lines = { prompt, "" }
+  
+  -- 選択肢を表示用に整形
+  for _, option in ipairs(options) do
+    local key = option[3] ~= "" and option[3] or "Space"
+    local display = option[2]
+    table.insert(lines, string.format("  %s: %s", key, display))
+  end
+  
+  table.insert(lines, "")
+  table.insert(lines, "  Enter: デフォルト | Esc: キャンセル")
+  table.insert(lines, "")
+  table.insert(lines, "  ▶ キーを入力してください...")
+  
+  -- バッファにコンテンツを設定
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  vim.api.nvim_buf_set_option(buf, 'modifiable', false)
+  vim.api.nvim_buf_set_option(buf, 'bufhidden', 'wipe')
+  vim.api.nvim_buf_set_option(buf, 'buftype', 'nofile')
+  
+  -- ウィンドウサイズを計算
+  local width = 0
+  for _, line in ipairs(lines) do
+    width = math.max(width, vim.fn.strdisplaywidth(line))
+  end
+  width = math.min(width + 4, vim.o.columns - 10)
+  local height = math.min(#lines + 2, vim.o.lines - 10)
+  
+  -- フローティングウィンドウ作成
+  local win = vim.api.nvim_open_win(buf, true, {
+    relative = 'cursor',
+    width = width,
+    height = height,
+    row = 1,
+    col = 1,
+    border = 'rounded',
+    style = 'minimal',
+    title = ' 選択してください ',
+    title_pos = 'center'
+  })
+  
+  -- ウィンドウオプション設定
+  vim.api.nvim_win_set_option(win, 'wrap', false)
+  vim.api.nvim_win_set_option(win, 'cursorline', false)
+  
+  -- クローズ処理
+  local function close_and_callback(result)
+    if vim.api.nvim_win_is_valid(win) then
+      vim.api.nvim_win_close(win, true)
+    end
+    callback(result)
+  end
+  
+  -- Insert modeでの文字入力受付（LSP風）
+  local function setup_input_handler()
+    -- Insert modeに切り替え
+    vim.cmd('startinsert')
+    
+    -- InsertCharPre autocmdで文字入力をキャッチ
+    local group = vim.api.nvim_create_augroup('SelectionInput', { clear = true })
+    
+    vim.api.nvim_create_autocmd('InsertCharPre', {
+      buffer = buf,
+      group = group,
+      callback = function()
+        local char = vim.v.char
+        
+        -- 改行やスペースは処理しない
+        if char == '\n' or char == '\r' then
+          return
+        end
+        
+        -- 入力をキャンセル（文字を表示させない）
+        vim.v.char = ''
+        
+        -- 非同期で処理（InsertCharPre中の制限を回避）
+        vim.schedule(function()
+          -- Spaceキーの処理
+          if char == ' ' then
+            for _, option in ipairs(options) do
+              if option[1] == "" then
+                vim.api.nvim_del_augroup_by_id(group)
+                close_and_callback(option)
+                return
+              end
+            end
+            vim.api.nvim_del_augroup_by_id(group)
+            close_and_callback(nil)
+            return
+          end
+          
+          -- 各選択肢の文字をチェック
+          for _, option in ipairs(options) do
+            if option[3] == char then
+              vim.api.nvim_del_augroup_by_id(group)
+              close_and_callback(option)
+              return
+            end
+          end
+        end)
+      end
+    })
+    
+    -- Enterキーの処理
+    vim.keymap.set('i', '<CR>', function()
+      vim.api.nvim_del_augroup_by_id(group)
+      if default_key then
+        for _, option in ipairs(options) do
+          if option[1] == default_key then
+            close_and_callback(option)
+            return
+          end
+        end
+      end
+      close_and_callback(nil)
+    end, { buffer = buf, silent = true })
+    
+    -- ESCキーの処理
+    vim.keymap.set('i', '<Esc>', function()
+      vim.api.nvim_del_augroup_by_id(group)
+      close_and_callback(nil)
+    end, { buffer = buf, silent = true })
+    
+    -- ウィンドウが閉じられた時のクリーンアップ
+    vim.api.nvim_create_autocmd('WinClosed', {
+      pattern = tostring(win),
+      group = group,
+      callback = function()
+        vim.api.nvim_del_augroup_by_id(group)
+      end
+    })
+  end
+  
+  -- 少し遅延してからInput modeセットアップ（ウィンドウが完全に表示されてから）
+  vim.defer_fn(setup_input_handler, 10)
+end
+
+-- 言語選択UI（専用バッファモード版）
 function M.show_language_selection(languages, prompt, callback)
-  -- メッセージを表示
-  local message_lines = { "💻 " .. prompt }
-  
-  for i, lang in ipairs(languages) do
-    local key = lang[3] ~= "" and lang[3] or "Space"
-    local display = lang[2]
-    table.insert(message_lines, string.format("  %s: %s", key, display))
-  end
-  
-  table.insert(message_lines, "")
-  table.insert(message_lines, "  Enter: No language (デフォルト) | Esc: キャンセル")
-  
-  -- メッセージを通知として表示
-  vim.notify(table.concat(message_lines, "\n"), vim.log.levels.INFO, { title = "Language Selection" })
-  
-  -- 一文字入力を待機
-  local char = vim.fn.getchar()
-  local input = vim.fn.nr2char(char)
-  
-  -- Enter（13）またはESC（27）の処理
-  if char == 13 then -- Enter
-    -- デフォルトで言語なしを選択
-    for _, lang in ipairs(languages) do
-      if lang[1] == "" then
-        callback(lang)
-        return
-      end
-    end
-  elseif char == 27 then -- ESC
-    callback(nil)
-    return
-  elseif char == 32 then -- Space
-    -- 言語なしを選択
-    for _, lang in ipairs(languages) do
-      if lang[1] == "" then
-        callback(lang)
-        return
-      end
-    end
-  end
-  
-  -- 入力されたキーに対応する言語を探す
-  for _, lang in ipairs(languages) do
-    if lang[3] == input then
-      callback(lang)
-      return
-    end
-  end
-  
-  -- 見つからない場合はキャンセル
-  callback(nil)
+  M.show_selection_buffer(languages, "💻 " .. prompt, "", callback)
 end
 
 -- 新しいCalloutを作成する関数
@@ -653,51 +744,9 @@ function M.create_new_callout(start_row, end_row)
   end)
 end
 
--- Callout選択UI（asdfghjk;対応）
+-- Callout選択UI（専用バッファモード版）
 function M.show_callout_selection(callout_types, prompt, callback)
-  -- メッセージを表示
-  local message_lines = { "🔟 " .. prompt }
-  
-  for i, callout in ipairs(callout_types) do
-    local key = callout[3] or tostring(i)
-    local display = callout[2]
-    table.insert(message_lines, string.format("  %s: %s", key, display))
-  end
-  
-  table.insert(message_lines, "")
-  table.insert(message_lines, "  Enter: Quote (デフォルト) | Esc: キャンセル")
-  
-  -- メッセージを通知として表示
-  vim.notify(table.concat(message_lines, "\n"), vim.log.levels.INFO, { title = "Callout Selection" })
-  
-  -- 一文字入力を待機
-  local char = vim.fn.getchar()
-  local input = vim.fn.nr2char(char)
-  
-  -- Enter（13）またはESC（27）の処理
-  if char == 13 then -- Enter
-    -- デフォルトでquoteを選択
-    for _, callout in ipairs(callout_types) do
-      if callout[1] == "quote" then
-        callback(callout)
-        return
-      end
-    end
-  elseif char == 27 then -- ESC
-    callback(nil)
-    return
-  end
-  
-  -- 入力されたキーに対応するcalloutを探す
-  for _, callout in ipairs(callout_types) do
-    if callout[3] == input then
-      callback(callout)
-      return
-    end
-  end
-  
-  -- 見つからない場合はキャンセル
-  callback(nil)
+  M.show_selection_buffer(callout_types, "🔟 " .. prompt, "quote", callback)
 end
 
 -- キーマップを設定する関数
