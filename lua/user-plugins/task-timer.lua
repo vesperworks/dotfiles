@@ -361,7 +361,7 @@ function M.show_timer_data_info()
   vim.notify(table.concat(info, "\n"), vim.log.levels.INFO)
 end
 
--- 🎯 新機能: アクティブタイマー選択ジャンプ（改良版）
+-- 🎯 新機能: アクティブタイマー選択ジャンプ（leader-c方式UI統一版）
 function M.jump_to_active_timer()
   -- デバッグ: 関数開始ログ（現在ファイル情報付き）
   local current_file = vim.api.nvim_buf_get_name(0)
@@ -395,8 +395,9 @@ function M.jump_to_active_timer()
     -- ユーザーに表示する選択肢テキスト（line_number除外版）
     local display_text = string.format("%s %s [%s]", elapsed_text, task_preview, file_name)
     
-    table.insert(timer_options, display_text)
-    timer_data_map[display_text] = timer_data
+    -- leader-c方式のオプション形式に変換
+    table.insert(timer_options, { task_id, display_text, tostring(#timer_options + 1) })
+    timer_data_map[task_id] = timer_data
     
     -- デバッグ: 各タイマー情報（ファイルパス付き）
     debug_log(string.format("🔍 タイマー追加: %s", display_text))
@@ -407,17 +408,17 @@ function M.jump_to_active_timer()
   -- デバッグ: 選択肢数確認
   debug_log(string.format("🔍 選択肢数: %d個", #timer_options))
   
-  -- 独自の選択UIを表示
-  M.show_timer_selection(timer_options, timer_data_map)
+  -- leader-c方式の専用バッファUIを表示
+  M.show_timer_selection_buffer(timer_options, timer_data_map)
   
   -- デバッグ: 関数終了ログ
   debug_log("🔍 jump_to_active_timer() 終了")
 end
 
--- 独自のタイマー選択UI（asdfghjklキーで選択）
-function M.show_timer_selection(timer_options, timer_data_map)
+-- 📟 leader-c方式の専用バッファタイマー選択UI
+function M.show_timer_selection_buffer(timer_options, timer_data_map)
   -- デバッグ: 関数開始ログ
-  debug_log(string.format("🔍 show_timer_selection() 開始 - オプション数: %d", #timer_options))
+  debug_log(string.format("🔍 show_timer_selection_buffer() 開始 - オプション数: %d", #timer_options))
   
   -- 選択キー（最大9個まで表示）
   local selection_keys = { 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l' }
@@ -428,62 +429,152 @@ function M.show_timer_selection(timer_options, timer_data_map)
   -- デバッグ: 表示数確認
   debug_log(string.format("🔍 表示予定数: %d個", display_count))
   
-  -- 選択肢を構築
-  local display_lines = { "🎯 稼働中タイマーにジャンプ:" }
-  local key_to_option = {}
+  -- 専用バッファ作成
+  local buf = vim.api.nvim_create_buf(false, true)
+  local lines = { "🎯 稼働中タイマーにジャンプ:", "" }
   
+  -- 選択肢を表示用に整形
+  local key_to_task_id = {}
   for i = 1, display_count do
     local key = selection_keys[i]
     local option = timer_options[i]
-    table.insert(display_lines, string.format("%s: %s", key, option))
-    key_to_option[key] = option
+    local task_id = option[1]
+    local display_text = option[2]
+    
+    table.insert(lines, string.format("  %s: %s", key, display_text))
+    key_to_task_id[key] = task_id
     
     -- デバッグ: 各選択肢（ファイルパス付き）
-    local timer_data = timer_data_map[option]
-    debug_log(string.format("🔍 %s: %s", key, option))
+    local timer_data = timer_data_map[task_id]
+    debug_log(string.format("🔍 %s: %s", key, display_text))
     debug_log(string.format("🔍   → フルパス: %s", timer_data.file_path))
   end
   
   -- 残りの項目がある場合は通知
   if #timer_options > display_count then
-    table.insert(display_lines, string.format("... 他 %d個のタイマー", #timer_options - display_count))
+    table.insert(lines, string.format("  ... 他 %d個のタイマー", #timer_options - display_count))
   end
   
-  table.insert(display_lines, "Esc: キャンセル")
+  table.insert(lines, "")
+  table.insert(lines, "  x: 🗑️ 見失ったタスクを削除 | Enter: デフォルト | Esc: キャンセル")
+  table.insert(lines, "")
+  table.insert(lines, "  ▶ キーを入力してください...")
   
-  -- デバッグ: 表示内容
-  debug_log(string.format("🔍 表示行数: %d行", #display_lines))
+  -- バッファにコンテンツを設定
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  vim.api.nvim_buf_set_option(buf, 'modifiable', false)
+  vim.api.nvim_buf_set_option(buf, 'bufhidden', 'wipe')
+  vim.api.nvim_buf_set_option(buf, 'buftype', 'nofile')
   
-  -- 選択肢を表示
-  vim.notify(table.concat(display_lines, "\n"), vim.log.levels.INFO)
-  
-  -- デバッグ: キー入力待機中
-  debug_log("🔍 キー入力待機中...")
-  
-  -- キー入力を待機
-  local char = vim.fn.getchar()
-  
-  -- ESCキーでキャンセル
-  if char == 27 then
-    vim.notify("キャンセルしました", vim.log.levels.INFO)
-    return
+  -- ウィンドウサイズを計算
+  local width = 0
+  for _, line in ipairs(lines) do
+    width = math.max(width, vim.fn.strdisplaywidth(line))
   end
+  width = math.min(width + 4, vim.o.columns - 10)
+  local height = math.min(#lines + 2, vim.o.lines - 10)
   
-  -- 入力された文字を取得
-  local input_key = vim.fn.nr2char(char)
+  -- フローティングウィンドウ作成
+  local win = vim.api.nvim_open_win(buf, true, {
+    relative = 'cursor',
+    width = width,
+    height = height,
+    row = 1,
+    col = 1,
+    border = 'rounded',
+    style = 'minimal',
+    title = ' 🎯 タイマージャンプ ',
+    title_pos = 'center'
+  })
   
-  -- 選択されたオプションを取得
-  local selected_option = key_to_option[input_key]
-  if selected_option then
-    local selected_timer = timer_data_map[selected_option]
-    if selected_timer then
-      -- 文字列ベースのジャンプ機能を使用
-      local task_id = display.generate_task_id(selected_timer.file_path, selected_timer.task_content)
-      M.jump_to_file_and_line_by_content(selected_timer.file_path, task_id)
+  -- ウィンドウオプション設定
+  vim.api.nvim_win_set_option(win, 'wrap', false)
+  vim.api.nvim_win_set_option(win, 'cursorline', false)
+  
+  -- クローズ処理
+  local function close_and_callback(result)
+    if vim.api.nvim_win_is_valid(win) then
+      vim.api.nvim_win_close(win, true)
     end
-  else
-    vim.notify("無効なキーです", vim.log.levels.WARN)
+    if result then
+      result()
+    end
   end
+  
+  -- Insert modeでの文字入力受付（LSP風）
+  local function setup_input_handler()
+    -- Insert modeに切り替え
+    vim.cmd('startinsert')
+    
+    -- InsertCharPre autocmdで文字入力をキャッチ
+    local group = vim.api.nvim_create_augroup('TimerSelectionInput', { clear = true })
+    
+    vim.api.nvim_create_autocmd('InsertCharPre', {
+      buffer = buf,
+      group = group,
+      callback = function()
+        local char = vim.v.char
+        
+        -- 改行は処理しない
+        if char == '\n' or char == '\r' then
+          return
+        end
+        
+        -- 入力をキャンセル（文字を表示させない）
+        vim.v.char = ''
+        
+        -- 非同期で処理（InsertCharPre中の制限を回避）
+        vim.schedule(function()
+          -- 見失ったタスク削除機能
+          if char == 'x' then
+            vim.api.nvim_del_augroup_by_id(group)
+            close_and_callback(function()
+              M.remove_lost_tasks()
+            end)
+            return
+          end
+          
+          -- 各選択肢の文字をチェック
+          local task_id = key_to_task_id[char]
+          if task_id then
+            local timer_data = timer_data_map[task_id]
+            if timer_data then
+              vim.api.nvim_del_augroup_by_id(group)
+              close_and_callback(function()
+                -- 文字列ベースのジャンプ機能を使用
+                M.jump_to_file_and_line_by_content(timer_data.file_path, task_id)
+              end)
+              return
+            end
+          end
+        end)
+      end
+    })
+    
+    -- Enterキーの処理
+    vim.keymap.set('i', '<CR>', function()
+      vim.api.nvim_del_augroup_by_id(group)
+      close_and_callback(nil)
+    end, { buffer = buf, silent = true })
+    
+    -- ESCキーの処理
+    vim.keymap.set('i', '<Esc>', function()
+      vim.api.nvim_del_augroup_by_id(group)
+      close_and_callback(nil)
+    end, { buffer = buf, silent = true })
+    
+    -- ウィンドウが閉じられた時のクリーンアップ
+    vim.api.nvim_create_autocmd('WinClosed', {
+      pattern = tostring(win),
+      group = group,
+      callback = function()
+        vim.api.nvim_del_augroup_by_id(group)
+      end
+    })
+  end
+  
+  -- 少し遅延してからInput modeセットアップ（ウィンドウが完全に表示されてから）
+  vim.defer_fn(setup_input_handler, 10)
 end
 
 -- 改良されたジャンプ機能（文字列検索ベース）
@@ -538,6 +629,112 @@ function M.jump_to_file_and_line_by_content(file_path, task_id)
       local preview = timer_data.task_content:gsub("-.*%[.-%]", ""):gsub("^%s+", "")
       vim.notify(string.format("探していたタスク: %s", preview:sub(1, 50)), vim.log.levels.INFO)
     end
+  end
+end
+
+-- 🗑️ 見失ったタスクを削除する機能
+function M.remove_lost_tasks()
+  local removed_count = 0
+  local lost_tasks = {}
+  
+  -- 各アクティブタイマーのタスクが存在するかチェック
+  for task_id, timer_data in pairs(active_timers) do
+    local file_path = timer_data.file_path
+    
+    -- ファイルが存在するかチェック
+    if vim.fn.filereadable(file_path) == 0 then
+      table.insert(lost_tasks, {
+        task_id = task_id,
+        reason = "ファイルが見つからない",
+        file_name = vim.fn.fnamemodify(file_path, ":t")
+      })
+    else
+      -- ファイルを開いてタスクが存在するかチェック
+      local bufnr = vim.fn.bufnr(file_path)
+      local need_load = false
+      local should_check_task = true
+      
+      if bufnr == -1 then
+        -- バッファにない場合は一時的に読み込み（エラーハンドリング付き）
+        bufnr = vim.fn.bufnr(file_path, true)
+        local ok, err = pcall(vim.fn.bufload, bufnr)
+        if not ok then
+          -- バッファ読み込みエラーの場合はスキップ（swapファイル等）
+          debug_log(string.format("🔍 バッファ読み込みエラー、スキップ: %s - %s", vim.fn.fnamemodify(file_path, ":t"), tostring(err)))
+          should_check_task = false
+          -- エラーが発生したバッファをクリーンアップ
+          pcall(vim.api.nvim_buf_delete, bufnr, { force = true })
+        else
+          need_load = true
+        end
+      end
+      
+      if should_check_task then
+        -- 文字列ベースでタスクを検索
+        local ok, line_number, found_line = pcall(display.find_task_by_content, bufnr, task_id)
+        
+        if not ok then
+          -- 検索エラーの場合はスキップ
+          debug_log(string.format("🔍 タスク検索エラー、スキップ: %s", vim.fn.fnamemodify(file_path, ":t")))
+        elseif not line_number then
+          -- タスクが見つからない場合は削除対象
+          table.insert(lost_tasks, {
+            task_id = task_id,
+            reason = "タスクが見つからない（内容が変更された可能性）",
+            file_name = vim.fn.fnamemodify(file_path, ":t"),
+            task_preview = timer_data.task_content:gsub("-.*%[.-%]", ""):gsub("^%s+", ""):sub(1, 30)
+          })
+        end
+      end
+      
+      -- 一時的に読み込んだバッファは削除
+      if need_load then
+        pcall(vim.api.nvim_buf_delete, bufnr, { force = true })
+      end
+    end
+  end
+  
+  -- 見失ったタスクを削除
+  if #lost_tasks > 0 then
+    local confirmation_lines = {
+      string.format("🗑️ %d個の見失ったタスクが見つかりました:", #lost_tasks),
+      ""
+    }
+    
+    for i, lost_task in ipairs(lost_tasks) do
+      local reason_text = lost_task.reason
+      local file_name = lost_task.file_name
+      local preview = lost_task.task_preview and (" (" .. lost_task.task_preview .. "...)") or ""
+      table.insert(confirmation_lines, string.format("  %d. [%s] %s%s", i, file_name, reason_text, preview))
+    end
+    
+    table.insert(confirmation_lines, "")
+    table.insert(confirmation_lines, "これらのタスクタイマーを削除しますか？")
+    
+    -- 確認ダイアログを表示
+    local choice = vim.fn.confirm(
+      table.concat(confirmation_lines, "\n"),
+      "&d: 削除する\n&c: キャンセル",
+      2
+    )
+    
+    if choice == 1 then
+      -- 削除実行
+      for _, lost_task in ipairs(lost_tasks) do
+        M.stop_timer(lost_task.task_id)
+        removed_count = removed_count + 1
+      end
+      
+      -- 表示を更新
+      display.clear_all_displays()
+      display.update_all_displays(active_timers)
+      
+      vim.notify(string.format("🗑️ %d個の見失ったタスクタイマーを削除しました", removed_count), vim.log.levels.INFO)
+    else
+      vim.notify("削除をキャンセルしました", vim.log.levels.INFO)
+    end
+  else
+    vim.notify("✅ 見失ったタスクはありませんでした", vim.log.levels.INFO)
   end
 end
 

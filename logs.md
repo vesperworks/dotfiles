@@ -394,6 +394,125 @@ vim.api.nvim_create_autocmd('InsertCharPre', {
 
 ---
 
+## 2025-06-19
+
+### leader-j UI統一 & 見失ったタスク削除機能実装（完了）
+
+**要求:**
+- leader-jのジャンプ時に見失ったタスクは削除したい
+- 表示をleader-cと同じ方式に変更したい
+
+**実装内容:**
+
+**1. 🎯 leader-j UIをleader-c方式に統一**
+```lua
+-- 従来: vim.fn.getchar()を使った従来の選択方式
+-- 新: 専用バッファ + Insertモード + LSP風UI
+
+function M.show_timer_selection_buffer(timer_options, timer_data_map)
+  -- 専用バッファ作成
+  local buf = vim.api.nvim_create_buf(false, true)
+  
+  -- フローティングウィンドウ + 美しいボーダー
+  local win = vim.api.nvim_open_win(buf, true, {
+    border = 'rounded',
+    title = ' 🎯 タイマージャンプ ',
+    title_pos = 'center'
+  })
+  
+  -- Insert modeでの文字入力受付（LSP風）
+  vim.api.nvim_create_autocmd('InsertCharPre', {
+    callback = function()
+      vim.v.char = ''  -- 文字表示キャンセル
+      vim.schedule(function()
+        -- 非同期で処理（制限回避）
+      end)
+    end
+  })
+end
+```
+
+**2. 🗑️ 見失ったタスク削除機能追加**
+```lua
+function M.remove_lost_tasks()
+  local lost_tasks = {}
+  
+  -- 各アクティブタイマーのタスクが存在するかチェック
+  for task_id, timer_data in pairs(active_timers) do
+    -- ファイル存在チェック
+    if vim.fn.filereadable(file_path) == 0 then
+      table.insert(lost_tasks, { reason = "ファイルが見つからない" })
+    else
+      -- 文字列ベースでタスクを検索
+      local line_number = display.find_task_by_content(bufnr, task_id)
+      if not line_number then
+        table.insert(lost_tasks, { reason = "タスクが見つからない" })
+      end
+    end
+  end
+  
+  -- 確認ダイアログ + 削除実行
+end
+```
+
+**3. 🎨 新機能UI:**
+- **`x`キー**: 🗑️ 見失ったタスクを削除
+- **`asdfghjkl`キー**: タイマー選択（最大9個まで）
+- **`Enter`**: デフォルト（何もせず終了）
+- **`Esc`**: キャンセル
+
+**新しい使用方法:**
+```
+<leader>j → フローティングウィンドウ表示
+🎯 稼働中タイマーにジャンプ:
+
+  a: (2h33m) 説明書読む [notes.md]
+  s: (3h32m) 一の木さんに連絡して... [tasks.md]
+  d: (3h22m) paneを変えるとタイマーが重複... [debug.md]
+  
+  x: 🗑️ 見失ったタスクを削除 | Enter: デフォルト | Esc: キャンセル
+  
+  ▶ キーを入力してください...
+```
+
+**技術的改善:**
+- **UI統一性**: leader-cと完全に同じ操作感
+- **見失ったタスク自動検出**: ファイル削除・内容変更を検出
+- **確認ダイアログ**: 削除前に詳細情報を表示
+- **安全な削除**: `stop_timer()`を使った適切な削除処理
+- **表示更新**: 削除後にvirtual textを自動更新
+
+**メリット:**
+- ✅ **操作性統一**: leader-cと同じInsert modeベースの直感的操作
+- ✅ **美しいUI**: タイトル付きフローティングウィンドウ
+- ✅ **メンテナンス向上**: 見失ったタスクを簡単に削除可能
+- ✅ **安全性**: 削除前の確認ダイアログで誤操作防止
+- ✅ **効率性**: ホームポジションからの素早い選択
+- ✅ **視認性**: 削除理由とタスクプレビューを表示
+
+**使用方法:**
+1. `<leader>j` でタイマージャンプUI表示
+2. `asdfghjkl` で任意のタイマーに瞬時にジャンプ
+3. `x` で見失ったタスクを安全に削除
+4. 操作感はleader-cと完全に統一
+
+**技術的価値:**
+- leader-cとleader-jのUI操作方式を完全統一
+- 見失ったタスクの自動検出アルゴリズム実装
+- Insert modeベースの安全なキー入力受付システム
+- フローティングウィンドウとautocmdの適切な組み合わせ
+- タスク管理システムの実用性とメンテナンス性の大幅向上
+
+**結果:**
+🎉 **leader-j UI統一 & クリーンアップ機能完成**
+- leader-cと同じ美しいフローティングウィンドウUI
+- 見失ったタスクの自動検出・削除機能
+- ホームポジション最適化されたキーバインド
+- 確認ダイアログによる安全な削除操作
+- **世界一快適なタスクタイマージャンプシステム**の実現 🚀
+
+---
+
 ## 2025-06-16
 
 ### Timer実装の全問題修正（完了）
@@ -715,6 +834,124 @@ end
 
 **次回作業:**
 デバッグログを元に根本原因を特定し、的確な修正を実装
+
+---
+
+### leader-x機能分離と複数行対応実装（完了）
+
+**背景:**
+- leader-xと<CR>キーが同じ`toggle_checkbox_state`機能で重複していた
+- 機能が混在しており、明確な分離が必要
+- ユーザーがチェックボックス追加と状態変更を別々に使いたい
+
+**機能分離の明確化:**
+1. **`toggle_as_task`** (`<leader>x`): チェックボックス自体の追加/削除
+   - `通常テキスト` ↔ `- [ ] テキスト`
+   - `- リストアイテム` ↔ `- [ ] リストアイテム`
+
+2. **`toggle_checkbox_state`** (`<CR>`): チェックボックス状態の循環
+   - `[ ]` → `[-]` → `[x]` → `[ ]`
+   - タスクタイマーと連携
+
+**実装内容:**
+```lua
+-- 旧: toggle_checkbox → 新: toggle_as_task
+function M.toggle_as_task()
+  -- Visual mode対応の複数行処理を追加
+  local start_row, end_row = get_visual_range()
+  
+  for _, line in ipairs(lines) do
+    if string.match(line, "^%s*[%*%-]%s*%[[ x%-]%]%s") then
+      -- チェックボックスを削除
+    elseif string.match(line, "^%s*-%s") then
+      -- リストアイテムにチェックボックス追加
+    else
+      -- 通常テキストをタスク化
+    end
+  end
+end
+
+-- キーマップの変更
+vim.keymap.set({'n', 'v'}, '<leader>x', M.toggle_as_task, 
+  { desc = "Toggle task checkbox (複数行対応)" })
+```
+
+**新しい使用方法:**
+- **タスク化**: `<leader>x` でチェックボックスを追加/削除
+- **状態変更**: `<CR>` でチェックボックス状態を循環
+- **複数行**: 両方とも`v`で選択後に一括操作可能
+
+**メリット:**
+- ✅ **機能の明確化**: タスク化と状態変更を別々のキーで操作
+- ✅ **操作性向上**: 直感的なキーバインドで異なる操作
+- ✅ **効率化**: 複数行のタスク化を一括実行
+- ✅ **統一性**: leader--と同じVisual mode対応
+- ✅ **既存機能保持**: `<CR>`のタイマー連携機能はそのまま
+
+**技術的価値:**
+- 関数名の明確化で可読性向上 (`toggle_checkbox` → `toggle_as_task`)
+- Visual mode対応の統一的な範囲取得ロジック
+- 正規表現で全状態のチェックボックスをサポート (`[ x%-]`)
+- カーソル位置の最適化でUX向上
+
+**結果:**
+🎉 **チェックボックス機能の完全分離完成**
+- `<leader>x`: タスク化トグル（複数行対応）
+- `<CR>`: タスク状態循環（タイマー連携）
+- Visual modeでの複数行一括操作対応
+- **世界一快適なMarkdownタスク管理システム**の機能分離と整理 🚀
+
+---
+
+## 2025-06-20
+
+### leader-x複数行対応実装（完了）
+
+**要求:**
+- leader-xをvで複数行できるようにしたい
+- leader--と同じ使用感にしたい
+
+**実装内容:**
+```lua
+-- 修正前: 単行のみのチェックボックス追加/削除
+vim.keymap.set('n', '<leader>x', M.toggle_checkbox, 
+  vim.tbl_extend('force', opts, { desc = "Toggle checkbox" }))
+
+-- 修正後: 複数行対応のチェックボックス状態切り替え
+vim.keymap.set({'n', 'v'}, '<leader>x', M.toggle_checkbox_state, 
+  vim.tbl_extend('force', opts, { desc = "Toggle checkbox state (複数行対応)" }))
+```
+
+**新機能:**
+1. **Normal mode**: 現在の行のチェックボックス状態を切り替え
+2. **Visual mode**: 選択した複数行のチェックボックス状態を一括切り替え
+3. **状態遷移**: 未完了（`[ ]`）→ 実行中（`[-]`）→ 完了（`[x]`）→ 未完了の循環
+4. **タイマー統合**: 状態変更時に自動でタスクタイマーに通知
+
+**使用方法:**
+- **単行**: `<leader>x` で現在行のチェックボックス状態を切り替え
+- **複数行**: `v` で範囲選択 → `<leader>x` で選択範囲のチェックボックスを一括切り替え
+- **leader--との統一**: 両方とも同じ操作感で複数行対応
+
+**メリット:**
+- ✅ **操作性統一**: leader--と完全に同じ使用感
+- ✅ **効率向上**: 複数タスクの状態を一括変更可能
+- ✅ **タイマー連携**: 状態変更時に自動でタイマー開始/停止
+- ✅ **直感的操作**: Visual modeでの範囲選択 → 一括操作
+- ✅ **既存機能保持**: Normal modeでの単行操作も継続
+
+**技術的価値:**
+- 既存の`toggle_checkbox_state`関数を活用した効率的な実装
+- Normal & Visual mode両対応のキーマップ設定
+- タスクタイマーシステムとの完全統合
+- チェックボックス状態管理の一元化
+
+**結果:**
+🎉 **leader-x複数行対応完成**
+- leader--と同じ操作感でチェックボックス状態切り替え
+- Visual modeでの複数行一括操作対応
+- タスクタイマーとの完全連携
+- **世界一快適なMarkdownタスク管理システム**のさらなる進化 🚀
 
 ---
 
