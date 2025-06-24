@@ -174,21 +174,42 @@ create_task_worktree() {
             ;;
     esac
     
-    local task_branch="${branch_prefix}/${task_id}-${timestamp}"
+    # ブランチ名（タイムスタンプなし - 1 feature = 1 branch）
+    local task_branch="${branch_prefix}/${task_id}"
     # .worktreesサブディレクトリ内にworktreeを作成
     local worktree_path=".worktrees/${branch_prefix}-${task_id}"
     
     # 既存worktreeのチェック
-    if [[ -d "$worktree_path" ]] || git worktree list | grep -q "$worktree_path"; then
-        log_warning "Worktree already exists: $worktree_path"
-        # タイムスタンプを追加して別名にする
-        worktree_path=".worktrees/${branch_prefix}-${task_id}-${timestamp}"
+    if [[ -d "$worktree_path" ]]; then
+        # 既存worktreeが同じブランチを使用しているか確認
+        local existing_branch=$(git -C "$worktree_path" branch --show-current 2>/dev/null || echo "")
+        if [[ "$existing_branch" == "$task_branch" ]]; then
+            log_info "Reusing existing worktree for branch: $task_branch"
+            echo "$worktree_path|$task_branch|$(get_feature_name "$task_description" "$task_type")"
+            return 0
+        else
+            # 異なるブランチの場合は別のworktreeを作成
+            log_warning "Worktree exists with different branch: $existing_branch"
+            worktree_path=".worktrees/${branch_prefix}-${task_id}-${timestamp}"
+        fi
     fi
     
-    # worktree作成
+    # worktree作成（既存ブランチがあれば再利用）
     log_info "Creating worktree: $worktree_path"
-    if ! git worktree add "$worktree_path" -b "$task_branch" >/dev/null 2>&1; then
-        handle_error $? "Failed to create worktree" "$worktree_path"
+    if git show-ref --verify --quiet "refs/heads/${task_branch}"; then
+        log_info "Using existing branch: $task_branch"
+        git worktree add "$worktree_path" "$task_branch" >/dev/null 2>&1
+        local exit_code=$?
+        if [[ $exit_code -ne 0 ]]; then
+            handle_error $exit_code "Failed to create worktree with existing branch" "$worktree_path"
+        fi
+    else
+        log_info "Creating new branch: $task_branch"
+        git worktree add "$worktree_path" -b "$task_branch" >/dev/null 2>&1
+        local exit_code=$?
+        if [[ $exit_code -ne 0 ]]; then
+            handle_error $exit_code "Failed to create worktree with new branch" "$worktree_path"
+        fi
     fi
     
     # ブランチが正しく作成されたか確認
