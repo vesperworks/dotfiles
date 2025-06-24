@@ -157,7 +157,24 @@ create_task_worktree() {
     
     # タスク識別子生成
     local project_root=$(basename "$(pwd)")
-    local task_id=$(echo "$task_description" | sed 's/[^a-zA-Z0-9]/-/g' | cut -c1-20)
+    # 日本語を含む場合でも安全にブランチ名を生成
+    local task_id=$(echo "$task_description" | \
+        iconv -f UTF-8 -t ASCII//TRANSLIT 2>/dev/null || echo "$task_description")
+    
+    # 英数字とハイフンのみに変換
+    task_id=$(echo "$task_id" | \
+        sed 's/[^a-zA-Z0-9]/-/g' | \
+        tr '[:upper:]' '[:lower:]' | \
+        sed 's/--*/-/g' | \
+        sed 's/^-//' | \
+        sed 's/-$//' | \
+        cut -c1-30)
+    
+    # 空の場合はデフォルト値を設定
+    if [[ -z "$task_id" ]]; then
+        task_id="task"
+    fi
+    
     local timestamp=$(date +%Y%m%d-%H%M%S)
     
     # ブランチ名決定
@@ -331,6 +348,77 @@ run_tests() {
     return 0
 }
 
+# フェーズ管理システム
+create_phase_status() {
+    local worktree_path="$1"
+    local phase_name="$2"
+    local status="${3:-started}"
+    
+    local status_dir="$worktree_path/.status"
+    mkdir -p "$status_dir"
+    
+    echo "{
+  \"phase\": \"$phase_name\",
+  \"status\": \"$status\",
+  \"timestamp\": \"$(date -Iseconds)\",
+  \"pid\": $$
+}" > "$status_dir/${phase_name}.json"
+}
+
+check_phase_completed() {
+    local worktree_path="$1"
+    local phase_name="$2"
+    
+    local status_file="$worktree_path/.status/${phase_name}.json"
+    if [[ -f "$status_file" ]]; then
+        local status=$(grep '"status"' "$status_file" | cut -d'"' -f4)
+        if [[ "$status" == "completed" ]]; then
+            return 0
+        fi
+    fi
+    return 1
+}
+
+update_phase_status() {
+    local worktree_path="$1"
+    local phase_name="$2"
+    local status="$3"
+    
+    create_phase_status "$worktree_path" "$phase_name" "$status"
+}
+
+rollback_on_error() {
+    local worktree_path="$1"
+    local phase_name="$2"
+    local error_msg="$3"
+    
+    log_error "Phase '$phase_name' failed: $error_msg"
+    update_phase_status "$worktree_path" "$phase_name" "failed"
+    
+    # 失敗した状態をレポートに記録
+    local error_report="$worktree_path/error-report.md"
+    echo "# Error Report
+
+## Phase: $phase_name
+## Time: $(date)
+## Error: $error_msg
+
+### Worktree State
+$(git -C "$worktree_path" status --short)
+
+### Last Commit
+$(git -C "$worktree_path" log -1 --oneline)
+
+### Rollback Instructions
+1. Review the error above
+2. Fix the issue manually or restart the workflow
+3. Clean up with: git worktree remove $worktree_path
+" > "$error_report"
+    
+    git -C "$worktree_path" add "$error_report" 2>/dev/null
+    git -C "$worktree_path" commit -m "[ERROR] $phase_name failed: $error_msg" 2>/dev/null
+}
+
 # git操作の標準化
 git_commit_phase() {
     local phase="$1"
@@ -437,16 +525,41 @@ get_feature_name() {
     local task_type="$2"
     
     # タスク説明から意味のあるfeature名を抽出
-    # 例: "認証機能のJWT有効期限チェック不具合を修正" → "auth-jwt-fix"
-    local feature_name=$(echo "$task_description" | \
+    # 日本語文字を英語に変換してから処理
+    local feature_name=""
+    
+    # 一般的なキーワードを英語に変換
+    local translated=$(echo "$task_description" | \
+        sed -e 's/認証機能/auth/g' \
+            -e 's/認証/auth/g' \
+            -e 's/ログイン/login/g' \
+            -e 's/ユーザー/user/g' \
+            -e 's/データベース/database/g' \
+            -e 's/修正/fix/g' \
+            -e 's/追加/add/g' \
+            -e 's/削除/delete/g' \
+            -e 's/更新/update/g' \
+            -e 's/機能/feature/g' \
+            -e 's/リファクタリング/refactor/g' \
+            -e 's/テスト/test/g' \
+            -e 's/バグ/bug/g' \
+            -e 's/有効期限/expiry/g' \
+            -e 's/チェック/check/g' \
+            -e 's/不具合/issue/g' \
+            -e 's/を/ /g' \
+            -e 's/の/ /g')
+    
+    # 英数字とスペースのみ抽出して処理
+    feature_name=$(echo "$translated" | \
         sed 's/[^a-zA-Z0-9 ]//g' | \
         tr '[:upper:]' '[:lower:]' | \
-        awk '{print $1"-"$2"-"$3}' | \
+        awk '{for(i=1;i<=NF&&i<=3;i++) printf "%s-", $i}' | \
         sed 's/-$//' | \
-        sed 's/--/-/g')
+        sed 's/--*/-/g' | \
+        cut -c1-30)  # 最大30文字に制限
     
-    # 空の場合はタスクタイプ + タイムスタンプ
-    if [[ -z "$feature_name" ]] || [[ "$feature_name" == "--" ]]; then
+    # それでも空の場合はタスクタイプ + タイムスタンプ
+    if [[ -z "$feature_name" ]] || [[ "$feature_name" == "-" ]]; then
         feature_name="${task_type}-$(date +%Y%m%d-%H%M%S)"
     fi
     
@@ -597,6 +710,7 @@ export -f get_test_command create_task_worktree cleanup_worktree
 export -f load_prompt safe_execute run_tests git_commit_phase
 export -f show_progress create_structured_directories get_feature_name
 export -f cleanup_old_worktrees merge_to_main create_pull_request
+export -f create_phase_status check_phase_completed update_phase_status rollback_on_error
 
 # デフォルトプロンプトのエクスポート
 export DEFAULT_EXPLORER_PROMPT DEFAULT_PLANNER_PROMPT DEFAULT_CODER_PROMPT

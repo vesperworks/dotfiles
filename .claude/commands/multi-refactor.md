@@ -3,7 +3,7 @@
 あなたは現在、マルチエージェントリファクタリングワークフローのオーケストレーターです。Anthropic公式の git worktree ベストプラクティス（1タスク=1worktree）に基づき、以下の手順で**自動実行**してください。
 
 ## リファクタリング対象
-$ARGUMENTS
+$TASK_DESCRIPTION
 
 ## 利用可能なオプション
 - `--keep-worktree`: worktreeを保持（デフォルト: 削除）
@@ -34,7 +34,7 @@ source .claude/scripts/worktree-utils.sh || {
 }
 
 # オプション解析
-parse_workflow_options $ARGUMENTS
+parse_workflow_options "$@"
 
 # 環境検証
 verify_environment || exit 1
@@ -75,6 +75,9 @@ log_info "Working in worktree: $WORKTREE_PATH"
 
 show_progress "Analysis" 4 1
 
+# フェーズ開始を記録
+create_phase_status "$WORKTREE_PATH" "analysis" "started"
+
 # Explorerプロンプトの読み込み（メインディレクトリから）
 EXPLORER_PROMPT=$(load_prompt ".claude/prompts/explorer.md" "$DEFAULT_EXPLORER_PROMPT")
 ```
@@ -82,7 +85,7 @@ EXPLORER_PROMPT=$(load_prompt ".claude/prompts/explorer.md" "$DEFAULT_EXPLORER_P
 **Explorer指示**:
 $EXPLORER_PROMPT
 
-**リファクタリング対象**: $ARGUMENTS
+**リファクタリング対象**: $TASK_DESCRIPTION
 
 **作業ディレクトリ**: $WORKTREE_PATH
 **注意**: ClaudeCodeのアクセス制限により、直接worktreeディレクトリに移動できません。以下の方法で作業してください：
@@ -107,19 +110,30 @@ $EXPLORER_PROMPT
 # Analysis結果のコミット（worktree内で実行）
 if [[ -f "$WORKTREE_PATH/analysis-results.md" ]]; then
     git -C "$WORKTREE_PATH" add analysis-results.md
-    git -C "$WORKTREE_PATH" commit -m "[ANALYSIS] Current state analyzed: $ARGUMENTS" || {
-        log_error "Failed to commit analysis results"
+    git -C "$WORKTREE_PATH" commit -m "[ANALYSIS] Current state analyzed: $TASK_DESCRIPTION" || {
+        rollback_on_error "$WORKTREE_PATH" "analysis" "Failed to commit analysis results"
         handle_error 1 "Analysis phase failed" "$WORKTREE_PATH"
     }
     log_success "Committed: [ANALYSIS] Current state analyzed"
+    update_phase_status "$WORKTREE_PATH" "analysis" "completed"
 else
-    log_warning "$WORKTREE_PATH/analysis-results.md not found, skipping commit"
+    rollback_on_error "$WORKTREE_PATH" "analysis" "analysis-results.md not found"
+    handle_error 1 "Analysis results not created" "$WORKTREE_PATH"
 fi
 ```
 
 #### Phase 2: Plan（戦略策定）
 ```bash
 show_progress "Plan" 4 2
+
+# 前フェーズの完了確認
+if ! check_phase_completed "$WORKTREE_PATH" "analysis"; then
+    log_error "Analysis phase not completed"
+    handle_error 1 "Cannot proceed without analysis phase" "$WORKTREE_PATH"
+fi
+
+# フェーズ開始を記録
+create_phase_status "$WORKTREE_PATH" "plan" "started"
 
 # Plannerプロンプトの読み込み
 PLANNER_PROMPT=$(load_prompt ".claude/prompts/planner.md" "$DEFAULT_PLANNER_PROMPT")
@@ -129,7 +143,7 @@ PLANNER_PROMPT=$(load_prompt ".claude/prompts/planner.md" "$DEFAULT_PLANNER_PROM
 $PLANNER_PROMPT
 
 **前フェーズ結果**: `$WORKTREE_PATH/analysis-results.md`
-**リファクタリング対象**: $ARGUMENTS
+**リファクタリング対象**: $TASK_DESCRIPTION
 **作業ディレクトリ**: $WORKTREE_PATH
 
 **実行内容**:
@@ -144,19 +158,30 @@ $PLANNER_PROMPT
 # Plan結果のコミット（worktree内で実行）
 if [[ -f "$WORKTREE_PATH/refactoring-plan.md" ]]; then
     git -C "$WORKTREE_PATH" add refactoring-plan.md
-    git -C "$WORKTREE_PATH" commit -m "[PLAN] Refactoring strategy defined: $ARGUMENTS" || {
-        log_error "Failed to commit plan results"
+    git -C "$WORKTREE_PATH" commit -m "[PLAN] Refactoring strategy defined: $TASK_DESCRIPTION" || {
+        rollback_on_error "$WORKTREE_PATH" "plan" "Failed to commit plan results"
         handle_error 1 "Plan phase failed" "$WORKTREE_PATH"
     }
     log_success "Committed: [PLAN] Refactoring strategy defined"
+    update_phase_status "$WORKTREE_PATH" "plan" "completed"
 else
-    log_warning "$WORKTREE_PATH/refactoring-plan.md not found, skipping commit"
+    rollback_on_error "$WORKTREE_PATH" "plan" "refactoring-plan.md not found"
+    handle_error 1 "Plan results not created" "$WORKTREE_PATH"
 fi
 ```
 
 #### Phase 3: Refactor（段階的実行）
 ```bash
 show_progress "Refactor" 4 3
+
+# 前フェーズの完了確認
+if ! check_phase_completed "$WORKTREE_PATH" "plan"; then
+    log_error "Plan phase not completed"
+    handle_error 1 "Cannot proceed without plan phase" "$WORKTREE_PATH"
+fi
+
+# フェーズ開始を記録
+create_phase_status "$WORKTREE_PATH" "refactor" "started"
 
 # Coderプロンプトの読み込み
 CODER_PROMPT=$(load_prompt ".claude/prompts/coder.md" "$DEFAULT_CODER_PROMPT")
@@ -169,7 +194,7 @@ $CODER_PROMPT
 - `$WORKTREE_PATH/analysis-results.md`
 - `$WORKTREE_PATH/refactoring-plan.md`
 
-**リファクタリング対象**: $ARGUMENTS
+**リファクタリング対象**: $TASK_DESCRIPTION
 **作業ディレクトリ**: $WORKTREE_PATH
 
 **実行パターン**:
@@ -197,7 +222,7 @@ $CODER_PROMPT
 ```bash
 # ベースラインテストの実行
 if ! run_tests "$PROJECT_TYPE" "$WORKTREE_PATH"; then
-    log_error "Baseline tests failed - cannot proceed with refactoring"
+    rollback_on_error "$WORKTREE_PATH" "refactor" "Baseline tests failed - cannot proceed with refactoring"
     handle_error 1 "Tests must pass before refactoring" "$WORKTREE_PATH"
 fi
 
@@ -205,7 +230,7 @@ fi
 # Step 1: Extract Method
 if [[ -n $(git -C "$WORKTREE_PATH" diff --name-only) ]]; then
     git -C "$WORKTREE_PATH" add .
-    git -C "$WORKTREE_PATH" commit -m "[REFACTOR] Extract method: $ARGUMENTS" || {
+    git -C "$WORKTREE_PATH" commit -m "[REFACTOR] Extract method: $TASK_DESCRIPTION" || {
         log_warning "No changes for extract method"
     }
 fi
@@ -213,7 +238,7 @@ fi
 # Step 2: Rename  
 if [[ -n $(git -C "$WORKTREE_PATH" diff --name-only) ]]; then
     git -C "$WORKTREE_PATH" add .
-    git -C "$WORKTREE_PATH" commit -m "[REFACTOR] Rename for clarity: $ARGUMENTS" || {
+    git -C "$WORKTREE_PATH" commit -m "[REFACTOR] Rename for clarity: $TASK_DESCRIPTION" || {
         log_warning "No rename changes"
     }
 fi
@@ -221,7 +246,7 @@ fi
 # Step 3: Reorganize
 if [[ -n $(git -C "$WORKTREE_PATH" diff --name-only) ]]; then
     git -C "$WORKTREE_PATH" add .
-    git -C "$WORKTREE_PATH" commit -m "[REFACTOR] Reorganize structure: $ARGUMENTS" || {
+    git -C "$WORKTREE_PATH" commit -m "[REFACTOR] Reorganize structure: $TASK_DESCRIPTION" || {
         log_warning "No structural changes"
     }
 fi
@@ -229,16 +254,28 @@ fi
 # 最終結果保存（worktree内で実行）
 if [[ -f "$WORKTREE_PATH/refactoring-results.md" ]]; then
     git -C "$WORKTREE_PATH" add refactoring-results.md
-    git -C "$WORKTREE_PATH" commit -m "[REFACTOR] Implementation complete: $ARGUMENTS" || {
+    git -C "$WORKTREE_PATH" commit -m "[REFACTOR] Implementation complete: $TASK_DESCRIPTION" || {
         log_warning "Failed to commit refactoring results"
     }
     log_success "Committed: [REFACTOR] Implementation complete"
+    update_phase_status "$WORKTREE_PATH" "refactor" "completed"
+else
+    log_warning "refactoring-results.md not created, but proceeding to verification"
 fi
 ```
 
 #### Phase 4: Verify（品質検証）
 ```bash
 show_progress "Verify" 4 4
+
+# 前フェーズの完了確認
+if ! check_phase_completed "$WORKTREE_PATH" "refactor"; then
+    log_error "Refactor phase not completed"
+    handle_error 1 "Cannot proceed without refactor phase" "$WORKTREE_PATH"
+fi
+
+# フェーズ開始を記録
+create_phase_status "$WORKTREE_PATH" "verify" "started"
 
 # Testerプロンプトの読み込み
 TESTER_PROMPT=$(load_prompt ".claude/prompts/tester.md" "# Testerエージェント: リファクタリング後の品質検証を実施してください")
@@ -252,7 +289,7 @@ $TESTER_PROMPT
 - `$WORKTREE_PATH/refactoring-plan.md`
 - `$WORKTREE_PATH/refactoring-results.md`
 
-**リファクタリング対象**: $ARGUMENTS
+**リファクタリング対象**: $TASK_DESCRIPTION
 **作業ディレクトリ**: $WORKTREE_PATH
 
 **実行内容**:
@@ -267,13 +304,15 @@ $TESTER_PROMPT
 # 検証結果のコミット（worktree内で実行）
 if [[ -f "$WORKTREE_PATH/verification-report.md" ]]; then
     git -C "$WORKTREE_PATH" add verification-report.md
-    git -C "$WORKTREE_PATH" commit -m "[VERIFY] Quality verification complete: $ARGUMENTS" || {
-        log_error "Failed to commit verification results"
+    git -C "$WORKTREE_PATH" commit -m "[VERIFY] Quality verification complete: $TASK_DESCRIPTION" || {
+        rollback_on_error "$WORKTREE_PATH" "verify" "Failed to commit verification results"
         handle_error 1 "Verification phase failed" "$WORKTREE_PATH"
     }
     log_success "Committed: [VERIFY] Quality verification complete"
+    update_phase_status "$WORKTREE_PATH" "verify" "completed"
 else
-    log_warning "$WORKTREE_PATH/verification-report.md not found, skipping commit"
+    log_warning "$WORKTREE_PATH/verification-report.md not found, but refactoring is complete"
+    update_phase_status "$WORKTREE_PATH" "verify" "completed"
 fi
 ```
 
@@ -384,7 +423,7 @@ cat > /tmp/refactoring-completion-report.md << EOF
 # Refactoring Completion Report
 
 ## Refactoring Summary
-**Target**: $ARGUMENTS  
+**Target**: $TASK_DESCRIPTION  
 **Branch**: $REFACTOR_BRANCH
 **Worktree**: $WORKTREE_PATH
 **Completed**: $(date)
