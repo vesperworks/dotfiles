@@ -5,6 +5,14 @@
 ## 実行タスク
 $ARGUMENTS
 
+## 利用可能なオプション
+- `--keep-worktree`: worktreeを保持（デフォルト: 削除）
+- `--no-merge`: mainへの自動マージをスキップ（デフォルト: マージ）
+- `--pr`: GitHub PRを作成（デフォルト: 作成しない）
+- `--no-draft`: 通常のPRを作成（デフォルト: ドラフト）
+- `--no-cleanup`: 自動クリーンアップを無効化
+- `--cleanup-days N`: N日以上前のworktreeを削除（デフォルト: 7）
+
 ## 実行方針
 **ユーザーは指示後、次のタスクに移行可能**。このタスクは独立したworktree内で**全フローを自動完了**します。
 
@@ -19,6 +27,9 @@ source .claude/scripts/worktree-utils.sh || {
     exit 1
 }
 
+# オプション解析
+parse_workflow_options $ARGUMENTS
+
 # 環境検証
 verify_environment || exit 1
 
@@ -26,17 +37,23 @@ verify_environment || exit 1
 PROJECT_TYPE=$(detect_project_type)
 log_info "Detected project type: $PROJECT_TYPE"
 
+# 古いworktreeのクリーンアップ（オプション）
+if [[ "$AUTO_CLEANUP" == "true" ]]; then
+    cleanup_old_worktrees "$CLEANUP_DAYS"
+fi
+
 # worktree作成
-WORKTREE_INFO=$(create_task_worktree "$ARGUMENTS" "tdd")
+WORKTREE_INFO=$(create_task_worktree "$TASK_DESCRIPTION" "tdd")
 WORKTREE_PATH=$(echo "$WORKTREE_INFO" | cut -d'|' -f1)
 TASK_BRANCH=$(echo "$WORKTREE_INFO" | cut -d'|' -f2)
 FEATURE_NAME=$(echo "$WORKTREE_INFO" | cut -d'|' -f3)
 
 log_success "Task worktree created"
-echo "📋 Task: $ARGUMENTS"
+echo "📋 Task: $TASK_DESCRIPTION"
 echo "🌿 Branch: $TASK_BRANCH"
 echo "📁 Worktree: $WORKTREE_PATH"
 echo "🏷️ Feature: $FEATURE_NAME"
+echo "⚙️ Options: keep-worktree=$KEEP_WORKTREE, no-merge=$NO_MERGE, pr=$CREATE_PR"
 ```
 
 ### Step 2: Worktree内で全フロー自動実行
@@ -251,18 +268,49 @@ rm /tmp/task-completion-report.md
 # worktree内でコミット
 if [[ -f "$WORKTREE_PATH/task-completion-report.md" ]]; then
     git -C "$WORKTREE_PATH" add task-completion-report.md
-    git -C "$WORKTREE_PATH" commit -m "[COMPLETE] Task finished: $ARGUMENTS" || {
+    git -C "$WORKTREE_PATH" commit -m "[COMPLETE] Task finished: $TASK_DESCRIPTION" || {
         log_warning "Failed to commit completion report"
     }
     log_success "Committed: [COMPLETE] Task finished"
 fi
 
+# ローカルマージ（オプション）
+if [[ "$NO_MERGE" != "true" ]] && [[ "$CREATE_PR" != "true" ]]; then
+    log_info "Merging to main branch..."
+    if merge_to_main "$WORKTREE_PATH" "$TASK_BRANCH" "$NO_MERGE"; then
+        log_success "Successfully merged to main"
+    else
+        log_warning "Merge failed - manual intervention required"
+    fi
+fi
+
+# PR作成（オプション）
+if [[ "$CREATE_PR" == "true" ]]; then
+    log_info "Creating pull request..."
+    local is_draft="true"
+    [[ "$NO_DRAFT" == "true" ]] && is_draft="false"
+    
+    if create_pull_request "$WORKTREE_PATH" "$TASK_BRANCH" "$TASK_DESCRIPTION" "$is_draft"; then
+        log_success "Pull request created"
+    else
+        log_warning "Failed to create PR - you can create it manually"
+    fi
+fi
+
+# worktreeクリーンアップ（オプション）
+if [[ "$KEEP_WORKTREE" != "true" ]] && [[ "$CREATE_PR" != "true" ]]; then
+    cleanup_worktree "$WORKTREE_PATH" "$KEEP_WORKTREE"
+    echo "✨ Worktree cleaned up automatically"
+else
+    echo "📊 Report: $WORKTREE_PATH/task-completion-report.md"
+    echo "🔀 Branch: $TASK_BRANCH"
+    echo "📁 Worktree kept at: $WORKTREE_PATH"
+    echo "🧹 To clean up later: git worktree remove $WORKTREE_PATH"
+fi
+
 log_success "Task completed independently!"
-echo "📊 Report: $WORKTREE_PATH/task-completion-report.md"
-echo "🔀 Ready for PR: $TASK_BRANCH → main"
 echo ""
 echo "💡 User can now proceed with next tasks."
-echo "🧹 Cleanup: git worktree remove $WORKTREE_PATH (after PR merge)"
 
 # エラーが発生していた場合は非ゼロで終了
 if ! run_tests "$PROJECT_TYPE" "$WORKTREE_PATH" &>/dev/null; then

@@ -191,6 +191,15 @@ create_task_worktree() {
         handle_error $? "Failed to create worktree" "$worktree_path"
     fi
     
+    # ブランチが正しく作成されたか確認
+    local actual_branch=$(git -C "$worktree_path" branch --show-current)
+    if [[ "$actual_branch" != "$task_branch" ]]; then
+        log_error "Branch mismatch! Expected: $task_branch, Actual: $actual_branch"
+        cleanup_worktree "$worktree_path"
+        return 1
+    fi
+    log_success "Branch correctly set to: $task_branch"
+    
     # .claude設定をコピー
     if [[ -d ".claude" ]]; then
         cp -r .claude "$worktree_path/" || log_warning "Failed to copy .claude directory"
@@ -209,6 +218,12 @@ create_task_worktree() {
 # worktreeのクリーンアップ
 cleanup_worktree() {
     local worktree_path="$1"
+    local keep_worktree="${2:-false}"
+    
+    if [[ "$keep_worktree" == "true" ]]; then
+        log_info "Keeping worktree as requested: $worktree_path"
+        return 0
+    fi
     
     if [[ -d "$worktree_path" ]]; then
         log_info "Cleaning up worktree: $worktree_path"
@@ -216,6 +231,32 @@ cleanup_worktree() {
             log_warning "Failed to remove worktree, trying manual cleanup"
             rm -rf "$worktree_path"
         }
+        log_success "Worktree cleaned up: $worktree_path"
+    fi
+}
+
+# 古いworktreeのクリーンアップ
+cleanup_old_worktrees() {
+    local days_old="${1:-7}"  # デフォルトは7日以上前
+    
+    log_info "Cleaning up worktrees older than $days_old days..."
+    
+    local count=0
+    for worktree_dir in .worktrees/*; do
+        if [[ -d "$worktree_dir" ]]; then
+            # ディレクトリの最終更新日を確認
+            if [[ $(find "$worktree_dir" -maxdepth 0 -mtime +$days_old 2>/dev/null) ]]; then
+                log_info "Removing old worktree: $worktree_dir"
+                cleanup_worktree "$worktree_dir"
+                ((count++))
+            fi
+        fi
+    done
+    
+    if [[ $count -eq 0 ]]; then
+        log_info "No old worktrees found"
+    else
+        log_success "Cleaned up $count old worktrees"
     fi
 }
 
@@ -291,6 +332,58 @@ show_progress() {
     echo ""
 }
 
+# コマンドラインオプションの解析
+parse_workflow_options() {
+    local args=("$@")
+    
+    # デフォルト値
+    KEEP_WORKTREE="false"
+    NO_MERGE="false"
+    CREATE_PR="false"
+    NO_DRAFT="false"
+    AUTO_CLEANUP="true"
+    CLEANUP_DAYS="7"
+    
+    # オプション解析
+    local i=0
+    while [[ $i -lt ${#args[@]} ]]; do
+        case "${args[$i]}" in
+            --keep-worktree)
+                KEEP_WORKTREE="true"
+                AUTO_CLEANUP="false"
+                ;;
+            --no-merge)
+                NO_MERGE="true"
+                ;;
+            --pr)
+                CREATE_PR="true"
+                ;;
+            --no-draft)
+                NO_DRAFT="true"
+                ;;
+            --no-cleanup)
+                AUTO_CLEANUP="false"
+                ;;
+            --cleanup-days)
+                ((i++))
+                CLEANUP_DAYS="${args[$i]}"
+                ;;
+            *)
+                # タスク説明として扱う
+                if [[ -z "${TASK_DESCRIPTION:-}" ]]; then
+                    TASK_DESCRIPTION="${args[$i]}"
+                else
+                    TASK_DESCRIPTION="$TASK_DESCRIPTION ${args[$i]}"
+                fi
+                ;;
+        esac
+        ((i++))
+    done
+    
+    # エクスポート
+    export KEEP_WORKTREE NO_MERGE CREATE_PR NO_DRAFT AUTO_CLEANUP CLEANUP_DAYS TASK_DESCRIPTION
+}
+
 # 構造化されたディレクトリを作成
 create_structured_directories() {
     local worktree_path="$1"
@@ -336,6 +429,120 @@ get_feature_name() {
     echo "$feature_name"
 }
 
+# ローカルマージ機能
+merge_to_main() {
+    local worktree_path="$1"
+    local branch_name="$2"
+    local no_merge="${3:-false}"
+    
+    if [[ "$no_merge" == "true" ]]; then
+        log_info "Skipping merge as requested"
+        return 0
+    fi
+    
+    # 現在のブランチを保存
+    local current_branch=$(git branch --show-current)
+    
+    log_info "Merging $branch_name to main..."
+    
+    # mainブランチに切り替え
+    if ! git checkout main; then
+        log_error "Failed to checkout main branch"
+        return 1
+    fi
+    
+    # 最新の状態に更新
+    if ! git pull origin main --rebase 2>/dev/null; then
+        log_warning "Could not pull latest main (maybe offline)"
+    fi
+    
+    # マージ実行
+    if ! git merge "$branch_name" --no-ff -m "Merge branch '$branch_name'"; then
+        log_error "Merge failed - conflicts may need to be resolved"
+        git checkout "$current_branch"
+        return 1
+    fi
+    
+    log_success "Successfully merged $branch_name to main"
+    
+    # 元のブランチに戻る
+    git checkout "$current_branch" 2>/dev/null || true
+    
+    return 0
+}
+
+# GitHub PR作成機能
+create_pull_request() {
+    local worktree_path="$1"
+    local branch_name="$2"
+    local task_description="$3"
+    local is_draft="${4:-true}"
+    
+    # ghコマンドの存在確認
+    if ! command -v gh &> /dev/null; then
+        log_error "GitHub CLI (gh) is not installed"
+        log_info "Install with: brew install gh"
+        return 1
+    fi
+    
+    # 認証確認
+    if ! gh auth status &>/dev/null; then
+        log_error "Not authenticated with GitHub"
+        log_info "Run: gh auth login"
+        return 1
+    fi
+    
+    # ブランチをプッシュ
+    log_info "Pushing branch to remote..."
+    if ! git -C "$worktree_path" push -u origin "$branch_name"; then
+        log_error "Failed to push branch"
+        return 1
+    fi
+    
+    # PR作成
+    local pr_flags=""
+    if [[ "$is_draft" == "true" ]]; then
+        pr_flags="--draft"
+    fi
+    
+    # 完了レポートがあれば使用
+    local pr_body=""
+    if [[ -f "$worktree_path/task-completion-report.md" ]]; then
+        pr_body=$(cat "$worktree_path/task-completion-report.md")
+    elif [[ -f "$worktree_path/feature-completion-report.md" ]]; then
+        pr_body=$(cat "$worktree_path/feature-completion-report.md")
+    elif [[ -f "$worktree_path/refactoring-completion-report.md" ]]; then
+        pr_body=$(cat "$worktree_path/refactoring-completion-report.md")
+    else
+        pr_body="## Summary
+Task: $task_description
+Branch: $branch_name
+Worktree: $worktree_path
+
+Please review the changes."
+    fi
+    
+    log_info "Creating pull request..."
+    if gh pr create \
+        --title "$task_description" \
+        --body "$pr_body" \
+        --base main \
+        --head "$branch_name" \
+        $pr_flags; then
+        
+        log_success "Pull request created successfully"
+        
+        # PR URLを表示
+        local pr_url=$(gh pr view "$branch_name" --json url -q .url)
+        echo "PR URL: $pr_url"
+        
+        return 0
+    else
+        log_error "Failed to create pull request"
+        return 1
+    fi
+}
+
 # デフォルトプロンプト定義
 DEFAULT_EXPLORER_PROMPT="あなたはExplorerエージェントです。以下のタスクについて調査・分析を行ってください：
 1. 現在のコードベースを調査・分析
@@ -363,6 +570,8 @@ export -f handle_error verify_environment detect_project_type
 export -f get_test_command create_task_worktree cleanup_worktree
 export -f load_prompt safe_execute run_tests git_commit_phase
 export -f show_progress create_structured_directories get_feature_name
+export -f cleanup_old_worktrees merge_to_main create_pull_request
+export -f parse_workflow_options
 
 # デフォルトプロンプトのエクスポート
 export DEFAULT_EXPLORER_PROMPT DEFAULT_PLANNER_PROMPT DEFAULT_CODER_PROMPT
