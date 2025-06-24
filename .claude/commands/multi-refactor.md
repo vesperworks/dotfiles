@@ -36,16 +36,18 @@ log_info "Detected project type: $PROJECT_TYPE"
 WORKTREE_INFO=$(create_task_worktree "$ARGUMENTS" "refactor")
 WORKTREE_PATH=$(echo "$WORKTREE_INFO" | cut -d'|' -f1)
 REFACTOR_BRANCH=$(echo "$WORKTREE_INFO" | cut -d'|' -f2)
+FEATURE_NAME=$(echo "$WORKTREE_INFO" | cut -d'|' -f3)
 
 log_success "Refactoring worktree created"
 echo "🔧 Refactoring: $ARGUMENTS"
 echo "🌿 Branch: $REFACTOR_BRANCH"
 echo "📁 Worktree: $WORKTREE_PATH"
+echo "🏷️ Feature: $FEATURE_NAME"
 ```
 
 ### Step 2: Worktree内で全フロー自動実行
 
-**Worktree**: `$WORKTREE_PATH` **Branch**: `$REFACTOR_BRANCH`
+**Worktree**: `$WORKTREE_PATH` **Branch**: `$REFACTOR_BRANCH` **Feature**: `$FEATURE_NAME`
 
 **重要**: 以下の全フローを**同一worktree内で連続自動実行**します：
 
@@ -78,6 +80,11 @@ $EXPLORER_PROMPT
 4. 技術的負債とコードの複雑度を特定
 5. リファクタリングのリスクと機会を評価
 6. 結果を `analysis-results.md` に保存
+
+**構造化されたディレクトリ**: 
+- テスト: `$WORKTREE_PATH/test/$FEATURE_NAME/`
+- レポート: `$WORKTREE_PATH/report/$FEATURE_NAME/`
+- ソース: `$WORKTREE_PATH/src/$FEATURE_NAME/`
 
 ```bash
 # Analysis結果のコミット（worktree内で実行）
@@ -370,12 +377,13 @@ cat > /tmp/refactoring-completion-report.md << EOF
 - $(if [[ -f "$WORKTREE_PATH/refactoring-plan.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Plan**: Refactoring strategy defined
 - $(if [[ -f "$WORKTREE_PATH/refactoring-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Refactor**: Changes implemented incrementally
 - $(if [[ -f "$WORKTREE_PATH/verification-report.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Verify**: Quality and compatibility confirmed
+- $(if [[ -d "$WORKTREE_PATH/report/$FEATURE_NAME" ]]; then echo "✅"; else echo "⚠️"; fi) **Reports**: Quality metrics and coverage reports generated
 - $(if run_tests "$PROJECT_TYPE" "$WORKTREE_PATH" &>/dev/null; then echo "✅"; else echo "⚠️"; fi) **Tests**: All tests passing
 
 ## Code Quality Improvements
-- 複雑度: [Before] → [After]
-- テストカバレッジ: [Before]% → [After]%
-- パフォーマンス: [Improvement]%
+- 複雑度: 詳細は`$WORKTREE_PATH/report/$FEATURE_NAME/quality/complexity-report.md`参照
+- テストカバレッジ: 詳細は`$WORKTREE_PATH/report/$FEATURE_NAME/coverage/coverage-report.html`参照
+- パフォーマンス: 詳細は`$WORKTREE_PATH/report/$FEATURE_NAME/performance/benchmark-results.md`参照
 
 ## Files Modified
 $(git -C "$WORKTREE_PATH" diff --name-only origin/main 2>/dev/null || echo "Unable to compare with origin/main")

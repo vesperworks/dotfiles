@@ -30,16 +30,18 @@ log_info "Detected project type: $PROJECT_TYPE"
 WORKTREE_INFO=$(create_task_worktree "$ARGUMENTS" "tdd")
 WORKTREE_PATH=$(echo "$WORKTREE_INFO" | cut -d'|' -f1)
 TASK_BRANCH=$(echo "$WORKTREE_INFO" | cut -d'|' -f2)
+FEATURE_NAME=$(echo "$WORKTREE_INFO" | cut -d'|' -f3)
 
 log_success "Task worktree created"
 echo "📋 Task: $ARGUMENTS"
 echo "🌿 Branch: $TASK_BRANCH"
 echo "📁 Worktree: $WORKTREE_PATH"
+echo "🏷️ Feature: $FEATURE_NAME"
 ```
 
 ### Step 2: Worktree内で全フロー自動実行
 
-**Worktree**: `$WORKTREE_PATH` **Branch**: `$TASK_BRANCH`
+**Worktree**: `$WORKTREE_PATH` **Branch**: `$TASK_BRANCH` **Feature**: `$FEATURE_NAME`
 
 **重要**: 以下の全フローを**同一worktree内で連続自動実行**します：
 
@@ -71,6 +73,8 @@ $EXPLORER_PROMPT
 3. 影響範囲と依存関係を明確化
 4. 要件と制約を整理
 5. 結果を `explore-results.md` に保存
+
+**テストファイルの配置**: `$WORKTREE_PATH/test/$FEATURE_NAME/`以下に配置してください
 
 ```bash
 # Explore結果のコミット（worktree内で実行）
@@ -143,24 +147,27 @@ $CODER_PROMPT
 
 **TDD実行順序**:
 1. **Write tests › Commit** - 失敗するテストを先に作成
+   - テストファイルは `test/$FEATURE_NAME/unit/test-$FEATURE_NAME.js` 等に配置
 2. **Code › Iterate** - テストを通すための最小実装
+   - 実装ファイルは `src/$FEATURE_NAME/` 以下に配置
 3. **Refactor › Commit** - コード品質向上
+   - レポートは `report/$FEATURE_NAME/quality/` に保存
 
 ```bash
 # TDD RED Phase - テスト作成（worktree内で実行）
-if [[ -d "$WORKTREE_PATH/tests/" ]] || [[ -n $(find "$WORKTREE_PATH" -name "*test*" -type f 2>/dev/null) ]]; then
-    git -C "$WORKTREE_PATH" add tests/ *test* 2>/dev/null
-    git -C "$WORKTREE_PATH" commit -m "[TDD-RED] Failing tests: $ARGUMENTS" || {
+if [[ -d "$WORKTREE_PATH/test/$FEATURE_NAME" ]]; then
+    git -C "$WORKTREE_PATH" add "test/$FEATURE_NAME" 2>/dev/null
+    git -C "$WORKTREE_PATH" commit -m "[TDD-RED] Failing tests for $FEATURE_NAME: $ARGUMENTS" || {
         log_warning "No test files to commit in RED phase"
     }
 else
-    log_warning "No test directory found in worktree"
+    log_warning "No test directory found for feature: $FEATURE_NAME"
 fi
 
 # TDD GREEN Phase - 実装（worktree内で実行）
-if [[ -d "$WORKTREE_PATH/src/" ]] || [[ -n $(git -C "$WORKTREE_PATH" diff --name-only) ]]; then
-    git -C "$WORKTREE_PATH" add src/ *.js *.ts *.py *.go 2>/dev/null
-    git -C "$WORKTREE_PATH" commit -m "[TDD-GREEN] Implementation: $ARGUMENTS" || {
+if [[ -d "$WORKTREE_PATH/src/$FEATURE_NAME" ]]; then
+    git -C "$WORKTREE_PATH" add "src/$FEATURE_NAME" 2>/dev/null
+    git -C "$WORKTREE_PATH" commit -m "[TDD-GREEN] Implementation for $FEATURE_NAME: $ARGUMENTS" || {
         log_warning "No implementation files to commit in GREEN phase"
     }
 fi
@@ -223,6 +230,12 @@ $(if command -v "$PROJECT_TYPE" &>/dev/null; then
 else
     echo "Test command not found for project type: $PROJECT_TYPE"
 fi)
+
+## Test Coverage Report
+Saved in: $WORKTREE_PATH/report/$FEATURE_NAME/coverage/
+
+## Code Quality Report  
+Saved in: $WORKTREE_PATH/report/$FEATURE_NAME/quality/
 
 ## Next Steps
 1. Review implementation in worktree: $WORKTREE_PATH

@@ -199,29 +199,33 @@ $CODER_PROMPT
 
 ```bash
 # API/コンポーネントテスト
-if [[ -d "tests/unit/" ]] || [[ -d "tests/integration/" ]]; then
-    git_commit_phase "TEST" "Interface and integration tests: $ARGUMENTS" "tests/unit/ tests/integration/" || {
+if [[ -d "$WORKTREE_PATH/test/$FEATURE_NAME" ]]; then
+    git -C "$WORKTREE_PATH" add "test/$FEATURE_NAME"
+    git -C "$WORKTREE_PATH" commit -m "[TEST] Interface and integration tests for $FEATURE_NAME: $ARGUMENTS" || {
         log_warning "No test files to commit"
     }
 fi
 
 # 機能実装
-if [[ -d "src/" ]] || [[ -d "components/" ]] || [[ -d "api/" ]]; then
-    git_commit_phase "IMPLEMENT" "Core feature implementation: $ARGUMENTS" "src/ components/ api/" || {
+if [[ -d "$WORKTREE_PATH/src/$FEATURE_NAME" ]]; then
+    git -C "$WORKTREE_PATH" add "src/$FEATURE_NAME"
+    git -C "$WORKTREE_PATH" commit -m "[IMPLEMENT] Core feature implementation for $FEATURE_NAME: $ARGUMENTS" || {
         log_warning "No implementation files to commit"
     }
 fi
 
 # E2Eテスト
-if [[ -d "tests/e2e/" ]]; then
-    git_commit_phase "E2E" "End-to-end tests: $ARGUMENTS" "tests/e2e/" || {
+if [[ -d "$WORKTREE_PATH/test/$FEATURE_NAME/e2e" ]]; then
+    git -C "$WORKTREE_PATH" add "test/$FEATURE_NAME/e2e"
+    git -C "$WORKTREE_PATH" commit -m "[E2E] End-to-end tests for $FEATURE_NAME: $ARGUMENTS" || {
         log_warning "No E2E test files to commit"
     }
 fi
 
 # 最適化とドキュメント
-if [[ -d "performance/" ]] || [[ -d "docs/" ]]; then
-    git_commit_phase "OPTIMIZE" "Performance and documentation: $ARGUMENTS" "performance/ docs/" || {
+if [[ -d "$WORKTREE_PATH/report/$FEATURE_NAME/performance" ]]; then
+    git -C "$WORKTREE_PATH" add "report/$FEATURE_NAME/performance"
+    git -C "$WORKTREE_PATH" commit -m "[OPTIMIZE] Performance optimization for $FEATURE_NAME: $ARGUMENTS" || {
         log_warning "No optimization files to commit"
     }
 fi
@@ -278,22 +282,28 @@ cat > /tmp/feature-completion-report.md << EOF
 - Performance metrics within targets
 
 ## Phase Results
-- $(if [[ -f "explore-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Explore**: Requirements and constraints analyzed
-- $(if [[ -f "plan-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Plan**: Architecture and implementation strategy defined
-- $(if [[ -f "prototype-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Prototype**: Working prototype demonstrated
-- $(if [[ -f "coding-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Code**: Full feature implementation completed
+- $(if [[ -f "$WORKTREE_PATH/explore-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Explore**: Requirements and constraints analyzed
+- $(if [[ -f "$WORKTREE_PATH/plan-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Plan**: Architecture and implementation strategy defined
+- $(if [[ -f "$WORKTREE_PATH/prototype-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Prototype**: Working prototype demonstrated
+- $(if [[ -f "$WORKTREE_PATH/coding-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Code**: Full feature implementation completed
 - $(if run_tests "$PROJECT_TYPE" "$WORKTREE_PATH" &>/dev/null; then echo "✅"; else echo "⚠️"; fi) **Test**: Comprehensive test coverage achieved
 - ✅ **Ready**: Feature ready for review and integration
 
 ## Files Created/Modified
 ### New Components
-$(find components/ -name "*.tsx" -o -name "*.jsx" 2>/dev/null | grep -v node_modules || echo "No new components")
+$(find "$WORKTREE_PATH/src/$FEATURE_NAME" -name "*.tsx" -o -name "*.jsx" 2>/dev/null | grep -v node_modules || echo "No new components")
 
 ### API Changes
-$(find api/ -name "*.ts" -o -name "*.js" 2>/dev/null | grep -v node_modules || echo "No API changes")
+$(find "$WORKTREE_PATH/src/$FEATURE_NAME" -name "*.ts" -o -name "*.js" 2>/dev/null | grep -v node_modules || echo "No API changes")
 
 ### Test Coverage
-$(find tests/ -name "*.test.*" -o -name "*.spec.*" 2>/dev/null | wc -l || echo "0") test files
+$(find "$WORKTREE_PATH/test/$FEATURE_NAME" -name "*.test.*" -o -name "*.spec.*" 2>/dev/null | wc -l || echo "0") test files
+
+### Coverage Report
+Detailed coverage report: $WORKTREE_PATH/report/$FEATURE_NAME/coverage/
+
+### Quality Report
+Code quality metrics: $WORKTREE_PATH/report/$FEATURE_NAME/quality/
 
 ## Commits
 $(git log --oneline origin/main..HEAD)

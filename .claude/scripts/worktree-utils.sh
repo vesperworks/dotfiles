@@ -196,8 +196,14 @@ create_task_worktree() {
         cp -r .claude "$worktree_path/" || log_warning "Failed to copy .claude directory"
     fi
     
-    # 結果を返す
-    echo "$worktree_path|$task_branch"
+    # feature名を生成
+    local feature_name=$(get_feature_name "$task_description" "$task_type")
+    
+    # 構造化されたディレクトリを作成
+    create_structured_directories "$worktree_path" "$feature_name"
+    
+    # 結果を返す（feature名も含める）
+    echo "$worktree_path|$task_branch|$feature_name"
 }
 
 # worktreeのクリーンアップ
@@ -285,6 +291,51 @@ show_progress() {
     echo ""
 }
 
+# 構造化されたディレクトリを作成
+create_structured_directories() {
+    local worktree_path="$1"
+    local feature_name="$2"
+    
+    log_info "Creating structured directories for feature: $feature_name"
+    
+    # テストディレクトリ構造
+    mkdir -p "$worktree_path/test/$feature_name/unit"
+    mkdir -p "$worktree_path/test/$feature_name/integration"
+    mkdir -p "$worktree_path/test/$feature_name/e2e"
+    
+    # レポートディレクトリ構造
+    mkdir -p "$worktree_path/report/$feature_name/coverage"
+    mkdir -p "$worktree_path/report/$feature_name/performance"
+    mkdir -p "$worktree_path/report/$feature_name/quality"
+    
+    # ソースコードディレクトリ（必要に応じて）
+    mkdir -p "$worktree_path/src/$feature_name"
+    
+    log_success "Structured directories created"
+}
+
+# タスクタイプからfeature名を生成
+get_feature_name() {
+    local task_description="$1"
+    local task_type="$2"
+    
+    # タスク説明から意味のあるfeature名を抽出
+    # 例: "認証機能のJWT有効期限チェック不具合を修正" → "auth-jwt-fix"
+    local feature_name=$(echo "$task_description" | \
+        sed 's/[^a-zA-Z0-9 ]//g' | \
+        tr '[:upper:]' '[:lower:]' | \
+        awk '{print $1"-"$2"-"$3}' | \
+        sed 's/-$//' | \
+        sed 's/--/-/g')
+    
+    # 空の場合はタスクタイプ + タイムスタンプ
+    if [[ -z "$feature_name" ]] || [[ "$feature_name" == "--" ]]; then
+        feature_name="${task_type}-$(date +%Y%m%d-%H%M%S)"
+    fi
+    
+    echo "$feature_name"
+}
+
 # デフォルトプロンプト定義
 DEFAULT_EXPLORER_PROMPT="あなたはExplorerエージェントです。以下のタスクについて調査・分析を行ってください：
 1. 現在のコードベースを調査・分析
@@ -311,7 +362,7 @@ export -f log_info log_success log_warning log_error
 export -f handle_error verify_environment detect_project_type
 export -f get_test_command create_task_worktree cleanup_worktree
 export -f load_prompt safe_execute run_tests git_commit_phase
-export -f show_progress
+export -f show_progress create_structured_directories get_feature_name
 
 # デフォルトプロンプトのエクスポート
 export DEFAULT_EXPLORER_PROMPT DEFAULT_PLANNER_PROMPT DEFAULT_CODER_PROMPT
