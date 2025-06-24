@@ -183,3 +183,38 @@
 ### ✅ 完了項目
 1. ~~**multi-refactor.mdのTaskツール呼び出し削除**~~ - 修正不要（誤認識）
 2. ~~**worktree-utils.shの関数スコープ修正**~~ - エクスポート追加済み
+
+## ✅ 修正フェーズ2: 機能修正（2025-06-24完了）
+
+### 変数スコープとエラーハンドリングバグ（中優先度）
+- [x] **Problem**: 変数の初期化とエラー処理が不完全
+  - [x] **新たな発見**: `$ARGUMENTS` と `$TASK_DESCRIPTION` の変数名不一致問題
+  - [x] multi-refactor.mdで`$ARGUMENTS`使用、worktree-utils.shで`$TASK_DESCRIPTION`に変換
+  - [x] タスクID生成時の文字列処理エラー（日本語文字列対応不備）
+  - [x] ブランチ名が空文字列になり `fatal: '' is not a valid branch name` エラー
+- [x] **Solution**: 変数管理とパラメータ処理の修正
+  - [x] **Step 1**: 変数名を統一（`$ARGUMENTS` → `$TASK_DESCRIPTION`）✅
+  - [x] **Step 2**: multi-refactor.md全体で一貫性のある変数使用に修正 ✅
+  - [x] **Step 3**: 日本語文字列処理の改善（日本語→英語変換でブランチ名生成）✅
+  - [x] **Step 4**: ブランチ名生成の堅牢化（デフォルト値設定、特殊文字除去）✅
+  - [x] **Step 5**: エラーケースの網羅的テスト（test-refactor-fixes.sh作成）✅
+
+### Phase間の依存関係管理バグ（中優先度）
+- [x] **Problem**: 各フェーズ間の依存関係と状態管理が未実装
+  - [x] Analysis -> Plan -> Refactor -> Verify の順序制御なし
+  - [x] 前フェーズの失敗時の処理が不明確
+  - [x] 並行実行との競合状態の可能性
+  - [x] ファイル作成確認の条件分岐が機能しない
+- [x] **Solution**: フェーズ管理システムの実装
+  - [x] **Step 1**: フェーズ状態管理システムの設計（.status ファイル利用）✅
+  - [x] **Step 2**: 前フェーズ完了確認の実装（check_phase_completed関数）✅
+  - [x] **Step 3**: エラー時のロールバック機能追加（rollback_on_error関数）✅
+  - [x] **Step 4**: フェーズ間データ受け渡しの標準化（JSON形式の採用）✅
+  - [x] **Step 5**: multi-refactor.mdへのフェーズ管理組み込み ✅
+
+### 修正成果
+- **multi-refactor.md**: 変数名を`$TASK_DESCRIPTION`に統一、フェーズ管理を組み込み
+- **worktree-utils.sh**: 
+  - 日本語タスク名を英語に変換してブランチ名生成
+  - フェーズ管理関数群を追加（create_phase_status, check_phase_completed, rollback_on_error）
+- **test-refactor-fixes.sh**: 修正内容のテストスクリプト作成
