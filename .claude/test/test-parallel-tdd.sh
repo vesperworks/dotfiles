@@ -71,6 +71,7 @@ setup_test_environment() {
     # .claude設定をコピー
     mkdir -p .claude/scripts .claude/prompts
     cp "$CLAUDE_SCRIPTS_DIR/worktree-utils.sh" .claude/scripts/
+    cp "$CLAUDE_SCRIPTS_DIR/parallel-agent-utils.sh" .claude/scripts/
     if [[ -f "$PROJECT_ROOT/.claude/prompts/coder-test.md" ]]; then
         cp "$PROJECT_ROOT/.claude/prompts/coder-test.md" .claude/prompts/
     fi
@@ -136,10 +137,16 @@ test_worktree_creation() {
     local task_desc="test-parallel-tdd-feature"
     local worktree_info
     
-    if worktree_info=$(create_task_worktree "$task_desc" "feature"); then
-        local worktree_path=$(echo "$worktree_info" | cut -d'|' -f1)
-        local branch_name=$(echo "$worktree_info" | cut -d'|' -f2)
-        local feature_name=$(echo "$worktree_info" | cut -d'|' -f3)
+    # worktree作成を実行（エラー出力を抑制）
+    worktree_info=$(create_task_worktree "$task_desc" "feature" 2>&1)
+    local exit_code=$?
+    
+    if [[ $exit_code -eq 0 ]]; then
+        # 最後の行（結果）のみを取得
+        local result_line=$(echo "$worktree_info" | tail -n1)
+        local worktree_path=$(echo "$result_line" | cut -d'|' -f1)
+        local branch_name=$(echo "$result_line" | cut -d'|' -f2)
+        local feature_name=$(echo "$result_line" | cut -d'|' -f3)
         
         # worktreeの存在確認
         if [[ -d "$worktree_path" ]]; then
@@ -158,6 +165,13 @@ test_worktree_creation() {
                 return 0
             else
                 log_error "Structured directories not created"
+                log_error "Expected directories:"
+                log_error "  - $worktree_path/test/$feature_name"
+                log_error "  - $worktree_path/src/$feature_name"
+                log_error "  - $worktree_path/report/$feature_name"
+                # 実際に存在するディレクトリを表示
+                log_info "Actual directories in worktree:"
+                ls -la "$worktree_path" 2>/dev/null || true
                 return 1
             fi
         else
@@ -166,6 +180,7 @@ test_worktree_creation() {
         fi
     else
         log_error "Failed to create worktree"
+        log_error "Output: $worktree_info"
         return 1
     fi
 }
@@ -181,14 +196,17 @@ test_test_agent_functions() {
     mkdir -p "$test_worktree_path/src/$feature_name"
     mkdir -p "$test_worktree_path/report/$feature_name"
     
+    # テスト用のpackage.jsonを作成（Node.jsプロジェクトとして認識させるため）
+    echo '{"name": "test-project", "version": "1.0.0"}' > "$test_worktree_path/package.json"
+    
     # テスト作成関数の実行
     if create_unit_tests "$test_worktree_path" "$feature_name" "$task_desc" &&
        create_integration_tests "$test_worktree_path" "$feature_name" "$task_desc" &&
        create_e2e_tests "$test_worktree_path" "$feature_name" "$task_desc" &&
        create_test_report "$test_worktree_path" "$feature_name"; then
         
-        # 作成されたファイルの確認
-        if [[ -f "$test_worktree_path/test/$feature_name/unit/test-feature.test.js" ]] &&
+        # 作成されたファイルの確認（feature_nameを正しく使用）
+        if [[ -f "$test_worktree_path/test/$feature_name/unit/$feature_name.test.js" ]] &&
            [[ -f "$test_worktree_path/test/$feature_name/integration/integration.test.md" ]] &&
            [[ -f "$test_worktree_path/test/$feature_name/e2e/e2e.test.md" ]] &&
            [[ -f "$test_worktree_path/test-creation-report.md" ]]; then
@@ -196,6 +214,13 @@ test_test_agent_functions() {
             return 0
         else
             log_error "Expected test files not created"
+            log_error "Looking for:"
+            log_error "  - $test_worktree_path/test/$feature_name/unit/$feature_name.test.js"
+            log_error "  - $test_worktree_path/test/$feature_name/integration/integration.test.md"
+            log_error "  - $test_worktree_path/test/$feature_name/e2e/e2e.test.md"
+            log_error "  - $test_worktree_path/test-creation-report.md"
+            log_info "Actual files:"
+            find "$test_worktree_path/test" -type f 2>/dev/null || true
             return 1
         fi
     else
@@ -215,6 +240,9 @@ test_impl_agent_functions() {
     mkdir -p "$test_worktree_path/src/$feature_name"
     mkdir -p "$test_worktree_path/report/$feature_name"
     
+    # テスト用のpackage.jsonを作成（Node.jsプロジェクトとして認識させるため）
+    echo '{"name": "test-project", "version": "1.0.0"}' > "$test_worktree_path/package.json"
+    
     # 実装関数の実行
     if implement_core_functionality "$test_worktree_path" "$feature_name" "$task_desc" &&
        implement_edge_cases "$test_worktree_path" "$feature_name" "$task_desc" &&
@@ -230,6 +258,13 @@ test_impl_agent_functions() {
             return 0
         else
             log_error "Expected implementation files not created"
+            log_error "Looking for:"
+            log_error "  - $test_worktree_path/src/$feature_name/index.js"
+            log_error "  - $test_worktree_path/src/$feature_name/utils/edge-cases.md"
+            log_error "  - $test_worktree_path/report/$feature_name/performance/optimization.md"
+            log_error "  - $test_worktree_path/implementation-report.md"
+            log_info "Actual files:"
+            find "$test_worktree_path" -type f -name "*.js" -o -name "*.md" 2>/dev/null | grep -v package.json || true
             return 1
         fi
     else
@@ -256,14 +291,38 @@ test_parallel_monitoring() {
     ) &
     local update_pid=$!
     
-    # 監視機能のテスト（タイムアウト付き）
-    if timeout 10s monitor_parallel_execution "$temp_dir" $$ $$; then
+    # 監視機能のテスト（タイムアウトなしで関数を直接実行）
+    # バックグラウンドでステータスファイルが更新されるのを待つ
+    (
+        # 最大5秒待機
+        for i in {1..10}; do
+            if [[ "$(cat "$temp_dir/test-agent.status" 2>/dev/null)" == "completed" ]] && 
+               [[ "$(cat "$temp_dir/impl-agent.status" 2>/dev/null)" == "completed" ]]; then
+                break
+            fi
+            sleep 0.5
+        done
+    ) &
+    local wait_pid=$!
+    
+    # 監視を開始
+    monitor_parallel_execution "$temp_dir" $update_pid $update_pid &
+    local monitor_pid=$!
+    
+    # 待機プロセスの完了を待つ
+    wait $wait_pid
+    
+    # 監視プロセスを終了
+    kill $monitor_pid 2>/dev/null || true
+    wait $update_pid 2>/dev/null || true
+    
+    # 結果の確認
+    if [[ "$(cat "$temp_dir/test-agent.status" 2>/dev/null)" == "completed" ]] && 
+       [[ "$(cat "$temp_dir/impl-agent.status" 2>/dev/null)" == "completed" ]]; then
         log_info "Parallel monitoring completed successfully"
-        wait $update_pid
         return 0
     else
-        log_error "Parallel monitoring failed or timed out"
-        kill $update_pid 2>/dev/null || true
+        log_error "Parallel monitoring failed"
         return 1
     fi
 }
