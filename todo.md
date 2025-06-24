@@ -34,11 +34,11 @@
 - [x] `test-multi-agent.sh` の実装内容確認と改善 ✅ 完了
 - [ ] 各ワークフローの自動テストスクリプト作成
 
-### 5. ファイル構造の改善
-- [ ] テストファイルを`/test/{feature-name}/`に配置するよう変更
-- [ ] レポートファイルを`/report/{feature-name}/`に配置するよう変更
-- [ ] ファイル名にfeature名を含めて明示的にする（例: `test-auth-unit.js`、`report-auth-coverage.md`）
-- [ ] worktree-utils.shにディレクトリ作成機能を追加
+### 5. ファイル構造の改善【完了】
+- [x] テストファイルを`/test/{feature-name}/`に配置するよう変更 ✅
+- [x] レポートファイルを`/report/{feature-name}/`に配置するよう変更 ✅
+- [x] ファイル名にfeature名を含めて明示的にする（例: `test-auth-unit.js`、`report-auth-coverage.md`）✅
+- [x] worktree-utils.shにディレクトリ作成機能を追加 ✅
 
 ### 6. TDDサイクルの並列化による効率化
 - [ ] worktree-utils.shに`run_parallel_agents()`関数を追加
@@ -87,6 +87,7 @@
 - [x] `.claude/commands/multi-feature.md` - 新機能開発
 - [x] `.claude/commands/multi-refactor.md` - リファクタリング
 - [x] `.claude/commands/s.md` - クイック検索（追加実装）
+- [x] `.claude/commands/p.md` - 計画モード（リサーチ・計画・管理）✅ NEW
 
 ### Prompts（全て実装済み）
 - [x] `.claude/prompts/explorer.md` - 探索・調査専門
@@ -103,6 +104,7 @@
 
 ### Test（実装済み）
 - [x] `.claude/test/test-multi-agent.sh` - 統合テストスクリプト ✅ NEW
+- [x] `.claude/test/test-structured-directories.sh` - 構造化ディレクトリテスト ✅ NEW
 
 ## 🟡 推奨改善項目
 
@@ -130,8 +132,8 @@
 
 1. ~~**最優先**: worktreeアクセス問題の修正（multi-featureコマンドのエラー対応）~~ ✅ 完了
 2. ~~**高**: CLAUDE.mdの更新（プロジェクト状態を正確に反映）~~ ✅ 完了
-3. **高**: ワークフロー実装の改善（ブランチ切り替え・クリーンアップ）
-4. **高**: ファイル構造の改善（テスト・レポートの整理）
+3. ~~**高**: ファイル構造の改善（テスト・レポートの整理）~~ ✅ 完了
+4. **高**: ワークフロー実装の改善（ブランチ切り替え・クリーンアップ）
 5. **中**: TDDサイクルの並列化による効率化
 6. **中**: 各ワークフローの自動テストスクリプト作成
 7. **低**: MCP連携機能の実装（別フェーズでも可）
@@ -148,9 +150,9 @@
 ## 🎯 新しい次のアクション
 
 1. ワークフロー実装の改善（ブランチ切り替え確認・自動クリーンアップ）
-2. ファイル構造の改善（テスト・レポートの整理）
-3. 各ワークフローの実際の使用例ドキュメント作成
-4. TDDサイクルの並列化による効率化の検討
+2. 各ワークフローの実際の使用例ドキュメント作成
+3. TDDサイクルの並列化による効率化の検討
+4. 各ワークフローの自動テストスクリプト作成
 
 ---
 
