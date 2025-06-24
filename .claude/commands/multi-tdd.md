@@ -45,11 +45,12 @@ echo "📁 Worktree: $WORKTREE_PATH"
 
 #### Phase 1: Explore（探索・調査）
 ```bash
-cd "$WORKTREE_PATH" || handle_error $? "Failed to change to worktree directory" "$WORKTREE_PATH"
+# ClaudeCodeアクセス制限対応: cdを使用せず、worktree内で作業
+log_info "Working in worktree: $WORKTREE_PATH"
 
 show_progress "Explore" 4 1
 
-# Explorerプロンプトの読み込み
+# Explorerプロンプトの読み込み（メインディレクトリから）
 EXPLORER_PROMPT=$(load_prompt ".claude/prompts/explorer.md" "$DEFAULT_EXPLORER_PROMPT")
 ```
 
@@ -57,6 +58,12 @@ EXPLORER_PROMPT=$(load_prompt ".claude/prompts/explorer.md" "$DEFAULT_EXPLORER_P
 $EXPLORER_PROMPT
 
 **タスク**: $ARGUMENTS
+
+**作業ディレクトリ**: $WORKTREE_PATH
+**注意**: ClaudeCodeのアクセス制限により、直接worktreeディレクトリに移動できません。以下の方法で作業してください：
+- ファイル読み取り: `Read $WORKTREE_PATH/ファイル名`
+- ファイル書き込み: `Write $WORKTREE_PATH/ファイル名`
+- ファイル編集: `Edit $WORKTREE_PATH/ファイル名`
 
 **実行内容**:
 1. 現在のコードベースを調査・分析
@@ -66,14 +73,17 @@ $EXPLORER_PROMPT
 5. 結果を `explore-results.md` に保存
 
 ```bash
-# Explore結果のコミット
-if [[ -f "explore-results.md" ]]; then
-    git_commit_phase "EXPLORE" "Analysis complete: $ARGUMENTS" "explore-results.md" || {
+# Explore結果のコミット（worktree内で実行）
+if [[ -f "$WORKTREE_PATH/explore-results.md" ]]; then
+    # worktree内でコミット
+    git -C "$WORKTREE_PATH" add explore-results.md
+    git -C "$WORKTREE_PATH" commit -m "[EXPLORE] Analysis complete: $ARGUMENTS" || {
         log_error "Failed to commit explore results"
         handle_error 1 "Explore phase failed" "$WORKTREE_PATH"
     }
+    log_success "Committed: [EXPLORE] Analysis complete"
 else
-    log_warning "explore-results.md not found, skipping commit"
+    log_warning "$WORKTREE_PATH/explore-results.md not found, skipping commit"
 fi
 ```
 
@@ -88,8 +98,9 @@ PLANNER_PROMPT=$(load_prompt ".claude/prompts/planner.md" "$DEFAULT_PLANNER_PROM
 **Planner指示**:
 $PLANNER_PROMPT
 
-**前フェーズ結果**: `explore-results.md`
+**前フェーズ結果**: `$WORKTREE_PATH/explore-results.md`
 **タスク**: $ARGUMENTS
+**作業ディレクトリ**: $WORKTREE_PATH
 
 **実行内容**:
 1. Explore結果を基に実装戦略を策定
@@ -99,14 +110,16 @@ $PLANNER_PROMPT
 5. 結果を `plan-results.md` に保存
 
 ```bash
-# Plan結果のコミット
-if [[ -f "plan-results.md" ]]; then
-    git_commit_phase "PLAN" "Strategy complete: $ARGUMENTS" "plan-results.md" || {
+# Plan結果のコミット（worktree内で実行）
+if [[ -f "$WORKTREE_PATH/plan-results.md" ]]; then
+    git -C "$WORKTREE_PATH" add plan-results.md
+    git -C "$WORKTREE_PATH" commit -m "[PLAN] Strategy complete: $ARGUMENTS" || {
         log_error "Failed to commit plan results"
         handle_error 1 "Plan phase failed" "$WORKTREE_PATH"
     }
+    log_success "Committed: [PLAN] Strategy complete"
 else
-    log_warning "plan-results.md not found, skipping commit"
+    log_warning "$WORKTREE_PATH/plan-results.md not found, skipping commit"
 fi
 ```
 
@@ -121,8 +134,12 @@ CODER_PROMPT=$(load_prompt ".claude/prompts/coder.md" "$DEFAULT_CODER_PROMPT")
 **Coder指示**:
 $CODER_PROMPT
 
-**前フェーズ結果**: `explore-results.md`, `plan-results.md`
+**前フェーズ結果**: 
+- `$WORKTREE_PATH/explore-results.md`
+- `$WORKTREE_PATH/plan-results.md`
+
 **タスク**: $ARGUMENTS
+**作業ディレクトリ**: $WORKTREE_PATH
 
 **TDD実行順序**:
 1. **Write tests › Commit** - 失敗するテストを先に作成
@@ -130,32 +147,39 @@ $CODER_PROMPT
 3. **Refactor › Commit** - コード品質向上
 
 ```bash
-# TDD RED Phase - テスト作成
-if [[ -d "tests/" ]] || [[ -n $(find . -name "*test*" -type f 2>/dev/null) ]]; then
-    git_commit_phase "TDD-RED" "Failing tests: $ARGUMENTS" "tests/ *test*" || {
+# TDD RED Phase - テスト作成（worktree内で実行）
+if [[ -d "$WORKTREE_PATH/tests/" ]] || [[ -n $(find "$WORKTREE_PATH" -name "*test*" -type f 2>/dev/null) ]]; then
+    git -C "$WORKTREE_PATH" add tests/ *test* 2>/dev/null
+    git -C "$WORKTREE_PATH" commit -m "[TDD-RED] Failing tests: $ARGUMENTS" || {
         log_warning "No test files to commit in RED phase"
     }
+else
+    log_warning "No test directory found in worktree"
 fi
 
-# TDD GREEN Phase - 実装
-if [[ -d "src/" ]] || [[ -n $(git diff --name-only) ]]; then
-    git_commit_phase "TDD-GREEN" "Implementation: $ARGUMENTS" "src/ *.js *.ts *.py *.go" || {
+# TDD GREEN Phase - 実装（worktree内で実行）
+if [[ -d "$WORKTREE_PATH/src/" ]] || [[ -n $(git -C "$WORKTREE_PATH" diff --name-only) ]]; then
+    git -C "$WORKTREE_PATH" add src/ *.js *.ts *.py *.go 2>/dev/null
+    git -C "$WORKTREE_PATH" commit -m "[TDD-GREEN] Implementation: $ARGUMENTS" || {
         log_warning "No implementation files to commit in GREEN phase"
     }
 fi
 
-# TDD REFACTOR Phase - リファクタリング
-if [[ -n $(git diff --name-only) ]]; then
-    git_commit_phase "TDD-REFACTOR" "Code quality improvements: $ARGUMENTS" "." || {
+# TDD REFACTOR Phase - リファクタリング（worktree内で実行）
+if [[ -n $(git -C "$WORKTREE_PATH" diff --name-only) ]]; then
+    git -C "$WORKTREE_PATH" add .
+    git -C "$WORKTREE_PATH" commit -m "[TDD-REFACTOR] Code quality improvements: $ARGUMENTS" || {
         log_warning "No changes to commit in REFACTOR phase"
     }
 fi
 
-# 最終結果保存
-if [[ -f "coding-results.md" ]]; then
-    git_commit_phase "CODING" "Implementation complete: $ARGUMENTS" "coding-results.md" || {
+# 最終結果保存（worktree内で実行）
+if [[ -f "$WORKTREE_PATH/coding-results.md" ]]; then
+    git -C "$WORKTREE_PATH" add coding-results.md
+    git -C "$WORKTREE_PATH" commit -m "[CODING] Implementation complete: $ARGUMENTS" || {
         log_warning "Failed to commit coding results"
     }
+    log_success "Committed: [CODING] Implementation complete"
 fi
 ```
 
@@ -170,8 +194,8 @@ if ! run_tests "$PROJECT_TYPE" "$WORKTREE_PATH"; then
     # テスト失敗してもレポートは生成する
 fi
 
-# 完了レポート生成
-cat > task-completion-report.md << EOF
+# 完了レポート生成（メインディレクトリに一時作成してからコピー）
+cat > /tmp/task-completion-report.md << EOF
 # Task Completion Report
 
 ## Task Summary
@@ -182,16 +206,16 @@ cat > task-completion-report.md << EOF
 **Completed**: $(date)
 
 ## Phase Results
-- $(if [[ -f "explore-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Explore**: Root cause analysis
-- $(if [[ -f "plan-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Plan**: Implementation strategy
-- $(if [[ -f "coding-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Code**: TDD implementation
+- $(if [[ -f "$WORKTREE_PATH/explore-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Explore**: Root cause analysis
+- $(if [[ -f "$WORKTREE_PATH/plan-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Plan**: Implementation strategy
+- $(if [[ -f "$WORKTREE_PATH/coding-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Code**: TDD implementation
 - $(if run_tests "$PROJECT_TYPE" "$WORKTREE_PATH" &>/dev/null; then echo "✅"; else echo "⚠️"; fi) **Tests**: All tests passing
 
 ## Files Modified
-$(git diff --name-only origin/main 2>/dev/null || echo "Unable to compare with origin/main")
+$(git -C "$WORKTREE_PATH" diff --name-only origin/main 2>/dev/null || echo "Unable to compare with origin/main")
 
 ## Commits
-$(git log --oneline origin/main..HEAD 2>/dev/null || git log --oneline -n 10)
+$(git -C "$WORKTREE_PATH" log --oneline origin/main..HEAD 2>/dev/null || git -C "$WORKTREE_PATH" log --oneline -n 10)
 
 ## Test Results
 $(if command -v "$PROJECT_TYPE" &>/dev/null; then
@@ -207,10 +231,18 @@ fi)
 
 EOF
 
-# 完了レポートのコミット
-git_commit_phase "COMPLETE" "Task finished: $ARGUMENTS" "task-completion-report.md" || {
-    log_warning "Failed to commit completion report"
-}
+# 完了レポートをworktreeにコピーしてコミット
+cp /tmp/task-completion-report.md "$WORKTREE_PATH/task-completion-report.md"
+rm /tmp/task-completion-report.md
+
+# worktree内でコミット
+if [[ -f "$WORKTREE_PATH/task-completion-report.md" ]]; then
+    git -C "$WORKTREE_PATH" add task-completion-report.md
+    git -C "$WORKTREE_PATH" commit -m "[COMPLETE] Task finished: $ARGUMENTS" || {
+        log_warning "Failed to commit completion report"
+    }
+    log_success "Committed: [COMPLETE] Task finished"
+fi
 
 log_success "Task completed independently!"
 echo "📊 Report: $WORKTREE_PATH/task-completion-report.md"

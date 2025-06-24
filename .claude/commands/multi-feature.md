@@ -45,11 +45,12 @@ echo "📁 Worktree: $WORKTREE_PATH"
 
 #### Phase 1: Explore（探索・要件分析）
 ```bash
-cd "$WORKTREE_PATH" || handle_error $? "Failed to change to worktree directory" "$WORKTREE_PATH"
+# ClaudeCodeアクセス制限対応: cdを使用せず、worktree内で作業
+log_info "Working in worktree: $WORKTREE_PATH"
 
 show_progress "Explore" 5 1
 
-# Explorerプロンプトの読み込み
+# Explorerプロンプトの読み込み（メインディレクトリから）
 EXPLORER_PROMPT=$(load_prompt ".claude/prompts/explorer.md" "$DEFAULT_EXPLORER_PROMPT")
 ```
 
@@ -57,6 +58,12 @@ EXPLORER_PROMPT=$(load_prompt ".claude/prompts/explorer.md" "$DEFAULT_EXPLORER_P
 $EXPLORER_PROMPT
 
 **開発機能**: $ARGUMENTS
+
+**作業ディレクトリ**: $WORKTREE_PATH
+**注意**: ClaudeCodeのアクセス制限により、直接worktreeディレクトリに移動できません。以下の方法で作業してください：
+- ファイル読み取り: `Read $WORKTREE_PATH/ファイル名`
+- ファイル書き込み: `Write $WORKTREE_PATH/ファイル名`
+- ファイル編集: `Edit $WORKTREE_PATH/ファイル名`
 
 **実行内容**:
 1. 新機能の要件分析・技術調査
@@ -73,14 +80,17 @@ $EXPLORER_PROMPT
 - **Playwright/Puppeteer**: 類似機能のE2Eテストパターン調査
 
 ```bash
-# Explore結果のコミット
-if [[ -f "explore-results.md" ]]; then
-    git_commit_phase "EXPLORE" "Feature analysis complete: $ARGUMENTS" "explore-results.md" || {
+# Explore結果のコミット（worktree内で実行）
+if [[ -f "$WORKTREE_PATH/explore-results.md" ]]; then
+    # worktree内でコミット
+    git -C "$WORKTREE_PATH" add explore-results.md
+    git -C "$WORKTREE_PATH" commit -m "[EXPLORE] Feature analysis complete: $ARGUMENTS" || {
         log_error "Failed to commit explore results"
         handle_error 1 "Explore phase failed" "$WORKTREE_PATH"
     }
+    log_success "Committed: [EXPLORE] Feature analysis complete"
 else
-    log_warning "explore-results.md not found, skipping commit"
+    log_warning "$WORKTREE_PATH/explore-results.md not found, skipping commit"
 fi
 ```
 
@@ -95,8 +105,9 @@ PLANNER_PROMPT=$(load_prompt ".claude/prompts/planner.md" "$DEFAULT_PLANNER_PROM
 **Planner指示**:
 $PLANNER_PROMPT
 
-**前フェーズ結果**: `explore-results.md`
+**前フェーズ結果**: `$WORKTREE_PATH/explore-results.md`
 **開発機能**: $ARGUMENTS
+**作業ディレクトリ**: $WORKTREE_PATH
 
 **実行内容**:
 1. Explore結果を基にアーキテクチャ設計
@@ -114,14 +125,16 @@ $PLANNER_PROMPT
 - **Context7**: 既存アーキテクチャとの整合性確認
 
 ```bash
-# Plan結果のコミット
-if [[ -f "plan-results.md" ]]; then
-    git_commit_phase "PLAN" "Architecture design complete: $ARGUMENTS" "plan-results.md" || {
+# Plan結果のコミット（worktree内で実行）
+if [[ -f "$WORKTREE_PATH/plan-results.md" ]]; then
+    git -C "$WORKTREE_PATH" add plan-results.md
+    git -C "$WORKTREE_PATH" commit -m "[PLAN] Architecture design complete: $ARGUMENTS" || {
         log_error "Failed to commit plan results"
         handle_error 1 "Plan phase failed" "$WORKTREE_PATH"
     }
+    log_success "Committed: [PLAN] Architecture design complete"
 else
-    log_warning "plan-results.md not found, skipping commit"
+    log_warning "$WORKTREE_PATH/plan-results.md not found, skipping commit"
 fi
 ```
 
@@ -164,8 +177,13 @@ CODER_PROMPT=$(load_prompt ".claude/prompts/coder.md" "$DEFAULT_CODER_PROMPT")
 **Coder指示**:
 $CODER_PROMPT
 
-**前フェーズ結果**: `explore-results.md`, `plan-results.md`, `prototype-results.md`
+**前フェーズ結果**: 
+- `$WORKTREE_PATH/explore-results.md`
+- `$WORKTREE_PATH/plan-results.md`
+- `$WORKTREE_PATH/prototype-results.md`
+
 **開発機能**: $ARGUMENTS
+**作業ディレクトリ**: $WORKTREE_PATH
 
 **TDD実行順序（機能開発向け）**:
 1. **インターフェーステスト作成**: APIやコンポーネントの境界テスト
@@ -236,8 +254,8 @@ if [[ -f "package.json" ]] && grep -q '"build"' package.json; then
     npm run build || log_warning "Build process needs review"
 fi
 
-# 完了レポート生成
-cat > feature-completion-report.md << EOF
+# 完了レポート生成（メインディレクトリに一時作成してからコピー）
+cat > /tmp/feature-completion-report.md << EOF
 # Feature Completion Report
 
 ## Feature Summary
@@ -307,10 +325,18 @@ $(git log --oneline origin/main..HEAD)
 
 EOF
 
-# 完了レポートのコミット
-git_commit_phase "COMPLETE" "Feature ready for integration: $ARGUMENTS" "feature-completion-report.md" || {
-    log_warning "Failed to commit completion report"
-}
+# 完了レポートをworktreeにコピーしてコミット
+cp /tmp/feature-completion-report.md "$WORKTREE_PATH/feature-completion-report.md"
+rm /tmp/feature-completion-report.md
+
+# worktree内でコミット
+if [[ -f "$WORKTREE_PATH/feature-completion-report.md" ]]; then
+    git -C "$WORKTREE_PATH" add feature-completion-report.md
+    git -C "$WORKTREE_PATH" commit -m "[COMPLETE] Feature ready for integration: $ARGUMENTS" || {
+        log_warning "Failed to commit completion report"
+    }
+    log_success "Committed: [COMPLETE] Feature ready for integration"
+fi
 
 log_success "Feature development completed independently!"
 echo "📊 Report: $WORKTREE_PATH/feature-completion-report.md"

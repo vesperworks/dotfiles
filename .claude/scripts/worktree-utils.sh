@@ -187,7 +187,7 @@ create_task_worktree() {
     
     # worktree作成
     log_info "Creating worktree: $worktree_path"
-    if ! git worktree add "$worktree_path" -b "$task_branch" 2>/dev/null; then
+    if ! git worktree add "$worktree_path" -b "$task_branch" >/dev/null 2>&1; then
         handle_error $? "Failed to create worktree" "$worktree_path"
     fi
     
