@@ -1,10 +1,32 @@
 #!/bin/bash
 # worktree-utils.sh - マルチエージェントワークフロー用共通ユーティリティ
 
-set -euo pipefail
-
 # 並列エージェント実行機能を読み込み
-source "$(dirname "${BASH_SOURCE[0]}")/parallel-agent-utils.sh"
+# 複数の場所を試して読み込み（エラーを無視）
+PARALLEL_AGENT_LOADED=false
+
+# 現在のディレクトリから相対的に探す
+if [[ -f ".claude/scripts/parallel-agent-utils.sh" ]]; then
+    set +e  # 一時的にエラーを無視
+    source ".claude/scripts/parallel-agent-utils.sh" && PARALLEL_AGENT_LOADED=true
+    set -e
+fi
+
+# BASH_SOURCEベースで探す（設定されている場合のみ）
+if [[ "$PARALLEL_AGENT_LOADED" = false ]] && [[ -n "${BASH_SOURCE[0]:-}" ]]; then
+    SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+    if [[ -f "$SCRIPT_DIR/parallel-agent-utils.sh" ]]; then
+        set +e  # 一時的にエラーを無視
+        source "$SCRIPT_DIR/parallel-agent-utils.sh" && PARALLEL_AGENT_LOADED=true
+        set -e
+    fi
+fi
+
+if [[ "$PARALLEL_AGENT_LOADED" = false ]]; then
+    echo "Warning: parallel-agent-utils.sh not found, parallel agent functionality will be limited"
+fi
+
+set -euo pipefail
 
 # カラー定義
 RED='\033[0;31m'

@@ -1,8 +1,6 @@
 #!/bin/bash
 # parallel-agent-utils.sh - 並列エージェント実行機能専用ユーティリティ
 
-set -euo pipefail
-
 # 並列エージェント実行機能
 run_parallel_agents() {
     local worktree_path="$1"
