@@ -40,21 +40,31 @@
 - [x] ファイル名にfeature名を含めて明示的にする（例: `test-auth-unit.js`、`report-auth-coverage.md`）✅
 - [x] worktree-utils.shにディレクトリ作成機能を追加 ✅
 
-### 6. TDDサイクルの並列化による効率化
-- [ ] worktree-utils.shに`run_parallel_agents()`関数を追加
-- [ ] TDD RED-GREENサイクルの並列実行機能
-  - [ ] Coder-Testエージェント（テスト作成専門）
-  - [ ] Coder-Implエージェント（実装専門）
-  - [ ] 両者の結果をマージする仕組み
-- [ ] Testerエージェントの早期投入
+### 6. TDDサイクルの並列化による効率化【完了】
+- [x] worktree-utils.shに`run_parallel_agents()`関数を追加 ✅
+- [x] TDD RED-GREENサイクルの並列実行機能 ✅
+  - [x] Coder-Testエージェント（テスト作成専門）✅
+  - [x] Coder-Implエージェント（実装専門）✅
+  - [x] 両者の結果をマージする仕組み ✅
+- [x] 並列実行監視とレポート機能 ✅
+  - [x] リアルタイム進捗表示（スピナー付き）✅
+  - [x] 統合レポート自動生成 ✅
+  - [x] Git自動コミット機能 ✅
+- [ ] Testerエージェントの早期投入（将来拡張）
   - [ ] 各TDDサイクル完了後に即座にTesterを起動
   - [ ] Coderの次サイクルとTesterの検証を並列実行
-- [ ] MCP連携の専門化
+- [ ] MCP連携の専門化（将来拡張）
   - [ ] MCP-Testerサブエージェント（Playwright/Puppeteer専門）
   - [ ] E2Eテストの自動生成・実行を並列化
-- [ ] 効果測定
+- [ ] 効果測定（運用後実施予定）
   - [ ] TDDサイクル時間の短縮率を計測（目標：30-40%短縮）
   - [ ] 早期品質問題発見率の向上
+
+### 6.1 並列TDD機能のコマンド統合
+- [ ] multi-tdd.mdに`--parallel`オプションを追加
+- [ ] オプション指定時に`run_parallel_agents()`を呼び出す
+- [ ] デフォルトは従来の順次実行を維持
+- [ ] 使用例とパフォーマンス比較をドキュメント化
 
 ### 7. MCP連携機能の実装
 - [ ] Context7連携の具体的な実装
@@ -93,7 +103,9 @@
 - [x] `.claude/prompts/explorer.md` - 探索・調査専門
 - [x] `.claude/prompts/planner.md` - 戦略策定専門
 - [x] `.claude/prompts/coder.md` - TDD実装専門
-- [x] `.claude/prompts/tester.md` - 品質検証・カバレッジ確認専門 ✅ NEW
+- [x] `.claude/prompts/coder-test.md` - テスト作成専門（並列TDD対応）✅ NEW
+- [x] `.claude/prompts/coder-impl.md` - 実装専門（並列TDD対応）✅ NEW
+- [x] `.claude/prompts/tester.md` - 品質検証・カバレッジ確認専門 ✅
 
 ### Templates（実装済み）
 - [x] `.claude/templates/task-completion.md` - タスク完了レポート
@@ -106,6 +118,7 @@
 - [x] `.claude/test/test-multi-agent.sh` - 統合テストスクリプト ✅ NEW
 - [x] `.claude/test/test-structured-directories.sh` - 構造化ディレクトリテスト ✅ NEW
 - [x] `.claude/test/test-workflow-improvements.sh` - ワークフロー改善テスト ✅ NEW
+- [x] `.claude/test/test-parallel-tdd.sh` - 並列TDD機能テスト ✅ NEW
 
 ## 🟡 推奨改善項目
 
@@ -135,10 +148,11 @@
 2. ~~**高**: CLAUDE.mdの更新（プロジェクト状態を正確に反映）~~ ✅ 完了
 3. ~~**高**: ファイル構造の改善（テスト・レポートの整理）~~ ✅ 完了
 4. ~~**高**: ワークフロー実装の改善（ブランチ切り替え・クリーンアップ）~~ ✅ 完了
-5. **中**: TDDサイクルの並列化による効率化
-6. **中**: 各ワークフローの自動テストスクリプト作成
-7. **低**: MCP連携機能の実装（別フェーズでも可）
-8. **低**: 推奨改善項目（運用開始後に順次対応）
+5. ~~**中**: TDDサイクルの並列化による効率化~~ ✅ 基盤実装完了
+6. **高**: 並列TDD機能のコマンド統合（ユーザーが使える状態にする）
+7. **中**: 各ワークフローの自動テストスクリプト作成
+8. **低**: MCP連携機能の実装（別フェーズでも可）
+9. **低**: 推奨改善項目（運用開始後に順次対応）
 
 ## 💡 次のアクション
 
@@ -150,14 +164,14 @@
 
 ## 🎯 新しい次のアクション
 
-1. TDDサイクルの並列化による効率化の検討
+1. **並列TDD機能のコマンド統合** - multi-tdd.mdに`--parallel`オプションを追加
 2. 各ワークフローの自動テストスクリプト作成
 3. MCP連携機能の実装検討
 4. エラーハンドリング強化（リトライ機能など）
 
 ---
 
-更新日: 2025-01-24（ワークフロー改善完了）
+更新日: 2025-06-24（並列TDD機能完了）
 
 ## 📝 完了した改善内容
 
@@ -181,3 +195,25 @@
 4. **ドキュメントとテスト**
    - workflow-improvements-usage.md: 詳細な使用方法
    - test-workflow-improvements.sh: 機能テスト
+
+### 並列TDD機能の実装（2025-06-24完了）
+1. **並列実行アーキテクチャ**
+   - `run_parallel_agents()`: メイン並列実行関数
+   - Test Agent と Implementation Agent の同時実行
+   - プロセス管理とPID追跡システム
+
+2. **専門エージェントの実装**
+   - Coder-Test Agent: TDD Red phase専門（テスト作成）
+   - Coder-Impl Agent: TDD Green phase専門（実装）
+   - 独立したログファイルと進捗管理
+
+3. **監視・統合機能**
+   - リアルタイム進捗監視（スピナー表示）
+   - 並列実行結果の自動マージ
+   - 統合レポート生成（parallel-tdd-report.md）
+   - Git自動コミット機能
+
+4. **専門プロンプトとテスト**
+   - coder-test.md: テスト作成専門プロンプト
+   - coder-impl.md: 実装専門プロンプト  
+   - test-parallel-tdd.sh: 包括的機能テスト
