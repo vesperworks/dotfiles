@@ -13,22 +13,28 @@ $ARGUMENTS
 **Anthropic公式パターン準拠**：
 
 ```bash
-# 1. タスク識別子生成
-PROJECT_ROOT=$(basename $(pwd))
-TASK_ID=$(echo "$ARGUMENTS" | sed 's/[^a-zA-Z0-9]/-/g' | cut -c1-20)
-TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-TASK_BRANCH="bugfix/jwt-${TIMESTAMP}"
-WORKTREE_PATH="../${PROJECT_ROOT}-${TASK_ID}"
+# 共通ユーティリティの読み込み
+source .claude/scripts/worktree-utils.sh || {
+    echo "Error: worktree-utils.sh not found"
+    exit 1
+}
 
-# 2. Featureブランチ作成とWorktree作成（公式パターン）
-git worktree add "$WORKTREE_PATH" -b "$TASK_BRANCH"
+# 環境検証
+verify_environment || exit 1
 
-# 3. .claude設定をコピー
-cp -r .claude "$WORKTREE_PATH/"
+# プロジェクトタイプの検出
+PROJECT_TYPE=$(detect_project_type)
+log_info "Detected project type: $PROJECT_TYPE"
 
-echo "🚀 Task worktree created: $WORKTREE_PATH"
+# worktree作成
+WORKTREE_INFO=$(create_task_worktree "$ARGUMENTS" "tdd")
+WORKTREE_PATH=$(echo "$WORKTREE_INFO" | cut -d'|' -f1)
+TASK_BRANCH=$(echo "$WORKTREE_INFO" | cut -d'|' -f2)
+
+log_success "Task worktree created"
 echo "📋 Task: $ARGUMENTS"
 echo "🌿 Branch: $TASK_BRANCH"
+echo "📁 Worktree: $WORKTREE_PATH"
 ```
 
 ### Step 2: Worktree内で全フロー自動実行
@@ -39,14 +45,16 @@ echo "🌿 Branch: $TASK_BRANCH"
 
 #### Phase 1: Explore（探索・調査）
 ```bash
-cd "$WORKTREE_PATH"
+cd "$WORKTREE_PATH" || handle_error $? "Failed to change to worktree directory" "$WORKTREE_PATH"
 
-# Explorerエージェント実行
-echo "🔍 Phase 1: Exploring..."
+show_progress "Explore" 4 1
+
+# Explorerプロンプトの読み込み
+EXPLORER_PROMPT=$(load_prompt ".claude/prompts/explorer.md" "$DEFAULT_EXPLORER_PROMPT")
 ```
 
 **Explorer指示**:
-$(cat .claude/prompts/explorer.md)
+$EXPLORER_PROMPT
 
 **タスク**: $ARGUMENTS
 
@@ -58,17 +66,27 @@ $(cat .claude/prompts/explorer.md)
 5. 結果を `explore-results.md` に保存
 
 ```bash
-git add explore-results.md
-git commit -m "[EXPLORE] Analysis complete: $ARGUMENTS"
+# Explore結果のコミット
+if [[ -f "explore-results.md" ]]; then
+    git_commit_phase "EXPLORE" "Analysis complete: $ARGUMENTS" "explore-results.md" || {
+        log_error "Failed to commit explore results"
+        handle_error 1 "Explore phase failed" "$WORKTREE_PATH"
+    }
+else
+    log_warning "explore-results.md not found, skipping commit"
+fi
 ```
 
 #### Phase 2: Plan（計画策定）
 ```bash
-echo "📋 Phase 2: Planning..."
+show_progress "Plan" 4 2
+
+# Plannerプロンプトの読み込み
+PLANNER_PROMPT=$(load_prompt ".claude/prompts/planner.md" "$DEFAULT_PLANNER_PROMPT")
 ```
 
 **Planner指示**:
-$(cat .claude/prompts/planner.md)
+$PLANNER_PROMPT
 
 **前フェーズ結果**: `explore-results.md`
 **タスク**: $ARGUMENTS
@@ -81,17 +99,27 @@ $(cat .claude/prompts/planner.md)
 5. 結果を `plan-results.md` に保存
 
 ```bash
-git add plan-results.md
-git commit -m "[PLAN] Strategy complete: $ARGUMENTS"
+# Plan結果のコミット
+if [[ -f "plan-results.md" ]]; then
+    git_commit_phase "PLAN" "Strategy complete: $ARGUMENTS" "plan-results.md" || {
+        log_error "Failed to commit plan results"
+        handle_error 1 "Plan phase failed" "$WORKTREE_PATH"
+    }
+else
+    log_warning "plan-results.md not found, skipping commit"
+fi
 ```
 
 #### Phase 3: Coding（TDD実装）
 ```bash
-echo "💻 Phase 3: Coding with TDD..."
+show_progress "Coding" 4 3
+
+# Coderプロンプトの読み込み
+CODER_PROMPT=$(load_prompt ".claude/prompts/coder.md" "$DEFAULT_CODER_PROMPT")
 ```
 
 **Coder指示**:
-$(cat .claude/prompts/coder.md)
+$CODER_PROMPT
 
 **前フェーズ結果**: `explore-results.md`, `plan-results.md`
 **タスク**: $ARGUMENTS
@@ -102,28 +130,45 @@ $(cat .claude/prompts/coder.md)
 3. **Refactor › Commit** - コード品質向上
 
 ```bash
-# TDD Cycle
-git add tests/
-git commit -m "[TDD-RED] Failing tests: $ARGUMENTS"
+# TDD RED Phase - テスト作成
+if [[ -d "tests/" ]] || [[ -n $(find . -name "*test*" -type f 2>/dev/null) ]]; then
+    git_commit_phase "TDD-RED" "Failing tests: $ARGUMENTS" "tests/ *test*" || {
+        log_warning "No test files to commit in RED phase"
+    }
+fi
 
-git add src/
-git commit -m "[TDD-GREEN] Implementation: $ARGUMENTS"
+# TDD GREEN Phase - 実装
+if [[ -d "src/" ]] || [[ -n $(git diff --name-only) ]]; then
+    git_commit_phase "TDD-GREEN" "Implementation: $ARGUMENTS" "src/ *.js *.ts *.py *.go" || {
+        log_warning "No implementation files to commit in GREEN phase"
+    }
+fi
 
-git add .
-git commit -m "[TDD-REFACTOR] Code quality improvements: $ARGUMENTS"
+# TDD REFACTOR Phase - リファクタリング
+if [[ -n $(git diff --name-only) ]]; then
+    git_commit_phase "TDD-REFACTOR" "Code quality improvements: $ARGUMENTS" "." || {
+        log_warning "No changes to commit in REFACTOR phase"
+    }
+fi
 
 # 最終結果保存
-git add coding-results.md
-git commit -m "[CODING] Implementation complete: $ARGUMENTS"
+if [[ -f "coding-results.md" ]]; then
+    git_commit_phase "CODING" "Implementation complete: $ARGUMENTS" "coding-results.md" || {
+        log_warning "Failed to commit coding results"
+    }
+fi
 ```
 
 ### Step 3: 完了通知とPR準備
 
 ```bash
-echo "✅ Phase 4: Task completion..."
+show_progress "Completion" 4 4
 
-# 最終検証
-npm test || echo "⚠️ Tests need attention"
+# 最終検証 - プロジェクトタイプに応じたテスト実行
+if ! run_tests "$PROJECT_TYPE" "$WORKTREE_PATH"; then
+    log_error "Tests failed - task may be incomplete"
+    # テスト失敗してもレポートは生成する
+fi
 
 # 完了レポート生成
 cat > task-completion-report.md << EOF
@@ -133,36 +178,51 @@ cat > task-completion-report.md << EOF
 **Task**: $ARGUMENTS  
 **Branch**: $TASK_BRANCH
 **Worktree**: $WORKTREE_PATH
+**Project Type**: $PROJECT_TYPE
 **Completed**: $(date)
 
 ## Phase Results
-- ✅ **Explore**: Root cause analysis complete
-- ✅ **Plan**: Implementation strategy defined  
-- ✅ **Code**: TDD implementation finished
-- ✅ **Ready**: PR ready for review
+- $(if [[ -f "explore-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Explore**: Root cause analysis
+- $(if [[ -f "plan-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Plan**: Implementation strategy
+- $(if [[ -f "coding-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Code**: TDD implementation
+- $(if run_tests "$PROJECT_TYPE" "$WORKTREE_PATH" &>/dev/null; then echo "✅"; else echo "⚠️"; fi) **Tests**: All tests passing
 
 ## Files Modified
-$(git diff --name-only origin/main)
+$(git diff --name-only origin/main 2>/dev/null || echo "Unable to compare with origin/main")
 
 ## Commits
-$(git log --oneline origin/main..HEAD)
+$(git log --oneline origin/main..HEAD 2>/dev/null || git log --oneline -n 10)
+
+## Test Results
+$(if command -v "$PROJECT_TYPE" &>/dev/null; then
+    run_tests "$PROJECT_TYPE" "$WORKTREE_PATH" 2>&1 | tail -20
+else
+    echo "Test command not found for project type: $PROJECT_TYPE"
+fi)
 
 ## Next Steps
 1. Review implementation in worktree: $WORKTREE_PATH
 2. Create PR: $TASK_BRANCH → main
-3. Clean up worktree after merge
+3. Clean up worktree after merge: \`git worktree remove $WORKTREE_PATH\`
 
 EOF
 
-git add task-completion-report.md
-git commit -m "[COMPLETE] Task finished: $ARGUMENTS"
+# 完了レポートのコミット
+git_commit_phase "COMPLETE" "Task finished: $ARGUMENTS" "task-completion-report.md" || {
+    log_warning "Failed to commit completion report"
+}
 
-echo "🎉 Task completed independently!"
+log_success "Task completed independently!"
 echo "📊 Report: $WORKTREE_PATH/task-completion-report.md"
 echo "🔀 Ready for PR: $TASK_BRANCH → main"
 echo ""
 echo "💡 User can now proceed with next tasks."
 echo "🧹 Cleanup: git worktree remove $WORKTREE_PATH (after PR merge)"
+
+# エラーが発生していた場合は非ゼロで終了
+if ! run_tests "$PROJECT_TYPE" "$WORKTREE_PATH" &>/dev/null; then
+    exit 1
+fi
 ```
 
 **使用例**: `/project:multi-tdd "認証機能のJWT有効期限チェック不具合を修正"`

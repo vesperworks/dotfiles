@@ -13,22 +13,28 @@ $ARGUMENTS
 **Anthropic公式パターン準拠**：
 
 ```bash
-# 1. 機能識別子生成
-PROJECT_ROOT=$(basename $(pwd))
-FEATURE_ID=$(echo "$ARGUMENTS" | sed 's/[^a-zA-Z0-9]/-/g' | cut -c1-20)
-TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-FEATURE_BRANCH="feature/${FEATURE_ID}-${TIMESTAMP}"
-WORKTREE_PATH="../${PROJECT_ROOT}-feature-${FEATURE_ID}"
+# 共通ユーティリティの読み込み
+source .claude/scripts/worktree-utils.sh || {
+    echo "Error: worktree-utils.sh not found"
+    exit 1
+}
 
-# 2. Featureブランチ作成とWorktree作成（公式パターン）
-git worktree add "$WORKTREE_PATH" -b "$FEATURE_BRANCH"
+# 環境検証
+verify_environment || exit 1
 
-# 3. .claude設定をコピー
-cp -r .claude "$WORKTREE_PATH/"
+# プロジェクトタイプの検出
+PROJECT_TYPE=$(detect_project_type)
+log_info "Detected project type: $PROJECT_TYPE"
 
-echo "🚀 Feature worktree created: $WORKTREE_PATH"
+# worktree作成
+WORKTREE_INFO=$(create_task_worktree "$ARGUMENTS" "feature")
+WORKTREE_PATH=$(echo "$WORKTREE_INFO" | cut -d'|' -f1)
+FEATURE_BRANCH=$(echo "$WORKTREE_INFO" | cut -d'|' -f2)
+
+log_success "Feature worktree created"
 echo "📋 Feature: $ARGUMENTS"
 echo "🌿 Branch: $FEATURE_BRANCH"
+echo "📁 Worktree: $WORKTREE_PATH"
 ```
 
 ### Step 2: Worktree内で全フロー自動実行
@@ -39,14 +45,16 @@ echo "🌿 Branch: $FEATURE_BRANCH"
 
 #### Phase 1: Explore（探索・要件分析）
 ```bash
-cd "$WORKTREE_PATH"
+cd "$WORKTREE_PATH" || handle_error $? "Failed to change to worktree directory" "$WORKTREE_PATH"
 
-# Explorerエージェント実行
-echo "🔍 Phase 1: Exploring feature requirements..."
+show_progress "Explore" 5 1
+
+# Explorerプロンプトの読み込み
+EXPLORER_PROMPT=$(load_prompt ".claude/prompts/explorer.md" "$DEFAULT_EXPLORER_PROMPT")
 ```
 
 **Explorer指示**:
-$(cat .claude/prompts/explorer.md)
+$EXPLORER_PROMPT
 
 **開発機能**: $ARGUMENTS
 
@@ -65,17 +73,27 @@ $(cat .claude/prompts/explorer.md)
 - **Playwright/Puppeteer**: 類似機能のE2Eテストパターン調査
 
 ```bash
-git add explore-results.md
-git commit -m "[EXPLORE] Feature analysis complete: $ARGUMENTS"
+# Explore結果のコミット
+if [[ -f "explore-results.md" ]]; then
+    git_commit_phase "EXPLORE" "Feature analysis complete: $ARGUMENTS" "explore-results.md" || {
+        log_error "Failed to commit explore results"
+        handle_error 1 "Explore phase failed" "$WORKTREE_PATH"
+    }
+else
+    log_warning "explore-results.md not found, skipping commit"
+fi
 ```
 
 #### Phase 2: Plan（実装戦略・アーキテクチャ設計）
 ```bash
-echo "📋 Phase 2: Planning feature architecture..."
+show_progress "Plan" 5 2
+
+# Plannerプロンプトの読み込み
+PLANNER_PROMPT=$(load_prompt ".claude/prompts/planner.md" "$DEFAULT_PLANNER_PROMPT")
 ```
 
 **Planner指示**:
-$(cat .claude/prompts/planner.md)
+$PLANNER_PROMPT
 
 **前フェーズ結果**: `explore-results.md`
 **開発機能**: $ARGUMENTS
@@ -96,13 +114,20 @@ $(cat .claude/prompts/planner.md)
 - **Context7**: 既存アーキテクチャとの整合性確認
 
 ```bash
-git add plan-results.md
-git commit -m "[PLAN] Architecture design complete: $ARGUMENTS"
+# Plan結果のコミット
+if [[ -f "plan-results.md" ]]; then
+    git_commit_phase "PLAN" "Architecture design complete: $ARGUMENTS" "plan-results.md" || {
+        log_error "Failed to commit plan results"
+        handle_error 1 "Plan phase failed" "$WORKTREE_PATH"
+    }
+else
+    log_warning "plan-results.md not found, skipping commit"
+fi
 ```
 
 #### Phase 3: Prototype（プロトタイプ作成）
 ```bash
-echo "🛠️ Phase 3: Creating feature prototype..."
+show_progress "Prototype" 5 3
 ```
 
 **実行内容**:
@@ -113,22 +138,31 @@ echo "🛠️ Phase 3: Creating feature prototype..."
 5. `prototype-results.md` に実装詳細を保存
 
 ```bash
-# プロトタイプ実装
-git add src/ components/ 
-git commit -m "[PROTOTYPE] Initial prototype: $ARGUMENTS"
+# プロトタイプ実装のコミット
+if [[ -d "src/" ]] || [[ -d "components/" ]]; then
+    git_commit_phase "PROTOTYPE" "Initial prototype: $ARGUMENTS" "src/ components/" || {
+        log_warning "No prototype files to commit"
+    }
+fi
 
-# プロトタイプ結果
-git add prototype-results.md screenshots/
-git commit -m "[PROTOTYPE] Prototype documentation: $ARGUMENTS"
+# プロトタイプ結果のコミット
+if [[ -f "prototype-results.md" ]] || [[ -d "screenshots/" ]]; then
+    git_commit_phase "PROTOTYPE" "Prototype documentation: $ARGUMENTS" "prototype-results.md screenshots/" || {
+        log_warning "No prototype documentation to commit"
+    }
+fi
 ```
 
 #### Phase 4: Coding（本格実装）
 ```bash
-echo "💻 Phase 4: Full feature implementation..."
+show_progress "Coding" 5 4
+
+# Coderプロンプトの読み込み
+CODER_PROMPT=$(load_prompt ".claude/prompts/coder.md" "$DEFAULT_CODER_PROMPT")
 ```
 
 **Coder指示**:
-$(cat .claude/prompts/coder.md)
+$CODER_PROMPT
 
 **前フェーズ結果**: `explore-results.md`, `plan-results.md`, `prototype-results.md`
 **開発機能**: $ARGUMENTS
@@ -147,37 +181,60 @@ $(cat .claude/prompts/coder.md)
 
 ```bash
 # API/コンポーネントテスト
-git add tests/unit/ tests/integration/
-git commit -m "[TEST] Interface and integration tests: $ARGUMENTS"
+if [[ -d "tests/unit/" ]] || [[ -d "tests/integration/" ]]; then
+    git_commit_phase "TEST" "Interface and integration tests: $ARGUMENTS" "tests/unit/ tests/integration/" || {
+        log_warning "No test files to commit"
+    }
+fi
 
 # 機能実装
-git add src/ components/ api/
-git commit -m "[IMPLEMENT] Core feature implementation: $ARGUMENTS"
+if [[ -d "src/" ]] || [[ -d "components/" ]] || [[ -d "api/" ]]; then
+    git_commit_phase "IMPLEMENT" "Core feature implementation: $ARGUMENTS" "src/ components/ api/" || {
+        log_warning "No implementation files to commit"
+    }
+fi
 
 # E2Eテスト
-git add tests/e2e/
-git commit -m "[E2E] End-to-end tests: $ARGUMENTS"
+if [[ -d "tests/e2e/" ]]; then
+    git_commit_phase "E2E" "End-to-end tests: $ARGUMENTS" "tests/e2e/" || {
+        log_warning "No E2E test files to commit"
+    }
+fi
 
 # 最適化とドキュメント
-git add performance/ docs/
-git commit -m "[OPTIMIZE] Performance and documentation: $ARGUMENTS"
+if [[ -d "performance/" ]] || [[ -d "docs/" ]]; then
+    git_commit_phase "OPTIMIZE" "Performance and documentation: $ARGUMENTS" "performance/ docs/" || {
+        log_warning "No optimization files to commit"
+    }
+fi
 
 # 最終結果保存
-git add coding-results.md
-git commit -m "[CODING] Feature implementation complete: $ARGUMENTS"
+if [[ -f "coding-results.md" ]]; then
+    git_commit_phase "CODING" "Feature implementation complete: $ARGUMENTS" "coding-results.md" || {
+        log_warning "Failed to commit coding results"
+    }
+fi
 ```
 
 ### Step 3: 完了通知とPR準備
 
 ```bash
-echo "✅ Phase 5: Feature completion..."
+show_progress "Completion" 5 5
 
-# 全テスト実行
-npm test || echo "⚠️ Some tests need attention"
-npm run e2e || echo "⚠️ E2E tests need review"
+# 全テスト実行 - プロジェクトタイプに応じたテスト
+if ! run_tests "$PROJECT_TYPE" "$WORKTREE_PATH"; then
+    log_error "Tests failed - feature may be incomplete"
+fi
 
-# デモ環境準備（可能な場合）
-npm run build || echo "⚠️ Build process needs review"
+# E2Eテスト実行（存在する場合）
+if [[ -f "package.json" ]] && grep -q '"e2e"' package.json; then
+    npm run e2e || log_warning "E2E tests need review"
+fi
+
+# ビルド実行（存在する場合）
+if [[ -f "package.json" ]] && grep -q '"build"' package.json; then
+    npm run build || log_warning "Build process needs review"
+fi
 
 # 完了レポート生成
 cat > feature-completion-report.md << EOF
@@ -203,11 +260,11 @@ cat > feature-completion-report.md << EOF
 - Performance metrics within targets
 
 ## Phase Results
-- ✅ **Explore**: Requirements and constraints analyzed
-- ✅ **Plan**: Architecture and implementation strategy defined
-- ✅ **Prototype**: Working prototype demonstrated
-- ✅ **Code**: Full feature implementation completed
-- ✅ **Test**: Comprehensive test coverage achieved
+- $(if [[ -f "explore-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Explore**: Requirements and constraints analyzed
+- $(if [[ -f "plan-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Plan**: Architecture and implementation strategy defined
+- $(if [[ -f "prototype-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Prototype**: Working prototype demonstrated
+- $(if [[ -f "coding-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Code**: Full feature implementation completed
+- $(if run_tests "$PROJECT_TYPE" "$WORKTREE_PATH" &>/dev/null; then echo "✅"; else echo "⚠️"; fi) **Test**: Comprehensive test coverage achieved
 - ✅ **Ready**: Feature ready for review and integration
 
 ## Files Created/Modified
@@ -250,16 +307,23 @@ $(git log --oneline origin/main..HEAD)
 
 EOF
 
-git add feature-completion-report.md
-git commit -m "[COMPLETE] Feature ready for integration: $ARGUMENTS"
+# 完了レポートのコミット
+git_commit_phase "COMPLETE" "Feature ready for integration: $ARGUMENTS" "feature-completion-report.md" || {
+    log_warning "Failed to commit completion report"
+}
 
-echo "🎉 Feature development completed independently!"
+log_success "Feature development completed independently!"
 echo "📊 Report: $WORKTREE_PATH/feature-completion-report.md"
 echo "🔀 Ready for PR: $FEATURE_BRANCH → main"
 echo "🚀 Demo available in: $WORKTREE_PATH"
 echo ""
 echo "💡 User can now proceed with other tasks."
 echo "🧹 Cleanup: git worktree remove $WORKTREE_PATH (after PR merge)"
+
+# エラーが発生していた場合は非ゼロで終了
+if ! run_tests "$PROJECT_TYPE" "$WORKTREE_PATH" &>/dev/null; then
+    exit 1
+fi
 ```
 
 ## 使用例

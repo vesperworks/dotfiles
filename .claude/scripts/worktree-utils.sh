@@ -122,10 +122,35 @@ get_test_command() {
     esac
 }
 
+# プロジェクトの初回セットアップチェック
+check_and_setup_project_structure() {
+    # .worktreesディレクトリが存在しない場合は作成
+    if [[ ! -d ".worktrees" ]]; then
+        log_info "Creating .worktrees directory for worktree management..."
+        mkdir -p .worktrees
+    fi
+    
+    # .gitignoreに.worktrees/を追加（まだ追加されていない場合）
+    if [[ -f ".gitignore" ]]; then
+        if ! grep -q "^\.worktrees/$" .gitignore && ! grep -q "^\.worktrees$" .gitignore; then
+            echo ".worktrees/" >> .gitignore
+            log_info "Added .worktrees/ to .gitignore"
+        fi
+    else
+        echo ".worktrees/" > .gitignore
+        log_info "Created .gitignore with .worktrees/ entry"
+    fi
+    
+    return 0
+}
+
 # worktree作成
 create_task_worktree() {
     local task_description="$1"
     local task_type="${2:-task}"  # tdd, feature, refactor
+    
+    # 初回セットアップチェック
+    check_and_setup_project_structure
     
     # タスク識別子生成
     local project_root=$(basename "$(pwd)")
@@ -150,13 +175,14 @@ create_task_worktree() {
     esac
     
     local task_branch="${branch_prefix}/${task_id}-${timestamp}"
-    local worktree_path="../${project_root}-${task_id}"
+    # .worktreesサブディレクトリ内にworktreeを作成
+    local worktree_path=".worktrees/${branch_prefix}-${task_id}"
     
     # 既存worktreeのチェック
-    if git worktree list | grep -q "$worktree_path"; then
+    if [[ -d "$worktree_path" ]] || git worktree list | grep -q "$worktree_path"; then
         log_warning "Worktree already exists: $worktree_path"
         # タイムスタンプを追加して別名にする
-        worktree_path="${worktree_path}-${timestamp}"
+        worktree_path=".worktrees/${branch_prefix}-${task_id}-${timestamp}"
     fi
     
     # worktree作成
