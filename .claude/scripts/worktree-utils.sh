@@ -477,6 +477,7 @@ parse_workflow_options() {
     NO_DRAFT="false"
     AUTO_CLEANUP="true"
     CLEANUP_DAYS="7"
+    TASK_DESCRIPTION=""
     
     # オプション解析
     local i=0
@@ -500,7 +501,9 @@ parse_workflow_options() {
                 ;;
             --cleanup-days)
                 ((i++))
-                CLEANUP_DAYS="${args[$i]}"
+                if [[ $i -lt ${#args[@]} ]]; then
+                    CLEANUP_DAYS="${args[$i]}"
+                fi
                 ;;
             *)
                 # タスク説明として扱う
