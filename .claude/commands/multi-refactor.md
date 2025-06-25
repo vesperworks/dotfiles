@@ -500,7 +500,7 @@ if [[ "$KEEP_WORKTREE" != "true" ]] && [[ "$CREATE_PR" != "true" ]]; then
     cleanup_worktree "$WORKTREE_PATH" "$KEEP_WORKTREE"
     echo "✨ Worktree cleaned up automatically"
 else
-    echo "📊 Report: $WORKTREE_PATH/refactoring-completion-report.md"
+    echo "📊 Report: $WORKTREE_PATH/report/$FEATURE_NAME/phase-results/task-completion-report.md"
     echo "🔀 Branch: $REFACTOR_BRANCH"
     echo "📁 Worktree kept at: $WORKTREE_PATH"
     echo "🧹 To clean up later: git worktree remove $WORKTREE_PATH"

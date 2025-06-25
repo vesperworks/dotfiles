@@ -125,22 +125,25 @@ $EXPLORER_PROMPT
 2. 問題の根本原因を特定
 3. 影響範囲と依存関係を明確化
 4. 要件と制約を整理
-5. 結果を `explore-results.md` に保存
+5. 結果を `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/explore-results.md` に保存
 
 **テストファイルの配置**: `$WORKTREE_PATH/test/$FEATURE_NAME/`以下に配置してください
 
 ```bash
+# レポートディレクトリ作成
+mkdir -p "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results"
+
 # Explore結果のコミット（worktree内で実行）
-if [[ -f "$WORKTREE_PATH/explore-results.md" ]]; then
+if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/explore-results.md" ]]; then
     # worktree内でコミット
-    git -C "$WORKTREE_PATH" add explore-results.md
+    git -C "$WORKTREE_PATH" add "report/$FEATURE_NAME/phase-results/explore-results.md"
     git -C "$WORKTREE_PATH" commit -m "[EXPLORE] Analysis complete: $ARGUMENTS" || {
         log_error "Failed to commit explore results"
         handle_error 1 "Explore phase failed" "$WORKTREE_PATH"
     }
     log_success "Committed: [EXPLORE] Analysis complete"
 else
-    log_warning "$WORKTREE_PATH/explore-results.md not found, skipping commit"
+    log_warning "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/explore-results.md not found, skipping commit"
 fi
 ```
 
@@ -171,7 +174,7 @@ PLANNER_PROMPT=$(load_prompt ".claude/prompts/planner.md" "$DEFAULT_PLANNER_PROM
 **Planner指示**:
 $PLANNER_PROMPT
 
-**前フェーズ結果**: `$WORKTREE_PATH/explore-results.md`
+**前フェーズ結果**: `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/explore-results.md`
 **タスク**: $ARGUMENTS
 **作業ディレクトリ**: $WORKTREE_PATH
 
@@ -180,19 +183,19 @@ $PLANNER_PROMPT
 2. TDD手順（Test First）での開発計画
 3. 実装の優先順位と段階分け
 4. テスト戦略とカバレッジ計画
-5. 結果を `plan-results.md` に保存
+5. 結果を `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/plan-results.md` に保存
 
 ```bash
 # Plan結果のコミット（worktree内で実行）
-if [[ -f "$WORKTREE_PATH/plan-results.md" ]]; then
-    git -C "$WORKTREE_PATH" add plan-results.md
+if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/plan-results.md" ]]; then
+    git -C "$WORKTREE_PATH" add "report/$FEATURE_NAME/phase-results/plan-results.md"
     git -C "$WORKTREE_PATH" commit -m "[PLAN] Strategy complete: $ARGUMENTS" || {
         log_error "Failed to commit plan results"
         handle_error 1 "Plan phase failed" "$WORKTREE_PATH"
     }
     log_success "Committed: [PLAN] Strategy complete"
 else
-    log_warning "$WORKTREE_PATH/plan-results.md not found, skipping commit"
+    log_warning "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/plan-results.md not found, skipping commit"
 fi
 ```
 
@@ -224,8 +227,8 @@ CODER_PROMPT=$(load_prompt ".claude/prompts/coder.md" "$DEFAULT_CODER_PROMPT")
 $CODER_PROMPT
 
 **前フェーズ結果**: 
-- `$WORKTREE_PATH/explore-results.md`
-- `$WORKTREE_PATH/plan-results.md`
+- `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/explore-results.md`
+- `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/plan-results.md`
 
 **タスク**: $ARGUMENTS
 **作業ディレクトリ**: $WORKTREE_PATH
@@ -266,8 +269,8 @@ if [[ -n $(git -C "$WORKTREE_PATH" diff --name-only) ]]; then
 fi
 
 # 最終結果保存（worktree内で実行）
-if [[ -f "$WORKTREE_PATH/coding-results.md" ]]; then
-    git -C "$WORKTREE_PATH" add coding-results.md
+if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/coding-results.md" ]]; then
+    git -C "$WORKTREE_PATH" add "report/$FEATURE_NAME/phase-results/coding-results.md"
     git -C "$WORKTREE_PATH" commit -m "[CODING] Implementation complete: $ARGUMENTS" || {
         log_warning "Failed to commit coding results"
     }
@@ -314,9 +317,9 @@ cat > /tmp/task-completion-report.md << EOF
 **Completed**: $(date)
 
 ## Phase Results
-- $(if [[ -f "$WORKTREE_PATH/explore-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Explore**: Root cause analysis
-- $(if [[ -f "$WORKTREE_PATH/plan-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Plan**: Implementation strategy
-- $(if [[ -f "$WORKTREE_PATH/coding-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Code**: TDD implementation
+- $(if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/explore-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Explore**: Root cause analysis
+- $(if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/plan-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Plan**: Implementation strategy
+- $(if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/coding-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Code**: TDD implementation
 - $(if run_tests "$PROJECT_TYPE" "$WORKTREE_PATH" &>/dev/null; then echo "✅"; else echo "⚠️"; fi) **Tests**: All tests passing
 
 ## Files Modified
@@ -345,13 +348,13 @@ Saved in: $WORKTREE_PATH/report/$FEATURE_NAME/quality/
 
 EOF
 
-# 完了レポートをworktreeにコピーしてコミット
-cp /tmp/task-completion-report.md "$WORKTREE_PATH/task-completion-report.md"
+# 完了レポートをworktreeのレポートディレクトリにコピーしてコミット
+cp /tmp/task-completion-report.md "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/task-completion-report.md"
 rm /tmp/task-completion-report.md
 
 # worktree内でコミット
-if [[ -f "$WORKTREE_PATH/task-completion-report.md" ]]; then
-    git -C "$WORKTREE_PATH" add task-completion-report.md
+if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/task-completion-report.md" ]]; then
+    git -C "$WORKTREE_PATH" add "report/$FEATURE_NAME/phase-results/task-completion-report.md"
     git -C "$WORKTREE_PATH" commit -m "[COMPLETE] Task finished: $TASK_DESCRIPTION" || {
         log_warning "Failed to commit completion report"
     }
@@ -391,7 +394,7 @@ if [[ "$KEEP_WORKTREE" != "true" ]] && [[ "$CREATE_PR" != "true" ]]; then
     fi
     echo "✨ Worktree cleaned up automatically"
 else
-    echo "📊 Report: $WORKTREE_PATH/task-completion-report.md"
+    echo "📊 Report: $WORKTREE_PATH/report/$FEATURE_NAME/phase-results/task-completion-report.md"
     echo "🔀 Branch: $TASK_BRANCH"
     echo "📁 Worktree kept at: $WORKTREE_PATH"
     echo "🔧 Env file: $ENV_FILE"

@@ -91,7 +91,7 @@ $EXPLORER_PROMPT
 4. UI/UXおよびデザイン要件の明確化
 5. パフォーマンス・セキュリティ要件の洗い出し
 6. MCP連携可能性の検討（Figma、Context7など）
-7. 結果を `explore-results.md` に保存
+7. 結果を `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/explore-results.md` に保存
 
 **MCP連携（利用可能な場合）**:
 - **Figma**: デザインコンポーネント・スタイルガイド取得
@@ -99,17 +99,20 @@ $EXPLORER_PROMPT
 - **Playwright/Puppeteer**: 類似機能のE2Eテストパターン調査
 
 ```bash
+# レポートディレクトリ作成
+mkdir -p "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results"
+
 # Explore結果のコミット（worktree内で実行）
-if [[ -f "$WORKTREE_PATH/explore-results.md" ]]; then
+if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/explore-results.md" ]]; then
     # worktree内でコミット
-    git -C "$WORKTREE_PATH" add explore-results.md
+    git -C "$WORKTREE_PATH" add "report/$FEATURE_NAME/phase-results/explore-results.md"
     git -C "$WORKTREE_PATH" commit -m "[EXPLORE] Feature analysis complete: $ARGUMENTS" || {
         log_error "Failed to commit explore results"
         handle_error 1 "Explore phase failed" "$WORKTREE_PATH"
     }
     log_success "Committed: [EXPLORE] Feature analysis complete"
 else
-    log_warning "$WORKTREE_PATH/explore-results.md not found, skipping commit"
+    log_warning "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/explore-results.md not found, skipping commit"
 fi
 ```
 
@@ -136,7 +139,7 @@ $PLANNER_PROMPT
 5. UI/UXの実装アプローチ
 6. テスト戦略（単体・統合・E2E）
 7. 段階的リリース計画
-8. 結果を `plan-results.md` に保存
+8. 結果を `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/plan-results.md` に保存
 
 **MCP連携戦略**:
 - **Figma → Code**: コンポーネント自動生成計画
@@ -145,15 +148,15 @@ $PLANNER_PROMPT
 
 ```bash
 # Plan結果のコミット（worktree内で実行）
-if [[ -f "$WORKTREE_PATH/plan-results.md" ]]; then
-    git -C "$WORKTREE_PATH" add plan-results.md
+if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/plan-results.md" ]]; then
+    git -C "$WORKTREE_PATH" add "report/$FEATURE_NAME/phase-results/plan-results.md"
     git -C "$WORKTREE_PATH" commit -m "[PLAN] Architecture design complete: $ARGUMENTS" || {
         log_error "Failed to commit plan results"
         handle_error 1 "Plan phase failed" "$WORKTREE_PATH"
     }
     log_success "Committed: [PLAN] Architecture design complete"
 else
-    log_warning "$WORKTREE_PATH/plan-results.md not found, skipping commit"
+    log_warning "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/plan-results.md not found, skipping commit"
 fi
 ```
 
@@ -167,7 +170,7 @@ show_progress "Prototype" 5 3
 2. 基本的なUI/UXスケルトン実装
 3. モックデータでの動作確認
 4. プロトタイプのスクリーンショット作成
-5. `prototype-results.md` に実装詳細を保存
+5. `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/prototype-results.md` に実装詳細を保存
 
 ```bash
 # プロトタイプ実装のコミット
@@ -178,8 +181,9 @@ if [[ -d "src/" ]] || [[ -d "components/" ]]; then
 fi
 
 # プロトタイプ結果のコミット
-if [[ -f "prototype-results.md" ]] || [[ -d "screenshots/" ]]; then
-    git_commit_phase "PROTOTYPE" "Prototype documentation: $ARGUMENTS" "prototype-results.md screenshots/" || {
+if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/prototype-results.md" ]] || [[ -d "$WORKTREE_PATH/screenshots/" ]]; then
+    git -C "$WORKTREE_PATH" add "report/$FEATURE_NAME/phase-results/prototype-results.md" "screenshots/" 2>/dev/null
+    git -C "$WORKTREE_PATH" commit -m "[PROTOTYPE] Prototype documentation: $ARGUMENTS" || {
         log_warning "No prototype documentation to commit"
     }
 fi
@@ -197,9 +201,9 @@ CODER_PROMPT=$(load_prompt ".claude/prompts/coder.md" "$DEFAULT_CODER_PROMPT")
 $CODER_PROMPT
 
 **前フェーズ結果**: 
-- `$WORKTREE_PATH/explore-results.md`
-- `$WORKTREE_PATH/plan-results.md`
-- `$WORKTREE_PATH/prototype-results.md`
+- `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/explore-results.md`
+- `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/plan-results.md`
+- `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/prototype-results.md`
 
 **開発機能**: $ARGUMENTS
 **作業ディレクトリ**: $WORKTREE_PATH
@@ -250,8 +254,9 @@ if [[ -d "$WORKTREE_PATH/report/$FEATURE_NAME/performance" ]]; then
 fi
 
 # 最終結果保存
-if [[ -f "coding-results.md" ]]; then
-    git_commit_phase "CODING" "Feature implementation complete: $ARGUMENTS" "coding-results.md" || {
+if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/coding-results.md" ]]; then
+    git -C "$WORKTREE_PATH" add "report/$FEATURE_NAME/phase-results/coding-results.md"
+    git -C "$WORKTREE_PATH" commit -m "[CODING] Feature implementation complete: $ARGUMENTS" || {
         log_warning "Failed to commit coding results"
     }
 fi
@@ -301,10 +306,10 @@ cat > /tmp/feature-completion-report.md << EOF
 - Performance metrics within targets
 
 ## Phase Results
-- $(if [[ -f "$WORKTREE_PATH/explore-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Explore**: Requirements and constraints analyzed
-- $(if [[ -f "$WORKTREE_PATH/plan-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Plan**: Architecture and implementation strategy defined
-- $(if [[ -f "$WORKTREE_PATH/prototype-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Prototype**: Working prototype demonstrated
-- $(if [[ -f "$WORKTREE_PATH/coding-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Code**: Full feature implementation completed
+- $(if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/explore-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Explore**: Requirements and constraints analyzed
+- $(if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/plan-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Plan**: Architecture and implementation strategy defined
+- $(if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/prototype-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Prototype**: Working prototype demonstrated
+- $(if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/coding-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Code**: Full feature implementation completed
 - $(if run_tests "$PROJECT_TYPE" "$WORKTREE_PATH" &>/dev/null; then echo "✅"; else echo "⚠️"; fi) **Test**: Comprehensive test coverage achieved
 - ✅ **Ready**: Feature ready for review and integration
 
@@ -354,13 +359,13 @@ $(git log --oneline origin/main..HEAD)
 
 EOF
 
-# 完了レポートをworktreeにコピーしてコミット
-cp /tmp/feature-completion-report.md "$WORKTREE_PATH/feature-completion-report.md"
+# 完了レポートをworktreeのレポートディレクトリにコピーしてコミット
+cp /tmp/feature-completion-report.md "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/task-completion-report.md"
 rm /tmp/feature-completion-report.md
 
 # worktree内でコミット
-if [[ -f "$WORKTREE_PATH/feature-completion-report.md" ]]; then
-    git -C "$WORKTREE_PATH" add feature-completion-report.md
+if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/task-completion-report.md" ]]; then
+    git -C "$WORKTREE_PATH" add "report/$FEATURE_NAME/phase-results/task-completion-report.md"
     git -C "$WORKTREE_PATH" commit -m "[COMPLETE] Feature ready for integration: $TASK_DESCRIPTION" || {
         log_warning "Failed to commit completion report"
     }
@@ -395,7 +400,7 @@ if [[ "$KEEP_WORKTREE" != "true" ]] && [[ "$CREATE_PR" != "true" ]]; then
     cleanup_worktree "$WORKTREE_PATH" "$KEEP_WORKTREE"
     echo "✨ Worktree cleaned up automatically"
 else
-    echo "📊 Report: $WORKTREE_PATH/feature-completion-report.md"
+    echo "📊 Report: $WORKTREE_PATH/report/$FEATURE_NAME/phase-results/task-completion-report.md"
     echo "🔀 Branch: $FEATURE_BRANCH"
     echo "🚀 Demo available in: $WORKTREE_PATH"
     echo "📁 Worktree kept at: $WORKTREE_PATH"
