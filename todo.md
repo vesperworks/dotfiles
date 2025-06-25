@@ -9,30 +9,27 @@
 2. **関数の永続性**: `source`で読み込んだ関数が次のコマンド実行時に保持されない
 3. **実行環境**: zshがデフォルトシェルだが、Bashツールはbashで実行される
 
-### 実装順序（推奨アプローチ）
-#### Phase 1: 共通基盤の修正
-- [ ] **worktree-utils.shに環境変数永続化機能を追加**
-  - `save_env_vars()`: 環境変数を.worktrees/.env-{task-id}に保存
-  - `load_env_vars()`: 環境ファイルから変数を復元
-  - 各コマンドから利用できる共通関数として実装
-- [ ] **parallel-agent-utils.shの読み込みエラーを修正**
-  - worktree-utils.sh内の存在チェックを改善（set +e/set -e使用済み）
+### 実装状況
+#### Phase 1: multi-tdd.mdの修正 ✅ 完了（2025-06-25）
+- [x] **環境変数の永続化実装**
+  - Step 1で環境変数を`.worktrees/.env-{task-id}`に保存
+  - 各フェーズで`source .claude/scripts/worktree-utils.sh`と環境ファイル読み込み
+  - クリーンアップ時に環境ファイルも削除
+- [x] **動作確認テスト**
+  - 環境変数の保存・復元が正常に動作
+  - 関数が新しいセッションでも利用可能
 
-#### Phase 2: 全multiコマンドへの一括適用
-- [ ] **multi-tdd.mdの修正**
-  - Step 1で`save_env_vars`を使用して変数保存
-  - Phase 1-3で`load_env_vars`と`source`で環境復元
+#### Phase 2: 残りのmultiコマンドへの適用
 - [ ] **multi-feature.mdの修正**
-  - Step 1で`save_env_vars`を使用して変数保存
-  - Phase 1-4で`load_env_vars`と`source`で環境復元
+  - Step 1で環境変数を`.worktrees/.env-{task-id}`に保存
+  - Phase 1-4で`source`と環境ファイル読み込み
 - [ ] **multi-refactor.mdの修正**  
-  - Step 1で`save_env_vars`を使用して変数保存
-  - Phase 1-4で`load_env_vars`と`source`で環境復元
+  - Step 1で環境変数を`.worktrees/.env-{task-id}`に保存
+  - Phase 1-4で`source`と環境ファイル読み込み
 
-#### Phase 3: 動作確認
-- [ ] 修正した全multiコマンドの動作確認テスト
-  - 各コマンドで簡単なタスクを実行
-  - 環境変数の永続性を確認
+#### Phase 3: 全体動作確認
+- [ ] 修正した全multiコマンドの統合テスト
+  - 各コマンドで実際のタスクを実行
   - エラーハンドリングの動作確認
 
 ## 🟠 高優先度タスク
@@ -88,19 +85,20 @@
 
 ## 💡 次のアクション（2025-06-25時点）
 
-1. **🔴 Phase 1**: worktree-utils.shに共通の環境変数永続化機能を実装
-   - `save_env_vars()`と`load_env_vars()`関数を追加
-   - 全multiコマンドから利用可能な共通基盤を構築
+1. **✅ 完了**: multi-tdd.mdのセッション分離問題を修正
+   - 環境変数の永続化機能を実装
+   - 各フェーズで関数と環境変数の再読み込み
+   - テストで動作確認済み
    
-2. **🔴 Phase 2**: 全multiコマンドに一括適用
-   - multi-tdd.md、multi-feature.md、multi-refactor.mdを同じパターンで修正
+2. **🔴 即座に実施**: 残りのmultiコマンドへ同じ修正を適用
+   - multi-feature.mdとmulti-refactor.mdに同じパターンで修正
    - 環境変数の保存・復元処理を統一
    
-3. **🔴 Phase 3**: 動作確認テストの実施
-   - 各コマンドの基本動作確認
-   - セッション分離問題が解決されたことを検証
+3. **🟠 その後実施**: 全体の統合テスト
+   - 各コマンドで実際のタスクを実行
+   - エラーハンドリングの動作確認
    
-4. **🟠 その後**: multi-feature.mdの品質改善
+4. **🟡 続いて実施**: multi-feature.mdの品質改善
    - XMLタグ構造とフェーズ管理システムの導入
    - Anthropicベストプラクティスの適用
 

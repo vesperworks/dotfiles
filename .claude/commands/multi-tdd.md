@@ -48,11 +48,31 @@ WORKTREE_PATH=$(echo "$WORKTREE_INFO" | cut -d'|' -f1)
 TASK_BRANCH=$(echo "$WORKTREE_INFO" | cut -d'|' -f2)
 FEATURE_NAME=$(echo "$WORKTREE_INFO" | cut -d'|' -f3)
 
+# タスクIDを生成（環境ファイル名用）
+TASK_ID=$(echo "$TASK_DESCRIPTION" | sed 's/[^a-zA-Z0-9]/-/g' | tr '[:upper:]' '[:lower:]' | cut -c1-30)
+ENV_FILE=".worktrees/.env-${TASK_ID}-$(date +%Y%m%d-%H%M%S)"
+
+# 環境変数をファイルに保存
+cat > "$ENV_FILE" << EOF
+WORKTREE_PATH="$WORKTREE_PATH"
+TASK_BRANCH="$TASK_BRANCH"
+FEATURE_NAME="$FEATURE_NAME"
+PROJECT_TYPE="$PROJECT_TYPE"
+TASK_DESCRIPTION="$TASK_DESCRIPTION"
+KEEP_WORKTREE="$KEEP_WORKTREE"
+NO_MERGE="$NO_MERGE"
+CREATE_PR="$CREATE_PR"
+NO_DRAFT="$NO_DRAFT"
+AUTO_CLEANUP="$AUTO_CLEANUP"
+CLEANUP_DAYS="$CLEANUP_DAYS"
+EOF
+
 log_success "Task worktree created"
 echo "📋 Task: $TASK_DESCRIPTION"
 echo "🌿 Branch: $TASK_BRANCH"
 echo "📁 Worktree: $WORKTREE_PATH"
 echo "🏷️ Feature: $FEATURE_NAME"
+echo "🔧 Env file: $ENV_FILE"
 echo "⚙️ Options: keep-worktree=$KEEP_WORKTREE, no-merge=$NO_MERGE, pr=$CREATE_PR"
 ```
 
@@ -64,6 +84,22 @@ echo "⚙️ Options: keep-worktree=$KEEP_WORKTREE, no-merge=$NO_MERGE, pr=$CREA
 
 #### Phase 1: Explore（探索・調査）
 ```bash
+# 共通ユーティリティの再読み込み（セッション分離対応）
+source .claude/scripts/worktree-utils.sh || {
+    echo "Error: worktree-utils.sh not found"
+    exit 1
+}
+
+# 最新の環境ファイルを探して読み込み
+ENV_FILE=$(ls -t .worktrees/.env-* 2>/dev/null | head -1)
+if [[ -f "$ENV_FILE" ]]; then
+    source "$ENV_FILE"
+    log_info "Environment loaded from: $ENV_FILE"
+else
+    echo "Error: Environment file not found"
+    exit 1
+fi
+
 # ClaudeCodeアクセス制限対応: cdを使用せず、worktree内で作業
 log_info "Working in worktree: $WORKTREE_PATH"
 
@@ -110,6 +146,22 @@ fi
 
 #### Phase 2: Plan（計画策定）
 ```bash
+# 共通ユーティリティの再読み込み（セッション分離対応）
+source .claude/scripts/worktree-utils.sh || {
+    echo "Error: worktree-utils.sh not found"
+    exit 1
+}
+
+# 最新の環境ファイルを探して読み込み
+ENV_FILE=$(ls -t .worktrees/.env-* 2>/dev/null | head -1)
+if [[ -f "$ENV_FILE" ]]; then
+    source "$ENV_FILE"
+    log_info "Environment loaded from: $ENV_FILE"
+else
+    echo "Error: Environment file not found"
+    exit 1
+fi
+
 show_progress "Plan" 4 2
 
 # Plannerプロンプトの読み込み
@@ -146,6 +198,22 @@ fi
 
 #### Phase 3: Coding（TDD実装）
 ```bash
+# 共通ユーティリティの再読み込み（セッション分離対応）
+source .claude/scripts/worktree-utils.sh || {
+    echo "Error: worktree-utils.sh not found"
+    exit 1
+}
+
+# 最新の環境ファイルを探して読み込み
+ENV_FILE=$(ls -t .worktrees/.env-* 2>/dev/null | head -1)
+if [[ -f "$ENV_FILE" ]]; then
+    source "$ENV_FILE"
+    log_info "Environment loaded from: $ENV_FILE"
+else
+    echo "Error: Environment file not found"
+    exit 1
+fi
+
 show_progress "Coding" 4 3
 
 # Coderプロンプトの読み込み
@@ -210,6 +278,22 @@ fi
 ### Step 3: 完了通知とPR準備
 
 ```bash
+# 共通ユーティリティの再読み込み（セッション分離対応）
+source .claude/scripts/worktree-utils.sh || {
+    echo "Error: worktree-utils.sh not found"
+    exit 1
+}
+
+# 最新の環境ファイルを探して読み込み
+ENV_FILE=$(ls -t .worktrees/.env-* 2>/dev/null | head -1)
+if [[ -f "$ENV_FILE" ]]; then
+    source "$ENV_FILE"
+    log_info "Environment loaded from: $ENV_FILE"
+else
+    echo "Error: Environment file not found"
+    exit 1
+fi
+
 show_progress "Completion" 4 4
 
 # 最終検証 - プロジェクトタイプに応じたテスト実行
@@ -300,12 +384,18 @@ fi
 # worktreeクリーンアップ（オプション）
 if [[ "$KEEP_WORKTREE" != "true" ]] && [[ "$CREATE_PR" != "true" ]]; then
     cleanup_worktree "$WORKTREE_PATH" "$KEEP_WORKTREE"
+    # 環境ファイルも削除
+    if [[ -f "$ENV_FILE" ]]; then
+        rm -f "$ENV_FILE"
+        log_info "Environment file cleaned up: $ENV_FILE"
+    fi
     echo "✨ Worktree cleaned up automatically"
 else
     echo "📊 Report: $WORKTREE_PATH/task-completion-report.md"
     echo "🔀 Branch: $TASK_BRANCH"
     echo "📁 Worktree kept at: $WORKTREE_PATH"
-    echo "🧹 To clean up later: git worktree remove $WORKTREE_PATH"
+    echo "🔧 Env file: $ENV_FILE"
+    echo "🧹 To clean up later: git worktree remove $WORKTREE_PATH && rm -f $ENV_FILE"
 fi
 
 log_success "Task completed independently!"
