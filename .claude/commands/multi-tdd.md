@@ -305,8 +305,8 @@ if ! run_tests "$PROJECT_TYPE" "$WORKTREE_PATH"; then
     # テスト失敗してもレポートは生成する
 fi
 
-# 完了レポート生成（メインディレクトリに一時作成してからコピー）
-cat > /tmp/task-completion-report.md << EOF
+# 完了レポート生成
+cat > "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/task-completion-report.md" << EOF
 # Task Completion Report
 
 ## Task Summary
@@ -347,10 +347,6 @@ Saved in: $WORKTREE_PATH/report/$FEATURE_NAME/quality/
 3. Clean up worktree after merge: \`git worktree remove $WORKTREE_PATH\`
 
 EOF
-
-# 完了レポートをworktreeのレポートディレクトリにコピーしてコミット
-cp /tmp/task-completion-report.md "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/task-completion-report.md"
-rm /tmp/task-completion-report.md
 
 # worktree内でコミット
 if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/task-completion-report.md" ]]; then

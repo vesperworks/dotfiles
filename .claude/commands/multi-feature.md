@@ -48,12 +48,32 @@ WORKTREE_PATH=$(echo "$WORKTREE_INFO" | cut -d'|' -f1)
 FEATURE_BRANCH=$(echo "$WORKTREE_INFO" | cut -d'|' -f2)
 FEATURE_NAME=$(echo "$WORKTREE_INFO" | cut -d'|' -f3)
 
+# タスクIDを生成（環境ファイル名用）
+TASK_ID=$(echo "$TASK_DESCRIPTION" | sed 's/[^a-zA-Z0-9]/-/g' | tr '[:upper:]' '[:lower:]' | cut -c1-30)
+ENV_FILE=".worktrees/.env-${TASK_ID}-$(date +%Y%m%d-%H%M%S)"
+
+# 環境変数をファイルに保存
+cat > "$ENV_FILE" << EOF
+WORKTREE_PATH="$WORKTREE_PATH"
+FEATURE_BRANCH="$FEATURE_BRANCH"
+FEATURE_NAME="$FEATURE_NAME"
+PROJECT_TYPE="$PROJECT_TYPE"
+TASK_DESCRIPTION="$TASK_DESCRIPTION"
+KEEP_WORKTREE="$KEEP_WORKTREE"
+NO_MERGE="$NO_MERGE"
+CREATE_PR="$CREATE_PR"
+NO_DRAFT="$NO_DRAFT"
+AUTO_CLEANUP="$AUTO_CLEANUP"
+CLEANUP_DAYS="$CLEANUP_DAYS"
+EOF
+
 log_success "Feature worktree created"
 echo "📋 Feature: $TASK_DESCRIPTION"
 echo "🌿 Branch: $FEATURE_BRANCH"
 echo "📁 Worktree: $WORKTREE_PATH"
 echo "🏷️ Feature: $FEATURE_NAME"
 echo "⚙️ Options: keep-worktree=$KEEP_WORKTREE, no-merge=$NO_MERGE, pr=$CREATE_PR"
+echo "💾 Environment saved to: $ENV_FILE"
 ```
 
 ### Step 2: Worktree内で全フロー自動実行
@@ -64,6 +84,22 @@ echo "⚙️ Options: keep-worktree=$KEEP_WORKTREE, no-merge=$NO_MERGE, pr=$CREA
 
 #### Phase 1: Explore（探索・要件分析）
 ```bash
+# 共通ユーティリティの再読み込み（セッション分離対応）
+source .claude/scripts/worktree-utils.sh || {
+    echo "Error: worktree-utils.sh not found"
+    exit 1
+}
+
+# 最新の環境ファイルを探して読み込み
+ENV_FILE=$(ls -t .worktrees/.env-* 2>/dev/null | head -1)
+if [[ -f "$ENV_FILE" ]]; then
+    source "$ENV_FILE"
+    log_info "Environment loaded from: $ENV_FILE"
+else
+    echo "Error: Environment file not found"
+    exit 1
+fi
+
 # ClaudeCodeアクセス制限対応: cdを使用せず、worktree内で作業
 log_info "Working in worktree: $WORKTREE_PATH"
 
@@ -118,6 +154,22 @@ fi
 
 #### Phase 2: Plan（実装戦略・アーキテクチャ設計）
 ```bash
+# 共通ユーティリティの再読み込み（セッション分離対応）
+source .claude/scripts/worktree-utils.sh || {
+    echo "Error: worktree-utils.sh not found"
+    exit 1
+}
+
+# 最新の環境ファイルを探して読み込み
+ENV_FILE=$(ls -t .worktrees/.env-* 2>/dev/null | head -1)
+if [[ -f "$ENV_FILE" ]]; then
+    source "$ENV_FILE"
+    log_info "Environment loaded from: $ENV_FILE"
+else
+    echo "Error: Environment file not found"
+    exit 1
+fi
+
 show_progress "Plan" 5 2
 
 # Plannerプロンプトの読み込み
@@ -127,7 +179,7 @@ PLANNER_PROMPT=$(load_prompt ".claude/prompts/planner.md" "$DEFAULT_PLANNER_PROM
 **Planner指示**:
 $PLANNER_PROMPT
 
-**前フェーズ結果**: `$WORKTREE_PATH/explore-results.md`
+**前フェーズ結果**: `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/explore-results.md`
 **開発機能**: $ARGUMENTS
 **作業ディレクトリ**: $WORKTREE_PATH
 
@@ -162,6 +214,22 @@ fi
 
 #### Phase 3: Prototype（プロトタイプ作成）
 ```bash
+# 共通ユーティリティの再読み込み（セッション分離対応）
+source .claude/scripts/worktree-utils.sh || {
+    echo "Error: worktree-utils.sh not found"
+    exit 1
+}
+
+# 最新の環境ファイルを探して読み込み
+ENV_FILE=$(ls -t .worktrees/.env-* 2>/dev/null | head -1)
+if [[ -f "$ENV_FILE" ]]; then
+    source "$ENV_FILE"
+    log_info "Environment loaded from: $ENV_FILE"
+else
+    echo "Error: Environment file not found"
+    exit 1
+fi
+
 show_progress "Prototype" 5 3
 ```
 
@@ -182,7 +250,7 @@ fi
 
 # プロトタイプ結果のコミット
 if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/prototype-results.md" ]] || [[ -d "$WORKTREE_PATH/screenshots/" ]]; then
-    git -C "$WORKTREE_PATH" add "report/$FEATURE_NAME/phase-results/prototype-results.md" "screenshots/" 2>/dev/null
+    git -C "$WORKTREE_PATH" add "report/$FEATURE_NAME/phase-results/prototype-results.md" screenshots/ 2>/dev/null
     git -C "$WORKTREE_PATH" commit -m "[PROTOTYPE] Prototype documentation: $ARGUMENTS" || {
         log_warning "No prototype documentation to commit"
     }
@@ -191,6 +259,22 @@ fi
 
 #### Phase 4: Coding（本格実装）
 ```bash
+# 共通ユーティリティの再読み込み（セッション分離対応）
+source .claude/scripts/worktree-utils.sh || {
+    echo "Error: worktree-utils.sh not found"
+    exit 1
+}
+
+# 最新の環境ファイルを探して読み込み
+ENV_FILE=$(ls -t .worktrees/.env-* 2>/dev/null | head -1)
+if [[ -f "$ENV_FILE" ]]; then
+    source "$ENV_FILE"
+    log_info "Environment loaded from: $ENV_FILE"
+else
+    echo "Error: Environment file not found"
+    exit 1
+fi
+
 show_progress "Coding" 5 4
 
 # Coderプロンプトの読み込み
@@ -265,6 +349,22 @@ fi
 ### Step 3: 完了通知とPR準備
 
 ```bash
+# 共通ユーティリティの再読み込み（セッション分離対応）
+source .claude/scripts/worktree-utils.sh || {
+    echo "Error: worktree-utils.sh not found"
+    exit 1
+}
+
+# 最新の環境ファイルを探して読み込み
+ENV_FILE=$(ls -t .worktrees/.env-* 2>/dev/null | head -1)
+if [[ -f "$ENV_FILE" ]]; then
+    source "$ENV_FILE"
+    log_info "Environment loaded from: $ENV_FILE"
+else
+    echo "Error: Environment file not found"
+    exit 1
+fi
+
 show_progress "Completion" 5 5
 
 # 全テスト実行 - プロジェクトタイプに応じたテスト
@@ -282,8 +382,8 @@ if [[ -f "package.json" ]] && grep -q '"build"' package.json; then
     npm run build || log_warning "Build process needs review"
 fi
 
-# 完了レポート生成（メインディレクトリに一時作成してからコピー）
-cat > /tmp/feature-completion-report.md << EOF
+# 完了レポート生成
+cat > "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/task-completion-report.md" << EOF
 # Feature Completion Report
 
 ## Feature Summary
@@ -359,10 +459,6 @@ $(git log --oneline origin/main..HEAD)
 
 EOF
 
-# 完了レポートをworktreeのレポートディレクトリにコピーしてコミット
-cp /tmp/feature-completion-report.md "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/task-completion-report.md"
-rm /tmp/feature-completion-report.md
-
 # worktree内でコミット
 if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/task-completion-report.md" ]]; then
     git -C "$WORKTREE_PATH" add "report/$FEATURE_NAME/phase-results/task-completion-report.md"
@@ -398,6 +494,11 @@ fi
 # worktreeクリーンアップ（オプション）
 if [[ "$KEEP_WORKTREE" != "true" ]] && [[ "$CREATE_PR" != "true" ]]; then
     cleanup_worktree "$WORKTREE_PATH" "$KEEP_WORKTREE"
+    # 環境ファイルも削除
+    if [[ -f "$ENV_FILE" ]]; then
+        rm -f "$ENV_FILE"
+        log_info "Environment file cleaned up: $ENV_FILE"
+    fi
     echo "✨ Worktree cleaned up automatically"
 else
     echo "📊 Report: $WORKTREE_PATH/report/$FEATURE_NAME/phase-results/task-completion-report.md"
@@ -405,6 +506,7 @@ else
     echo "🚀 Demo available in: $WORKTREE_PATH"
     echo "📁 Worktree kept at: $WORKTREE_PATH"
     echo "🧹 To clean up later: git worktree remove $WORKTREE_PATH"
+    echo "🧹 Environment file to clean up later: rm -f $ENV_FILE"
 fi
 
 log_success "Feature development completed independently!"

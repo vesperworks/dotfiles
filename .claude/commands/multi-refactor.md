@@ -99,7 +99,7 @@ $EXPLORER_PROMPT
 3. パフォーマンスのベースラインを測定
 4. 技術的負債とコードの複雑度を特定
 5. リファクタリングのリスクと機会を評価
-6. 結果を `analysis-results.md` に保存
+6. 結果を `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/analysis-results.md` に保存
 
 **構造化されたディレクトリ**: 
 - テスト: `$WORKTREE_PATH/test/$FEATURE_NAME/`
@@ -107,9 +107,12 @@ $EXPLORER_PROMPT
 - ソース: `$WORKTREE_PATH/src/$FEATURE_NAME/`
 
 ```bash
+# レポートディレクトリ作成
+mkdir -p "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results"
+
 # Analysis結果のコミット（worktree内で実行）
-if [[ -f "$WORKTREE_PATH/analysis-results.md" ]]; then
-    git -C "$WORKTREE_PATH" add analysis-results.md
+if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/analysis-results.md" ]]; then
+    git -C "$WORKTREE_PATH" add "report/$FEATURE_NAME/phase-results/analysis-results.md"
     git -C "$WORKTREE_PATH" commit -m "[ANALYSIS] Current state analyzed: $TASK_DESCRIPTION" || {
         rollback_on_error "$WORKTREE_PATH" "analysis" "Failed to commit analysis results"
         handle_error 1 "Analysis phase failed" "$WORKTREE_PATH"
@@ -117,7 +120,7 @@ if [[ -f "$WORKTREE_PATH/analysis-results.md" ]]; then
     log_success "Committed: [ANALYSIS] Current state analyzed"
     update_phase_status "$WORKTREE_PATH" "analysis" "completed"
 else
-    rollback_on_error "$WORKTREE_PATH" "analysis" "analysis-results.md not found"
+    rollback_on_error "$WORKTREE_PATH" "analysis" "report/$FEATURE_NAME/phase-results/analysis-results.md not found"
     handle_error 1 "Analysis results not created" "$WORKTREE_PATH"
 fi
 ```
@@ -142,7 +145,7 @@ PLANNER_PROMPT=$(load_prompt ".claude/prompts/planner.md" "$DEFAULT_PLANNER_PROM
 **Planner指示**:
 $PLANNER_PROMPT
 
-**前フェーズ結果**: `$WORKTREE_PATH/analysis-results.md`
+**前フェーズ結果**: `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/analysis-results.md`
 **リファクタリング対象**: $TASK_DESCRIPTION
 **作業ディレクトリ**: $WORKTREE_PATH
 
@@ -152,12 +155,12 @@ $PLANNER_PROMPT
 3. ロールバック計画とリスク軽減策を準備
 4. 後方互換性の維持方法を設計
 5. 成功基準と改善目標を定義
-6. 結果を `refactoring-plan.md` に保存
+6. 結果を `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/refactoring-plan.md` に保存
 
 ```bash
 # Plan結果のコミット（worktree内で実行）
-if [[ -f "$WORKTREE_PATH/refactoring-plan.md" ]]; then
-    git -C "$WORKTREE_PATH" add refactoring-plan.md
+if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/refactoring-plan.md" ]]; then
+    git -C "$WORKTREE_PATH" add "report/$FEATURE_NAME/phase-results/refactoring-plan.md"
     git -C "$WORKTREE_PATH" commit -m "[PLAN] Refactoring strategy defined: $TASK_DESCRIPTION" || {
         rollback_on_error "$WORKTREE_PATH" "plan" "Failed to commit plan results"
         handle_error 1 "Plan phase failed" "$WORKTREE_PATH"
@@ -165,7 +168,7 @@ if [[ -f "$WORKTREE_PATH/refactoring-plan.md" ]]; then
     log_success "Committed: [PLAN] Refactoring strategy defined"
     update_phase_status "$WORKTREE_PATH" "plan" "completed"
 else
-    rollback_on_error "$WORKTREE_PATH" "plan" "refactoring-plan.md not found"
+    rollback_on_error "$WORKTREE_PATH" "plan" "report/$FEATURE_NAME/phase-results/refactoring-plan.md not found"
     handle_error 1 "Plan results not created" "$WORKTREE_PATH"
 fi
 ```
@@ -191,8 +194,8 @@ CODER_PROMPT=$(load_prompt ".claude/prompts/coder.md" "$DEFAULT_CODER_PROMPT")
 $CODER_PROMPT
 
 **前フェーズ結果**: 
-- `$WORKTREE_PATH/analysis-results.md`
-- `$WORKTREE_PATH/refactoring-plan.md`
+- `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/analysis-results.md`
+- `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/refactoring-plan.md`
 
 **リファクタリング対象**: $TASK_DESCRIPTION
 **作業ディレクトリ**: $WORKTREE_PATH
@@ -204,7 +207,7 @@ $CODER_PROMPT
 - **Replace**: 古いパターンを新しいパターンへ
 - **Simplify**: 複雑なロジックを簡潔に
 
-**成果物**: `refactoring-results.md`
+**成果物**: `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/refactoring-results.md`
 - 実行した変更の詳細
 - 各段階のテスト結果
 - パフォーマンス比較
@@ -217,7 +220,7 @@ $CODER_PROMPT
 4. **Move**: 適切なモジュールへ移動
 5. **Replace**: 古いパターンを新しいパターンへ
 6. **Simplify**: 複雑なロジックを簡潔に
-7. 結果を `refactoring-results.md` に保存
+7. 結果を `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/refactoring-results.md` に保存
 
 ```bash
 # ベースラインテストの実行
@@ -252,15 +255,15 @@ if [[ -n $(git -C "$WORKTREE_PATH" diff --name-only) ]]; then
 fi
 
 # 最終結果保存（worktree内で実行）
-if [[ -f "$WORKTREE_PATH/refactoring-results.md" ]]; then
-    git -C "$WORKTREE_PATH" add refactoring-results.md
+if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/refactoring-results.md" ]]; then
+    git -C "$WORKTREE_PATH" add "report/$FEATURE_NAME/phase-results/refactoring-results.md"
     git -C "$WORKTREE_PATH" commit -m "[REFACTOR] Implementation complete: $TASK_DESCRIPTION" || {
         log_warning "Failed to commit refactoring results"
     }
     log_success "Committed: [REFACTOR] Implementation complete"
     update_phase_status "$WORKTREE_PATH" "refactor" "completed"
 else
-    log_warning "refactoring-results.md not created, but proceeding to verification"
+    log_warning "report/$FEATURE_NAME/phase-results/refactoring-results.md not created, but proceeding to verification"
 fi
 ```
 
@@ -285,9 +288,9 @@ TESTER_PROMPT=$(load_prompt ".claude/prompts/tester.md" "# Testerエージェン
 $TESTER_PROMPT
 
 **前フェーズ結果**: 
-- `$WORKTREE_PATH/analysis-results.md`
-- `$WORKTREE_PATH/refactoring-plan.md`
-- `$WORKTREE_PATH/refactoring-results.md`
+- `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/analysis-results.md`
+- `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/refactoring-plan.md`
+- `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/refactoring-results.md`
 
 **リファクタリング対象**: $TASK_DESCRIPTION
 **作業ディレクトリ**: $WORKTREE_PATH
@@ -298,12 +301,12 @@ $TESTER_PROMPT
 3. 後方互換性の確認
 4. コード品質メトリクスの比較
 5. 改善効果の測定
-6. 結果を `verification-report.md` に保存
+6. 結果を `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/verification-report.md` に保存
 
 ```bash
 # 検証結果のコミット（worktree内で実行）
-if [[ -f "$WORKTREE_PATH/verification-report.md" ]]; then
-    git -C "$WORKTREE_PATH" add verification-report.md
+if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/verification-report.md" ]]; then
+    git -C "$WORKTREE_PATH" add "report/$FEATURE_NAME/phase-results/verification-report.md"
     git -C "$WORKTREE_PATH" commit -m "[VERIFY] Quality verification complete: $TASK_DESCRIPTION" || {
         rollback_on_error "$WORKTREE_PATH" "verify" "Failed to commit verification results"
         handle_error 1 "Verification phase failed" "$WORKTREE_PATH"
@@ -311,7 +314,7 @@ if [[ -f "$WORKTREE_PATH/verification-report.md" ]]; then
     log_success "Committed: [VERIFY] Quality verification complete"
     update_phase_status "$WORKTREE_PATH" "verify" "completed"
 else
-    log_warning "$WORKTREE_PATH/verification-report.md not found, but refactoring is complete"
+    log_warning "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/verification-report.md not found, but refactoring is complete"
     update_phase_status "$WORKTREE_PATH" "verify" "completed"
 fi
 ```
@@ -375,7 +378,7 @@ git commit -m "test: add performance benchmarks for refactored code"
 
 ## 最終成果物
 
-### task-completion-report.md
+### $WORKTREE_PATH/report/$FEATURE_NAME/phase-results/task-completion-report.md
 ```markdown
 # リファクタリング完了レポート
 
@@ -418,8 +421,8 @@ if ! run_tests "$PROJECT_TYPE" "$WORKTREE_PATH"; then
     log_error "Tests failed after refactoring - review needed"
 fi
 
-# 完了レポート生成（メインディレクトリに一時作成してからコピー）
-cat > /tmp/refactoring-completion-report.md << EOF
+# 完了レポート生成
+cat > "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/task-completion-report.md" << EOF
 # Refactoring Completion Report
 
 ## Refactoring Summary
@@ -429,10 +432,10 @@ cat > /tmp/refactoring-completion-report.md << EOF
 **Completed**: $(date)
 
 ## Phase Results
-- $(if [[ -f "$WORKTREE_PATH/analysis-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Analysis**: Current state and risks assessed
-- $(if [[ -f "$WORKTREE_PATH/refactoring-plan.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Plan**: Refactoring strategy defined
-- $(if [[ -f "$WORKTREE_PATH/refactoring-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Refactor**: Changes implemented incrementally
-- $(if [[ -f "$WORKTREE_PATH/verification-report.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Verify**: Quality and compatibility confirmed
+- $(if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/analysis-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Analysis**: Current state and risks assessed
+- $(if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/refactoring-plan.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Plan**: Refactoring strategy defined
+- $(if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/refactoring-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Refactor**: Changes implemented incrementally
+- $(if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/verification-report.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Verify**: Quality and compatibility confirmed
 - $(if [[ -d "$WORKTREE_PATH/report/$FEATURE_NAME" ]]; then echo "✅"; else echo "⚠️"; fi) **Reports**: Quality metrics and coverage reports generated
 - $(if run_tests "$PROJECT_TYPE" "$WORKTREE_PATH" &>/dev/null; then echo "✅"; else echo "⚠️"; fi) **Tests**: All tests passing
 
@@ -459,13 +462,9 @@ $(git -C "$WORKTREE_PATH" log --oneline origin/main..HEAD 2>/dev/null || git -C 
 
 EOF
 
-# 完了レポートをworktreeにコピーしてコミット
-cp /tmp/refactoring-completion-report.md "$WORKTREE_PATH/refactoring-completion-report.md"
-rm /tmp/refactoring-completion-report.md
-
 # worktree内でコミット
-if [[ -f "$WORKTREE_PATH/refactoring-completion-report.md" ]]; then
-    git -C "$WORKTREE_PATH" add refactoring-completion-report.md
+if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/task-completion-report.md" ]]; then
+    git -C "$WORKTREE_PATH" add "report/$FEATURE_NAME/phase-results/task-completion-report.md"
     git -C "$WORKTREE_PATH" commit -m "[COMPLETE] Refactoring ready for review: $TASK_DESCRIPTION" || {
         log_warning "Failed to commit completion report"
     }
