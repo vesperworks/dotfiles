@@ -1,6 +1,45 @@
 # DONE: 完了したタスク
 
-更新日: 2025-06-24
+更新日: 2025-06-25
+
+## ✅ multiシリーズコマンドのセッション分離問題修正完了（2025-06-25）
+
+### Phase 1: multi-tdd.mdの修正（2025-06-25完了）
+- **環境変数の永続化実装**
+  - Step 1で環境変数を`.worktrees/.env-{task-id}`に保存
+  - 各フェーズで`source .claude/scripts/worktree-utils.sh`と環境ファイル読み込み
+  - クリーンアップ時に環境ファイルも削除
+- **動作確認テスト**
+  - 環境変数の保存・復元が正常に動作
+  - 関数が新しいセッションでも利用可能
+  - test-multi-tdd.shで検証済み
+
+### Phase 2: multi-feature.mdの修正（2025-06-25完了）
+- **セッション分離問題の修正**
+  - 環境変数永続化機能を全5フェーズに追加
+  - 各フェーズでworktree-utils.shと環境変数を再読み込み
+  - test-multi-feature.shで動作確認済み
+- **レポートファイルの整理**
+  - 全レポートを`report/{feature-name}/phase-results/`に統一
+  - multi-tdd.md、multi-feature.md、multi-refactor.mdで共通化
+  - ファイル整理: refactoring関連→`report/refactoring/`、テスト→`test/`
+
+### Phase 3: multi-refactor.mdの修正（2025-06-25完了）
+- **セッション分離問題の修正**
+  - 環境変数永続化機能を全4フェーズ（Analysis、Plan、Refactor、Verify）とStep 3に追加
+  - 各フェーズでworktree-utils.shと環境変数を再読み込み
+  - test-multi-refactor.shで動作確認済み
+- **修正内容**
+  - Step 1: 環境変数保存機能を追加（タスクID生成、ENV_FILE作成）
+  - 各フェーズ: ユーティリティ再読み込みと環境復元処理を追加
+  - Step 3: 完了処理での環境復元とクリーンアップ処理を追加
+  - REFACTOR_BRANCH変数の使用（TASK_BRANCHではなく）
+
+### 実装詳細
+- **環境ファイル管理**: `.worktrees/.env-{task-id}-{timestamp}`形式で保存
+- **セッション復元**: 各フェーズ開始時に自動的に環境を復元
+- **エラーハンドリング**: 環境ファイル未検出時の適切なエラーメッセージ
+- **テスト完了**: 全multiコマンド（multi-tdd、multi-feature、multi-refactor）でセッション分離問題が解決
 
 ## ✅ 修正フェーズ2完了（2025-06-24）
 

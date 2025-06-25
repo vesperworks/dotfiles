@@ -54,11 +54,31 @@ WORKTREE_PATH=$(echo "$WORKTREE_INFO" | cut -d'|' -f1)
 REFACTOR_BRANCH=$(echo "$WORKTREE_INFO" | cut -d'|' -f2)
 FEATURE_NAME=$(echo "$WORKTREE_INFO" | cut -d'|' -f3)
 
+# タスクIDを生成（環境ファイル名用）
+TASK_ID=$(echo "$TASK_DESCRIPTION" | sed 's/[^a-zA-Z0-9]/-/g' | tr '[:upper:]' '[:lower:]' | cut -c1-30)
+ENV_FILE=".worktrees/.env-${TASK_ID}-$(date +%Y%m%d-%H%M%S)"
+
+# 環境変数をファイルに保存
+cat > "$ENV_FILE" << EOF
+WORKTREE_PATH="$WORKTREE_PATH"
+REFACTOR_BRANCH="$REFACTOR_BRANCH"
+FEATURE_NAME="$FEATURE_NAME"
+PROJECT_TYPE="$PROJECT_TYPE"
+TASK_DESCRIPTION="$TASK_DESCRIPTION"
+KEEP_WORKTREE="$KEEP_WORKTREE"
+NO_MERGE="$NO_MERGE"
+CREATE_PR="$CREATE_PR"
+NO_DRAFT="$NO_DRAFT"
+AUTO_CLEANUP="$AUTO_CLEANUP"
+CLEANUP_DAYS="$CLEANUP_DAYS"
+EOF
+
 log_success "Refactoring worktree created"
 echo "🔧 Refactoring: $TASK_DESCRIPTION"
 echo "🌿 Branch: $REFACTOR_BRANCH"
 echo "📁 Worktree: $WORKTREE_PATH"
 echo "🏷️ Feature: $FEATURE_NAME"
+echo "🔧 Env file: $ENV_FILE"
 echo "⚙️ Options: keep-worktree=$KEEP_WORKTREE, no-merge=$NO_MERGE, pr=$CREATE_PR"
 ```
 
@@ -70,6 +90,22 @@ echo "⚙️ Options: keep-worktree=$KEEP_WORKTREE, no-merge=$NO_MERGE, pr=$CREA
 
 #### Phase 1: Analysis（現状分析）
 ```bash
+# 共通ユーティリティの再読み込み（セッション分離対応）
+source .claude/scripts/worktree-utils.sh || {
+    echo "Error: worktree-utils.sh not found"
+    exit 1
+}
+
+# 最新の環境ファイルを探して読み込み
+ENV_FILE=$(ls -t .worktrees/.env-* 2>/dev/null | head -1)
+if [[ -f "$ENV_FILE" ]]; then
+    source "$ENV_FILE"
+    log_info "Environment loaded from: $ENV_FILE"
+else
+    echo "Error: Environment file not found"
+    exit 1
+fi
+
 # ClaudeCodeアクセス制限対応: cdを使用せず、worktree内で作業
 log_info "Working in worktree: $WORKTREE_PATH"
 
@@ -127,6 +163,22 @@ fi
 
 #### Phase 2: Plan（戦略策定）
 ```bash
+# 共通ユーティリティの再読み込み（セッション分離対応）
+source .claude/scripts/worktree-utils.sh || {
+    echo "Error: worktree-utils.sh not found"
+    exit 1
+}
+
+# 最新の環境ファイルを探して読み込み
+ENV_FILE=$(ls -t .worktrees/.env-* 2>/dev/null | head -1)
+if [[ -f "$ENV_FILE" ]]; then
+    source "$ENV_FILE"
+    log_info "Environment loaded from: $ENV_FILE"
+else
+    echo "Error: Environment file not found"
+    exit 1
+fi
+
 show_progress "Plan" 4 2
 
 # 前フェーズの完了確認
@@ -175,6 +227,22 @@ fi
 
 #### Phase 3: Refactor（段階的実行）
 ```bash
+# 共通ユーティリティの再読み込み（セッション分離対応）
+source .claude/scripts/worktree-utils.sh || {
+    echo "Error: worktree-utils.sh not found"
+    exit 1
+}
+
+# 最新の環境ファイルを探して読み込み
+ENV_FILE=$(ls -t .worktrees/.env-* 2>/dev/null | head -1)
+if [[ -f "$ENV_FILE" ]]; then
+    source "$ENV_FILE"
+    log_info "Environment loaded from: $ENV_FILE"
+else
+    echo "Error: Environment file not found"
+    exit 1
+fi
+
 show_progress "Refactor" 4 3
 
 # 前フェーズの完了確認
@@ -269,6 +337,22 @@ fi
 
 #### Phase 4: Verify（品質検証）
 ```bash
+# 共通ユーティリティの再読み込み（セッション分離対応）
+source .claude/scripts/worktree-utils.sh || {
+    echo "Error: worktree-utils.sh not found"
+    exit 1
+}
+
+# 最新の環境ファイルを探して読み込み
+ENV_FILE=$(ls -t .worktrees/.env-* 2>/dev/null | head -1)
+if [[ -f "$ENV_FILE" ]]; then
+    source "$ENV_FILE"
+    log_info "Environment loaded from: $ENV_FILE"
+else
+    echo "Error: Environment file not found"
+    exit 1
+fi
+
 show_progress "Verify" 4 4
 
 # 前フェーズの完了確認
@@ -414,6 +498,22 @@ git commit -m "test: add performance benchmarks for refactored code"
 ### Step 3: 完了通知とPR準備
 
 ```bash
+# 共通ユーティリティの再読み込み（セッション分離対応）
+source .claude/scripts/worktree-utils.sh || {
+    echo "Error: worktree-utils.sh not found"
+    exit 1
+}
+
+# 最新の環境ファイルを探して読み込み
+ENV_FILE=$(ls -t .worktrees/.env-* 2>/dev/null | head -1)
+if [[ -f "$ENV_FILE" ]]; then
+    source "$ENV_FILE"
+    log_info "Environment loaded from: $ENV_FILE"
+else
+    echo "Error: Environment file not found"
+    exit 1
+fi
+
 show_progress "Completion" 4 4
 
 # 全テスト実行 - プロジェクトタイプに応じたテスト
@@ -497,12 +597,18 @@ fi
 # worktreeクリーンアップ（オプション）
 if [[ "$KEEP_WORKTREE" != "true" ]] && [[ "$CREATE_PR" != "true" ]]; then
     cleanup_worktree "$WORKTREE_PATH" "$KEEP_WORKTREE"
+    # 環境ファイルも削除
+    if [[ -f "$ENV_FILE" ]]; then
+        rm -f "$ENV_FILE"
+        log_info "Environment file cleaned up: $ENV_FILE"
+    fi
     echo "✨ Worktree cleaned up automatically"
 else
     echo "📊 Report: $WORKTREE_PATH/report/$FEATURE_NAME/phase-results/task-completion-report.md"
     echo "🔀 Branch: $REFACTOR_BRANCH"
     echo "📁 Worktree kept at: $WORKTREE_PATH"
-    echo "🧹 To clean up later: git worktree remove $WORKTREE_PATH"
+    echo "🔧 Env file: $ENV_FILE"
+    echo "🧹 To clean up later: git worktree remove $WORKTREE_PATH && rm -f $ENV_FILE"
 fi
 
 log_success "Refactoring completed independently!"
