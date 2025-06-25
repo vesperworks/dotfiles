@@ -161,9 +161,14 @@ check_and_setup_project_structure() {
             echo ".worktrees/" >> .gitignore
             log_info "Added .worktrees/ to .gitignore"
         fi
+        # 環境ファイルパターンも追加
+        if ! grep -q "^\.worktrees/\.env-\*$" .gitignore; then
+            echo ".worktrees/.env-*" >> .gitignore
+            log_info "Added .worktrees/.env-* to .gitignore"
+        fi
     else
-        echo ".worktrees/" > .gitignore
-        log_info "Created .gitignore with .worktrees/ entry"
+        echo -e ".worktrees/\n.worktrees/.env-*" > .gitignore
+        log_info "Created .gitignore with .worktrees/ and .env-* entries"
     fi
     
     return 0
@@ -739,3 +744,101 @@ export -f create_phase_status check_phase_completed update_phase_status rollback
 
 # デフォルトプロンプトのエクスポート
 export DEFAULT_EXPLORER_PROMPT DEFAULT_PLANNER_PROMPT DEFAULT_CODER_PROMPT
+
+# 環境ファイル管理関数
+generate_env_file_path() {
+    local task_type="$1"
+    local task_id="$2"
+    local timestamp="$3"
+    
+    # .worktreesディレクトリが存在することを確認
+    mkdir -p .worktrees
+    
+    # 環境ファイルパスを生成
+    local env_file_path=".worktrees/.env-${task_type}-${task_id}-${timestamp}"
+    
+    # パスの正規化（相対パスを絶対パスに変換）
+    echo "$(pwd)/$env_file_path"
+}
+
+# 環境ファイルを探す関数（より安全な実装）
+find_env_file() {
+    local env_file_path="${1:-}"
+    
+    # 明示的にパスが指定されている場合
+    if [[ -n "$env_file_path" ]] && [[ -f "$env_file_path" ]]; then
+        echo "$env_file_path"
+        return 0
+    fi
+    
+    # ENV_FILE環境変数が設定されている場合
+    if [[ -n "${ENV_FILE:-}" ]] && [[ -f "$ENV_FILE" ]]; then
+        echo "$ENV_FILE"
+        return 0
+    fi
+    
+    # 最新の環境ファイルを探す（フォールバック）
+    local latest_env=$(ls -t .worktrees/.env-* 2>/dev/null | head -1)
+    if [[ -n "$latest_env" ]] && [[ -f "$latest_env" ]]; then
+        log_warning "Using latest environment file as fallback: $latest_env"
+        echo "$latest_env"
+        return 0
+    fi
+    
+    # 環境ファイルが見つからない
+    log_error "No environment file found. Searched locations:"
+    log_error "  - Explicit path: ${env_file_path:-<none>}"
+    log_error "  - ENV_FILE variable: ${ENV_FILE:-<not set>}"
+    log_error "  - Latest in .worktrees/: $(ls -la .worktrees/.env-* 2>&1 | head -5 || echo '<none found>')"
+    log_error ""
+    log_error "This usually happens when:"
+    log_error "  1. The task was started in a different session"
+    log_error "  2. Multiple tasks are running in parallel without proper ENV_FILE"
+    log_error "  3. The environment file was manually deleted"
+    log_error "  4. ClaudeCode's session separation prevents variable inheritance"
+    log_error ""
+    log_error "To fix:"
+    log_error "  1. Check Step 1 output for the environment file path"
+    log_error "  2. Set ENV_FILE explicitly: ENV_FILE='/path/to/.worktrees/.env-...'"
+    log_error "  3. Or pass the path to load_env_file: load_env_file '/path/to/.worktrees/.env-...'"
+    return 1
+}
+
+# 環境ファイルを安全に読み込む関数
+load_env_file() {
+    local env_file_path="${1:-}"
+    
+    # 環境ファイルを探す
+    local env_file=$(find_env_file "$env_file_path")
+    if [[ $? -ne 0 ]]; then
+        log_error "Failed to find environment file"
+        return 1
+    fi
+    
+    if [[ ! -f "$env_file" ]]; then
+        log_error "Environment file does not exist: $env_file"
+        return 1
+    fi
+    
+    # 環境ファイルを読み込む
+    source "$env_file"
+    log_info "Environment loaded from: $env_file"
+    
+    # 必須変数の検証
+    local missing_vars=()
+    for var in WORKTREE_PATH TASK_BRANCH FEATURE_NAME PROJECT_TYPE TASK_DESCRIPTION; do
+        if [[ -z "${!var:-}" ]]; then
+            missing_vars+=("$var")
+        fi
+    done
+    
+    if [[ ${#missing_vars[@]} -gt 0 ]]; then
+        log_error "Missing required environment variables: ${missing_vars[*]}"
+        return 1
+    fi
+    
+    return 0
+}
+
+# 環境ファイル管理関数のエクスポート
+export -f generate_env_file_path find_env_file load_env_file

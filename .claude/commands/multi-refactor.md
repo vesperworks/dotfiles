@@ -56,7 +56,8 @@ FEATURE_NAME=$(echo "$WORKTREE_INFO" | cut -d'|' -f3)
 
 # タスクIDを生成（環境ファイル名用）
 TASK_ID=$(echo "$TASK_DESCRIPTION" | sed 's/[^a-zA-Z0-9]/-/g' | tr '[:upper:]' '[:lower:]' | cut -c1-30)
-ENV_FILE=".worktrees/.env-${TASK_ID}-$(date +%Y%m%d-%H%M%S)"
+TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+ENV_FILE=$(generate_env_file_path "refactor" "$TASK_ID" "$TIMESTAMP")
 
 # 環境変数をファイルに保存
 cat > "$ENV_FILE" << EOF
@@ -78,8 +79,14 @@ echo "🔧 Refactoring: $TASK_DESCRIPTION"
 echo "🌿 Branch: $REFACTOR_BRANCH"
 echo "📁 Worktree: $WORKTREE_PATH"
 echo "🏷️ Feature: $FEATURE_NAME"
-echo "🔧 Env file: $ENV_FILE"
+echo "💾 Environment: $ENV_FILE"
 echo "⚙️ Options: keep-worktree=$KEEP_WORKTREE, no-merge=$NO_MERGE, pr=$CREATE_PR"
+
+# 環境ファイルパスを明示的にエクスポート（セッション分離対応）
+export ENV_FILE
+echo ""
+echo "📌 IMPORTANT: Use this environment file in each phase:"
+echo "   ENV_FILE='$ENV_FILE'"
 ```
 
 ### Step 2: Worktree内で全フロー自動実行
@@ -96,13 +103,9 @@ source .claude/scripts/worktree-utils.sh || {
     exit 1
 }
 
-# 最新の環境ファイルを探して読み込み
-ENV_FILE=$(ls -t .worktrees/.env-* 2>/dev/null | head -1)
-if [[ -f "$ENV_FILE" ]]; then
-    source "$ENV_FILE"
-    log_info "Environment loaded from: $ENV_FILE"
-else
-    echo "Error: Environment file not found"
+# 環境ファイルを安全に読み込み
+if ! load_env_file "${ENV_FILE:-}"; then
+    echo "Error: Failed to load environment file"
     exit 1
 fi
 
@@ -169,13 +172,9 @@ source .claude/scripts/worktree-utils.sh || {
     exit 1
 }
 
-# 最新の環境ファイルを探して読み込み
-ENV_FILE=$(ls -t .worktrees/.env-* 2>/dev/null | head -1)
-if [[ -f "$ENV_FILE" ]]; then
-    source "$ENV_FILE"
-    log_info "Environment loaded from: $ENV_FILE"
-else
-    echo "Error: Environment file not found"
+# 環境ファイルを安全に読み込み
+if ! load_env_file "${ENV_FILE:-}"; then
+    echo "Error: Failed to load environment file"
     exit 1
 fi
 
@@ -233,13 +232,9 @@ source .claude/scripts/worktree-utils.sh || {
     exit 1
 }
 
-# 最新の環境ファイルを探して読み込み
-ENV_FILE=$(ls -t .worktrees/.env-* 2>/dev/null | head -1)
-if [[ -f "$ENV_FILE" ]]; then
-    source "$ENV_FILE"
-    log_info "Environment loaded from: $ENV_FILE"
-else
-    echo "Error: Environment file not found"
+# 環境ファイルを安全に読み込み
+if ! load_env_file "${ENV_FILE:-}"; then
+    echo "Error: Failed to load environment file"
     exit 1
 fi
 
@@ -343,13 +338,9 @@ source .claude/scripts/worktree-utils.sh || {
     exit 1
 }
 
-# 最新の環境ファイルを探して読み込み
-ENV_FILE=$(ls -t .worktrees/.env-* 2>/dev/null | head -1)
-if [[ -f "$ENV_FILE" ]]; then
-    source "$ENV_FILE"
-    log_info "Environment loaded from: $ENV_FILE"
-else
-    echo "Error: Environment file not found"
+# 環境ファイルを安全に読み込み
+if ! load_env_file "${ENV_FILE:-}"; then
+    echo "Error: Failed to load environment file"
     exit 1
 fi
 
@@ -504,13 +495,9 @@ source .claude/scripts/worktree-utils.sh || {
     exit 1
 }
 
-# 最新の環境ファイルを探して読み込み
-ENV_FILE=$(ls -t .worktrees/.env-* 2>/dev/null | head -1)
-if [[ -f "$ENV_FILE" ]]; then
-    source "$ENV_FILE"
-    log_info "Environment loaded from: $ENV_FILE"
-else
-    echo "Error: Environment file not found"
+# 環境ファイルを安全に読み込み
+if ! load_env_file "${ENV_FILE:-}"; then
+    echo "Error: Failed to load environment file"
     exit 1
 fi
 
@@ -607,7 +594,7 @@ else
     echo "📊 Report: $WORKTREE_PATH/report/$FEATURE_NAME/phase-results/task-completion-report.md"
     echo "🔀 Branch: $REFACTOR_BRANCH"
     echo "📁 Worktree kept at: $WORKTREE_PATH"
-    echo "🔧 Env file: $ENV_FILE"
+    echo "💾 Environment: $ENV_FILE"
     echo "🧹 To clean up later: git worktree remove $WORKTREE_PATH && rm -f $ENV_FILE"
 fi
 

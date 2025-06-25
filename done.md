@@ -2,6 +2,30 @@
 
 更新日: 2025-06-25
 
+## ✅ 環境ファイル管理の改善完了（2025-06-25）
+
+### 実施内容
+- **環境ファイル検索方法の改善**
+  - `generate_env_file_path`関数で絶対パスを返すように修正
+  - .worktreesディレクトリの自動作成を追加
+  - 並行実行時の環境ファイル競合を防止
+- **セキュリティ対策**
+  - `.gitignore`に`.worktrees/.env-*`が既に追加済みであることを確認
+  - 環境ファイルがGitにコミットされないことを保証
+- **エラーハンドリングの詳細化**
+  - `find_env_file`関数のエラーメッセージを改善
+  - ClaudeCodeのセッション分離問題と解決方法を明記
+  - 環境ファイルパスの明示的な指定方法を追加
+- **各multiコマンドの改善**
+  - multi-tdd.md、multi-feature.md、multi-refactor.mdで環境ファイルパスを明示的に表示
+  - 「📌 IMPORTANT: Use this environment file in each phase」メッセージを追加
+  - セッション分離対応のコメントを追加
+
+### 技術的詳細
+- **worktree-utils.sh**: `generate_env_file_path`、`find_env_file`、`load_env_file`関数の改善
+- **並行実行対応**: 各ワークフローが独自の環境ファイルを使用することで競合を防止
+- **エラーメッセージ**: 環境ファイル未検出時の詳細な原因と解決方法を提供
+
 ## ✅ multiシリーズコマンドのセッション分離問題修正完了（2025-06-25）
 
 ### Phase 1: multi-tdd.mdの修正（2025-06-25完了）
