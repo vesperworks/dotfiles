@@ -340,7 +340,6 @@ fi
 
 show_progress "Prototype" 5 3
 ```
-</example>
 
 **実行内容**:
 1. 最小限の動作するプロトタイプ作成
@@ -349,7 +348,6 @@ show_progress "Prototype" 5 3
 4. プロトタイプのスクリーンショット作成
 5. MUST document implementation details in `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/prototype-results.md`
 
-<example>
 ```bash
 # プロトタイプ実装のコミット
 if [[ -d "src/" ]] || [[ -d "components/" ]]; then
@@ -366,7 +364,6 @@ if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/prototype-results.md
     }
 fi
 ```
-</example>
 
   <output>
     - Working prototype code
@@ -393,7 +390,6 @@ fi
   </tools>
 
 #### Phase 4: Coding（本格実装）
-<example>
 ```bash
 # 共通ユーティリティの再読み込み（セッション分離対応）
 source .claude/scripts/worktree-utils.sh || {
@@ -412,7 +408,6 @@ show_progress "Coding" 5 4
 # Coderプロンプトの読み込み
 CODER_PROMPT=$(load_prompt ".claude/prompts/coder.md" "$DEFAULT_CODER_PROMPT")
 ```
-</example>
 
 **Coder指示**:
 $CODER_PROMPT
@@ -437,7 +432,6 @@ $CODER_PROMPT
 - **Playwright**: E2Eテスト自動生成・実行
 - **Context7**: 動的設定・コンテキスト情報活用
 
-<example>
 ```bash
 # API/コンポーネントテスト
 if [[ -d "$WORKTREE_PATH/test/$FEATURE_NAME" ]]; then
@@ -479,7 +473,6 @@ if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/coding-results.md" ]
     }
 fi
 ```
-</example>
 
   <output>
     - Complete feature implementation
@@ -507,7 +500,6 @@ fi
 
 ### Step 3: 完了通知とPR準備
 
-<example>
 ```bash
 # 共通ユーティリティの再読み込み（セッション分離対応）
 source .claude/scripts/worktree-utils.sh || {
@@ -675,7 +667,23 @@ if ! run_tests "$PROJECT_TYPE" "$WORKTREE_PATH" &>/dev/null; then
     exit 1
 fi
 ```
-</example>
+
+## 使用例
+
+### 基本的な機能開発
+```
+/project:multi-feature "ユーザープロフィール画像アップロード機能"
+```
+
+### デザイン連携を含む機能開発
+```
+/project:multi-feature "Figmaデザインに基づくダッシュボードウィジェット"
+```
+
+### API統合を含む機能開発
+```
+/project:multi-feature "外部決済システムとのWebhook統合"
+```
 
   <output>
     - Complete task report
@@ -684,29 +692,6 @@ fi
     - Worktree cleaned (if requested)
   </output>
 </phase>
-
-## 使用例
-
-### 基本的な機能開発
-<example>
-```
-/project:multi-feature "ユーザープロフィール画像アップロード機能"
-```
-</example>
-
-### デザイン連携を含む機能開発
-<example>
-```
-/project:multi-feature "Figmaデザインに基づくダッシュボードウィジェット"
-```
-</example>
-
-### API統合を含む機能開発
-<example>
-```
-/project:multi-feature "外部決済システムとのWebhook統合"
-```
-</example>
 
 ## 実行結果
 
