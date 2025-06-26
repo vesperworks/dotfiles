@@ -83,7 +83,7 @@ generate_summary() {
     done
     
     # Generate detailed report file
-    cat > ".worktrees/bugfix-3/phase3-test-report.md" << EOF
+    cat > "phase3-test-report.md" << EOF
 # Phase 3 Test Execution Report
 
 **Date**: $(date)  
@@ -143,7 +143,7 @@ else
 fi)
 EOF
     
-    echo -e "\n${BLUE}Report saved to: .worktrees/bugfix-3/phase3-test-report.md${NC}"
+    echo -e "\n${BLUE}Report saved to: phase3-test-report.md${NC}"
 }
 
 # Main execution
@@ -152,10 +152,10 @@ main() {
     
     # Define tests
     declare -A TESTS=(
-        ["Test 1: Japanese Parameters"]=".worktrees/bugfix-3/test/phase3-test-japanese-worktree.sh"
-        ["Test 2: Sequential Phases"]=".worktrees/bugfix-3/test/phase3-test-sequential-phases.sh"
-        ["Test 3: Error Handling"]=".worktrees/bugfix-3/test/phase3-test-error-handling.sh"
-        ["Test 4: Refactoring Complete"]=".worktrees/bugfix-3/test/phase3-test-refactoring-complete.sh"
+        ["Test 1: Japanese Parameters"]="test/phase3-test-japanese-worktree.sh"
+        ["Test 2: Sequential Phases"]="test/phase3-test-sequential-phases.sh"
+        ["Test 3: Error Handling"]="test/phase3-test-error-handling.sh"
+        ["Test 4: Refactoring Complete"]="test/phase3-test-refactoring-complete.sh"
     )
     
     # Check if test scripts exist
