@@ -20,6 +20,7 @@ $ARGUMENTS
 
 **Anthropic公式パターン準拠**：
 
+<example>
 ```bash
 # 共通ユーティリティの読み込み
 source .claude/scripts/worktree-utils.sh || {
@@ -82,6 +83,7 @@ echo ""
 echo "📌 IMPORTANT: Use this environment file in each phase:"
 echo "   ENV_FILE='$ENV_FILE'"
 ```
+</example>
 
 ### Step 2: Worktree内で全フロー自動実行
 
@@ -90,6 +92,7 @@ echo "   ENV_FILE='$ENV_FILE'"
 **重要**: 以下の全フローを**同一worktree内で連続自動実行**します：
 
 #### Phase 1: Explore（探索・要件分析）
+<example>
 ```bash
 # 共通ユーティリティの再読み込み（セッション分離対応）
 source .claude/scripts/worktree-utils.sh || {
@@ -111,6 +114,7 @@ show_progress "Explore" 5 1
 # Explorerプロンプトの読み込み（メインディレクトリから）
 EXPLORER_PROMPT=$(load_prompt ".claude/prompts/explorer.md" "$DEFAULT_EXPLORER_PROMPT")
 ```
+</example>
 
 **Explorer指示**:
 $EXPLORER_PROMPT
@@ -137,6 +141,7 @@ $EXPLORER_PROMPT
 - **Context7**: プロジェクトアーキテクチャ・既存パターン分析
 - **Playwright/Puppeteer**: 類似機能のE2Eテストパターン調査
 
+<example>
 ```bash
 # レポートディレクトリ作成
 mkdir -p "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results"
@@ -154,8 +159,10 @@ else
     log_warning "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/explore-results.md not found, skipping commit"
 fi
 ```
+</example>
 
 #### Phase 2: Plan（実装戦略・アーキテクチャ設計）
+<example>
 ```bash
 # 共通ユーティリティの再読み込み（セッション分離対応）
 source .claude/scripts/worktree-utils.sh || {
@@ -174,6 +181,7 @@ show_progress "Plan" 5 2
 # Plannerプロンプトの読み込み
 PLANNER_PROMPT=$(load_prompt ".claude/prompts/planner.md" "$DEFAULT_PLANNER_PROMPT")
 ```
+</example>
 
 **Planner指示**:
 $PLANNER_PROMPT
@@ -197,6 +205,7 @@ $PLANNER_PROMPT
 - **Playwright**: E2Eテストシナリオ設計
 - **Context7**: 既存アーキテクチャとの整合性確認
 
+<example>
 ```bash
 # Plan結果のコミット（worktree内で実行）
 if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/plan-results.md" ]]; then
@@ -210,8 +219,10 @@ else
     log_warning "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/plan-results.md not found, skipping commit"
 fi
 ```
+</example>
 
 #### Phase 3: Prototype（プロトタイプ作成）
+<example>
 ```bash
 # 共通ユーティリティの再読み込み（セッション分離対応）
 source .claude/scripts/worktree-utils.sh || {
@@ -227,6 +238,7 @@ fi
 
 show_progress "Prototype" 5 3
 ```
+</example>
 
 **実行内容**:
 1. 最小限の動作するプロトタイプ作成
@@ -235,6 +247,7 @@ show_progress "Prototype" 5 3
 4. プロトタイプのスクリーンショット作成
 5. `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/prototype-results.md` に実装詳細を保存
 
+<example>
 ```bash
 # プロトタイプ実装のコミット
 if [[ -d "src/" ]] || [[ -d "components/" ]]; then
@@ -251,8 +264,10 @@ if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/prototype-results.md
     }
 fi
 ```
+</example>
 
 #### Phase 4: Coding（本格実装）
+<example>
 ```bash
 # 共通ユーティリティの再読み込み（セッション分離対応）
 source .claude/scripts/worktree-utils.sh || {
@@ -271,6 +286,7 @@ show_progress "Coding" 5 4
 # Coderプロンプトの読み込み
 CODER_PROMPT=$(load_prompt ".claude/prompts/coder.md" "$DEFAULT_CODER_PROMPT")
 ```
+</example>
 
 **Coder指示**:
 $CODER_PROMPT
@@ -295,6 +311,7 @@ $CODER_PROMPT
 - **Playwright**: E2Eテスト自動生成・実行
 - **Context7**: 動的設定・コンテキスト情報活用
 
+<example>
 ```bash
 # API/コンポーネントテスト
 if [[ -d "$WORKTREE_PATH/test/$FEATURE_NAME" ]]; then
@@ -336,9 +353,11 @@ if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/coding-results.md" ]
     }
 fi
 ```
+</example>
 
 ### Step 3: 完了通知とPR準備
 
+<example>
 ```bash
 # 共通ユーティリティの再読み込み（セッション分離対応）
 source .claude/scripts/worktree-utils.sh || {
@@ -505,23 +524,30 @@ if ! run_tests "$PROJECT_TYPE" "$WORKTREE_PATH" &>/dev/null; then
     exit 1
 fi
 ```
+</example>
 
 ## 使用例
 
 ### 基本的な機能開発
+<example>
 ```
 /project:multi-feature "ユーザープロフィール画像アップロード機能"
 ```
+</example>
 
 ### デザイン連携を含む機能開発
+<example>
 ```
 /project:multi-feature "Figmaデザインに基づくダッシュボードウィジェット"
 ```
+</example>
 
 ### API統合を含む機能開発
+<example>
 ```
 /project:multi-feature "外部決済システムとのWebhook統合"
 ```
+</example>
 
 ## 実行結果
 
