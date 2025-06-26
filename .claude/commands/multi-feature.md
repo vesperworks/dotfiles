@@ -1,3 +1,5 @@
+<feature_development_workflow>
+
 # Multi-Agent Feature Development Workflow
 
 あなたは現在、マルチエージェント機能開発ワークフローのオーケストレーターです。Anthropic公式の git worktree ベストプラクティス（1機能=1worktree）に基づき、以下の手順で**自動実行**してください。
@@ -15,6 +17,37 @@ $ARGUMENTS
 
 ## 実行方針
 **1機能 = 1worktree** で全フローを自動実行。ユーザーは指示後、他の作業が可能。このタスクは独立したworktree内で**全フローを自動完了**します。
+
+<quality_gates>
+  <gate name="code_quality">
+    - MUST run all linting and type checking before commits
+    - MUST maintain test coverage above 80%
+    - NEVER commit untested code
+  </gate>
+  <gate name="security">
+    - MUST validate all user inputs
+    - NEVER expose sensitive data in logs
+    - ALWAYS use secure communication protocols
+  </gate>
+  <gate name="performance">
+    - MUST meet response time requirements
+    - ALWAYS optimize database queries
+    - NEVER introduce N+1 query problems
+  </gate>
+</quality_gates>
+
+<phase name="worktree_setup">
+  <objectives>
+    - Create isolated worktree for feature development
+    - Set up environment variables and configurations
+    - Validate project environment
+  </objectives>
+  
+  <tools>
+    - Git worktree commands
+    - Bash scripting utilities
+    - Environment validation functions
+  </tools>
 
 ### Step 1: 機能用Worktree作成（オーケストレーター）
 
@@ -85,11 +118,33 @@ echo "   ENV_FILE='$ENV_FILE'"
 ```
 </example>
 
+  <output>
+    - Created worktree at specified path
+    - Environment file with all necessary variables
+    - Initial commit on feature branch
+  </output>
+</phase>
+
 ### Step 2: Worktree内で全フロー自動実行
 
 **Worktree**: `$WORKTREE_PATH` **Branch**: `$FEATURE_BRANCH`
 
-**重要**: 以下の全フローを**同一worktree内で連続自動実行**します：
+**IMPORTANT**: 以下の全フローを**同一worktree内で連続自動実行**します：
+
+<phase name="explore">
+  <objectives>
+    - Analyze feature requirements and constraints
+    - Identify integration points with existing system
+    - Research necessary dependencies and APIs
+    - Define UI/UX and design requirements
+    - Evaluate performance and security needs
+  </objectives>
+  
+  <tools>
+    - Read tool for codebase analysis
+    - Grep tool for pattern searching
+    - MCP tools (Figma, Context7) if available
+  </tools>
 
 #### Phase 1: Explore（探索・要件分析）
 <example>
@@ -134,7 +189,7 @@ $EXPLORER_PROMPT
 4. UI/UXおよびデザイン要件の明確化
 5. パフォーマンス・セキュリティ要件の洗い出し
 6. MCP連携可能性の検討（Figma、Context7など）
-7. 結果を `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/explore-results.md` に保存
+7. MUST save results to `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/explore-results.md`
 
 **MCP連携（利用可能な場合）**:
 - **Figma**: デザインコンポーネント・スタイルガイド取得
@@ -160,6 +215,29 @@ else
 fi
 ```
 </example>
+
+  <output>
+    - Comprehensive requirements document
+    - Technical constraints analysis
+    - Integration points specification
+    - Committed explore-results.md
+  </output>
+</phase>
+
+<phase name="plan">
+  <objectives>
+    - Design system architecture based on exploration
+    - Define component structure and interfaces
+    - Plan data flow and state management
+    - Design APIs (REST/GraphQL/WebSocket)
+    - Create testing strategy
+  </objectives>
+  
+  <tools>
+    - Architecture design tools
+    - Diagramming capabilities
+    - Test planning frameworks
+  </tools>
 
 #### Phase 2: Plan（実装戦略・アーキテクチャ設計）
 <example>
@@ -198,7 +276,7 @@ $PLANNER_PROMPT
 5. UI/UXの実装アプローチ
 6. テスト戦略（単体・統合・E2E）
 7. 段階的リリース計画
-8. 結果を `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/plan-results.md` に保存
+8. MUST save results to `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/plan-results.md`
 
 **MCP連携戦略**:
 - **Figma → Code**: コンポーネント自動生成計画
@@ -220,6 +298,30 @@ else
 fi
 ```
 </example>
+
+  <output>
+    - Architecture design document
+    - Component specifications
+    - API contracts
+    - Test strategy document
+    - Committed plan-results.md
+  </output>
+</phase>
+
+<phase name="prototype">
+  <objectives>
+    - Create minimal working prototype
+    - Implement basic UI/UX skeleton
+    - Verify concept with mock data
+    - Generate screenshots for review
+  </objectives>
+  
+  <tools>
+    - Code generation tools
+    - UI framework components
+    - Mock data generators
+    - Screenshot utilities
+  </tools>
 
 #### Phase 3: Prototype（プロトタイプ作成）
 <example>
@@ -245,7 +347,7 @@ show_progress "Prototype" 5 3
 2. 基本的なUI/UXスケルトン実装
 3. モックデータでの動作確認
 4. プロトタイプのスクリーンショット作成
-5. `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/prototype-results.md` に実装詳細を保存
+5. MUST document implementation details in `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/prototype-results.md`
 
 <example>
 ```bash
@@ -265,6 +367,30 @@ if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/prototype-results.md
 fi
 ```
 </example>
+
+  <output>
+    - Working prototype code
+    - UI/UX skeleton
+    - Screenshots of prototype
+    - Prototype documentation
+    - Committed prototype files
+  </output>
+</phase>
+
+<phase name="coding">
+  <objectives>
+    - Implement full feature following TDD practices
+    - Create comprehensive test coverage
+    - Optimize performance and UX
+    - Integrate with existing systems
+  </objectives>
+  
+  <tools>
+    - Code editors and IDEs
+    - Testing frameworks
+    - Performance profilers
+    - MCP integration tools
+  </tools>
 
 #### Phase 4: Coding（本格実装）
 <example>
@@ -300,11 +426,11 @@ $CODER_PROMPT
 **作業ディレクトリ**: $WORKTREE_PATH
 
 **TDD実行順序（機能開発向け）**:
-1. **インターフェーステスト作成**: APIやコンポーネントの境界テスト
-2. **統合テスト作成**: 機能全体のワークフローテスト
-3. **実装**: テストを満たす機能実装
-4. **E2Eテスト**: ユーザー視点の動作確認
-5. **最適化**: パフォーマンス・UX改善
+1. **インターフェーステスト作成**: APIやコンポーネントの境界テスト - ALWAYS write tests first
+2. **統合テスト作成**: 機能全体のワークフローテスト - MUST cover all workflows
+3. **実装**: テストを満たす機能実装 - NEVER commit failing tests
+4. **E2Eテスト**: ユーザー視点の動作確認 - MUST validate user journeys
+5. **最適化**: パフォーマンス・UX改善 - ALWAYS measure before optimizing
 
 **MCP活用実装**:
 - **Figma**: デザイントークン取得・コンポーネント生成
@@ -355,6 +481,30 @@ fi
 ```
 </example>
 
+  <output>
+    - Complete feature implementation
+    - Full test suite (unit, integration, E2E)
+    - Performance optimization results
+    - All tests passing
+    - Committed implementation files
+  </output>
+</phase>
+
+<phase name="completion">
+  <objectives>
+    - Run all tests and verify quality
+    - Generate completion report
+    - Prepare for PR or merge
+    - Clean up resources if requested
+  </objectives>
+  
+  <tools>
+    - Test runners
+    - Report generators
+    - Git merge tools
+    - PR creation utilities
+  </tools>
+
 ### Step 3: 完了通知とPR準備
 
 <example>
@@ -373,9 +523,10 @@ fi
 
 show_progress "Completion" 5 5
 
-# 全テスト実行 - プロジェクトタイプに応じたテスト
+# ALWAYS run all tests - プロジェクトタイプに応じたテスト
 if ! run_tests "$PROJECT_TYPE" "$WORKTREE_PATH"; then
     log_error "Tests failed - feature may be incomplete"
+    # NEVER proceed with failing tests
 fi
 
 # E2Eテスト実行（存在する場合）
@@ -383,7 +534,7 @@ if [[ -f "package.json" ]] && grep -q '"e2e"' package.json; then
     npm run e2e || log_warning "E2E tests need review"
 fi
 
-# ビルド実行（存在する場合）
+# MUST run build if available
 if [[ -f "package.json" ]] && grep -q '"build"' package.json; then
     npm run build || log_warning "Build process needs review"
 fi
@@ -526,6 +677,14 @@ fi
 ```
 </example>
 
+  <output>
+    - Complete task report
+    - All quality gates passed
+    - PR ready (if requested)
+    - Worktree cleaned (if requested)
+  </output>
+</phase>
+
 ## 使用例
 
 ### 基本的な機能開発
@@ -560,3 +719,5 @@ fi
 5. **完了フェーズ**: デモ環境準備・PR準備完了
 
 全工程が自動化され、ユーザーは最終レビュー時のみ関与すれば良い設計です。
+
+</feature_development_workflow>
