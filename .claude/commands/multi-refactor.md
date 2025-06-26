@@ -1,5 +1,38 @@
 # Multi-Agent Refactoring Workflow
 
+<refactoring_workflow>
+  <metadata>
+    <workflow_type>refactoring</workflow_type>
+    <task_description>$TASK_DESCRIPTION</task_description>
+    <automation_level>full</automation_level>
+  </metadata>
+
+  <quality_gates>
+    <gate phase="all">
+      <requirement priority="CRITICAL">All existing tests MUST continue to pass</requirement>
+      <requirement priority="HIGH">Code coverage MUST NOT decrease</requirement>
+      <requirement priority="HIGH">Performance MUST NOT degrade</requirement>
+      <requirement priority="MEDIUM">Backward compatibility MUST be maintained</requirement>
+    </gate>
+    <gate phase="analysis">
+      <requirement>Baseline metrics MUST be captured</requirement>
+      <requirement>Technical debt MUST be identified</requirement>
+    </gate>
+    <gate phase="refactor">
+      <requirement>Each refactoring step MUST be atomic and reversible</requirement>
+      <requirement>ALWAYS commit after each successful refactoring pattern</requirement>
+    </gate>
+  </quality_gates>
+
+  <emphasis_guidelines>
+    <level name="CRITICAL">System-breaking risks that require immediate attention</level>
+    <level name="ALWAYS">Mandatory actions that must be performed every time</level>
+    <level name="NEVER">Prohibited actions that could cause issues</level>
+    <level name="MUST">Quality requirements that cannot be skipped</level>
+    <level name="IMPORTANT">Key considerations for success</level>
+  </emphasis_guidelines>
+</refactoring_workflow>
+
 あなたは現在、マルチエージェントリファクタリングワークフローのオーケストレーターです。Anthropic公式の git worktree ベストプラクティス（1タスク=1worktree）に基づき、以下の手順で**自動実行**してください。
 
 ## リファクタリング対象
