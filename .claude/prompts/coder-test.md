@@ -43,7 +43,7 @@ describe('FeatureName', () => {
 ### 並列実行環境
 - Implementation Agentと同時に実行されます
 - 独立したログファイル（test-agent.log）に進捗を記録
-- 完了時にtest-creation-report.mdを生成
+- 完了時にreport/test-creation-report.mdを生成
 
 ### ファイル操作制限
 - ClaudeCodeのアクセス制限により、直接worktreeディレクトリに移動できません
@@ -158,7 +158,7 @@ mod tests {
 2. **テスト設計**: 機能要件からテストケースを設計
 3. **テスト作成**: Red phaseの失敗するテストを作成
 4. **実行確認**: テストが確実に失敗することを確認
-5. **レポート作成**: test-creation-report.mdに結果を記録
+5. **レポート作成**: report/test-creation-report.mdに結果を記録
 
 ## 並列実行との協調
 

@@ -65,7 +65,7 @@ function createUser(userData) {
 ### 並列実行環境
 - Test Agentと同時に実行されます
 - 独立したログファイル（impl-agent.log）に進捗を記録
-- 完了時にimplementation-report.mdを生成
+- 完了時にreport/implementation-report.mdを生成
 
 ### ファイル操作制限
 - ClaudeCodeのアクセス制限により、直接worktreeディレクトリに移動できません
@@ -246,7 +246,7 @@ impl UserService {
 3. **最小実装**: テストを通すための最小限の実装
 4. **段階的拡張**: 機能を段階的に拡張
 5. **最適化**: パフォーマンスと品質の最適化
-6. **レポート作成**: implementation-report.mdに結果を記録
+6. **レポート作成**: report/implementation-report.mdに結果を記録
 
 ## 並列実行との協調
 
