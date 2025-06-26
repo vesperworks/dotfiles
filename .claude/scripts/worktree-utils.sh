@@ -842,3 +842,71 @@ load_env_file() {
 
 # 環境ファイル管理関数のエクスポート
 export -f generate_env_file_path find_env_file load_env_file
+
+# ==========================================
+# フェーズ共通関数（DRY原則）
+# ==========================================
+
+# フェーズ初期化共通関数
+initialize_phase() {
+    local env_file="${1:-}"
+    local phase_name="${2:-Unknown}"
+    
+    # 共通ユーティリティの再読み込み（セッション分離対応）
+    source .claude/scripts/worktree-utils.sh || {
+        log_error "worktree-utils.sh not found"
+        return 1
+    }
+    
+    # 環境ファイルを安全に読み込み
+    if ! load_env_file "$env_file"; then
+        log_error "Failed to load environment file"
+        return 1
+    fi
+    
+    log_info "Phase initialized: $phase_name"
+    return 0
+}
+
+# フェーズ結果のコミット共通関数
+commit_phase_results() {
+    local phase_tag="$1"      # EXPLORE, PLAN, PROTOTYPE, etc.
+    local worktree_path="$2"
+    local file_path="$3"
+    local commit_message="$4"
+    local optional_paths="${5:-}"
+    
+    if [[ ! -f "$file_path" ]]; then
+        log_warning "$file_path not found, skipping commit"
+        return 1
+    fi
+    
+    # 基本ファイルを追加
+    git -C "$worktree_path" add "$file_path" || {
+        log_warning "Failed to add $file_path"
+        return 1
+    }
+    
+    # オプションのパスがあれば追加
+    if [[ -n "$optional_paths" ]]; then
+        for path in $optional_paths; do
+            if [[ -e "$worktree_path/$path" ]]; then
+                git -C "$worktree_path" add "$path" 2>/dev/null || {
+                    log_warning "Failed to add optional path: $path"
+                }
+            fi
+        done
+    fi
+    
+    # コミット実行
+    git -C "$worktree_path" commit -m "[$phase_tag] $commit_message" || {
+        log_warning "Failed to commit $phase_tag results"
+        return 1
+    }
+    
+    log_success "Committed: [$phase_tag] $commit_message"
+    return 0
+}
+
+# フェーズ共通関数のエクスポート
+export -f initialize_phase commit_phase_results
