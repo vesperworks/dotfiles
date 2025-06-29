@@ -52,8 +52,8 @@ return {
         },
       })
       
-      -- Obsidian Zoomスタイル機能を読み込み
-      require('user-plugins.obsidian-zoom')
+      -- Obsidian Zoomスタイル機能を読み込み（v2版）
+      require('user-plugins.obsidian-zoom-v2')
     end,
     keys = {
       { "<leader>dp", function() require('dropbar.api').pick() end, desc = "パンくずリストナビ" },

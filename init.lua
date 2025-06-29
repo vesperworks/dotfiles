@@ -64,7 +64,7 @@ vim.opt.jumpoptions:append("stack")
 
 -- User plugins (markdown helper, obsidian zoom etc.)
 require('user-plugins.markdown-helper').setup_keymaps()
-require('user-plugins.obsidian-zoom')
+require('user-plugins.obsidian-zoom-v2')
 
 -- タスクタイマーシステムを初期化
 local ok, task_timer = pcall(require, 'user-plugins.task-timer')
