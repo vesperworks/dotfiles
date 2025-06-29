@@ -577,7 +577,7 @@ function M.show_timer_selection_buffer(timer_options, timer_data_map)
   vim.defer_fn(setup_input_handler, 10)
 end
 
--- 改良されたジャンプ機能（文字列検索ベース）
+-- 改良されたジャンプ機能（文字列検索ベース + swapファイル対応）
 function M.jump_to_file_and_line_by_content(file_path, task_id)
   -- ファイルが存在するかチェック
   if vim.fn.filereadable(file_path) == 0 then
@@ -605,8 +605,49 @@ function M.jump_to_file_and_line_by_content(file_path, task_id)
     -- choice == 2 なら保存せずに続行
   end
   
-  -- ファイルを開く
-  vim.cmd('edit! ' .. vim.fn.fnameescape(file_path))
+  -- swapファイル対応でファイルを安全に開く
+  local success, error_msg = pcall(function()
+    -- まずバッファが既に開いているかチェック
+    local existing_bufnr = vim.fn.bufnr(file_path)
+    if existing_bufnr ~= -1 then
+      -- 既存のバッファに切り替え
+      vim.cmd('buffer ' .. existing_bufnr)
+      return
+    end
+    
+    -- swapファイルの存在確認
+    local swap_file = vim.fn.swapname(file_path)
+    if swap_file ~= "" and vim.fn.filereadable(swap_file) == 1 then
+      -- swapファイルが存在する場合は、ユーザーに対処法を提示
+      local choice = vim.fn.confirm(
+        string.format("swapファイルが検出されました:\n%s\n\nどうしますか？", swap_file),
+        "&r: Read-only で開く\n&d: swapファイルを削除して開く\n&c: キャンセル",
+        1
+      )
+      
+      if choice == 1 then
+        -- Read-onlyで開く
+        vim.cmd('view ' .. vim.fn.fnameescape(file_path))
+      elseif choice == 2 then
+        -- swapファイルを削除してから開く
+        vim.fn.delete(swap_file)
+        vim.cmd('edit! ' .. vim.fn.fnameescape(file_path))
+      else
+        -- キャンセル
+        vim.notify("ファイルオープンをキャンセルしました", vim.log.levels.INFO)
+        return
+      end
+    else
+      -- 通常通りファイルを開く
+      vim.cmd('edit! ' .. vim.fn.fnameescape(file_path))
+    end
+  end)
+  
+  if not success then
+    vim.notify(string.format("⚠️ ファイルオープンエラー: %s", error_msg), vim.log.levels.ERROR)
+    return
+  end
+  
   local bufnr = vim.api.nvim_get_current_buf()
   
   -- 文字列ベースでタスクを検索
