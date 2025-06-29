@@ -99,9 +99,9 @@ function M.toggle_as_task()
     local new_line
     
     -- 既存のチェックボックスの状態をチェック
-    if string.match(line, "^%s*[%*%-]%s*%[[ x%-]%]%s") then
+    if string.match(line, "^%s*[%*%-]%s*%[[ x%-/]%]%s") then
       -- 既にチェックボックスがある場合は削除
-      new_line = string.gsub(line, "^(%s*)[%*%-]%s*%[[ x%-]%]%s*", "%1")
+      new_line = string.gsub(line, "^(%s*)[%*%-]%s*%[[ x%-/]%]%s*", "%1")
     elseif string.match(line, "^%s*-%s") then
       -- 既存の "- 項目" を "- [ ] 項目" に置き換え
       new_line = string.gsub(line, "^(%s*)-%s", "%1- [ ] ")
@@ -192,8 +192,11 @@ function M.toggle_checkbox_state()
       -- 実行中 → 完了
       new_line = string.gsub(line, "(%[)%-(%])", "%1x%2")
     elseif string.match(line, "^%s*[%*%-]%s*%[x%]") then
-      -- 完了 → 未完了
-      new_line = string.gsub(line, "(%[)x(%])", "%1 %2")
+      -- 完了 → キャンセル
+      new_line = string.gsub(line, "(%[)x(%])", "%1/%2")
+    elseif string.match(line, "^%s*[%*%-]%s*%[/%]") then
+      -- キャンセル → 未完了
+      new_line = string.gsub(line, "(%[)/(%])", "%1 %2")
     else
       -- チェックボックスがない場合はそのまま
       new_line = line
@@ -845,6 +848,8 @@ function M.show_current_element()
     print("In-progress checkbox")
   elseif string.match(current_line, "^%s*[%*%-]%s*%[x%]") then
     print("Checked checkbox")
+  elseif string.match(current_line, "^%s*[%*%-]%s*%[/%]") then
+    print("Cancelled checkbox")
   elseif string.match(current_line, "^%s*[%*%-]%s") then
     print("List item")
   else
