@@ -1,16 +1,16 @@
 # TODO: マルチエージェントワークフロー実装の残タスク
 
-更新日: 2025-06-26（todo.md整理 - 並列実行を低優先度へ移動）
+更新日: 2025-06-26（最新コミット反映 - multi-feature.md改善完了）
 
 ## 🔴 最優先度タスク（即座に実施）
 
-### 残存worktreeのクリーンアップ [推定: 0.5時間]
-- [ ] 4つの残存worktree（feature-user-auth、refactor-logging、tdd-auth-jwt、tdd-multi-tdd）を削除
-- [ ] クリーンアップ機能の動作確認
+### ✅ 残存worktreeのクリーンアップ [完了: 2025-06-26]
+- [x] 4つの残存worktree（feature-user-auth、refactor-logging、tdd-auth-jwt、tdd-multi-tdd）を削除
+- [x] クリーンアップ機能の動作確認
 
-### CLAUDE.mdの軽微な更新 [推定: 0.5時間]
-- [ ] test-worktree-access.shの正しい配置場所（.claude/test/）を反映
-- [ ] 新しいコマンド（p.md、t.md）をプロジェクト構造に追加
+### ✅ CLAUDE.mdの軽微な更新 [完了: 2025-06-26]
+- [x] test-worktree-access.shの正しい配置場所（.claude/test/）を反映
+- [x] 新しいコマンド（p.md、t.md）をプロジェクト構造に追加
 
 ## 🟠 高優先度タスク（1週間以内）
 
@@ -25,19 +25,23 @@
 - [ ] test-parallel-tdd.shの作成（.claude/test/配下）
 - [ ] 基本的な動作確認テストの実装
 
-### multi-feature.md改善（XMLタグ構造導入） [推定: 2-3時間]
-- [ ] **XMLタグ構造の導入**
-  - [ ] `<feature_development_workflow>`でワークフロー全体を囲む
-  - [ ] 各フェーズを`<phase name="explore">`等でマークアップ
-  - [ ] `<objectives>`, `<tools>`, `<output>`で各フェーズ内容を構造化
-  - [ ] `<quality_gates>`で品質基準を明確化
-- [ ] **強調語の体系的使用**
-  - [ ] `ALWAYS`: 必須のコミット、テスト実行に使用
-  - [ ] `NEVER`: 未テストのコミット、main直接編集の禁止に使用
-  - [ ] `MUST`: ファイル作成前の確認、品質ゲート通過に使用
-  - [ ] `IMPORTANT`: 重要な注意事項に限定使用
+### ✅ multi-feature.md改善（XMLタグ構造導入） [完了: 2025-06-26]
+- [x] **XMLタグ構造の導入**
+  - [x] `<feature_development_workflow>`でワークフロー全体を囲む
+  - [x] 各フェーズを`<phase name="explore">`等でマークアップ
+  - [x] `<objectives>`, `<tools>`, `<output>`で各フェーズ内容を構造化
+  - [x] `<quality_gates>`で品質基準を明確化
+- [x] **強調語の体系的使用**
+  - [x] `ALWAYS`: 必須のコミット、テスト実行に使用
+  - [x] `NEVER`: 未テストのコミット、main直接編集の禁止に使用
+  - [x] `MUST`: ファイル作成前の確認、品質ゲート通過に使用
+  - [x] `IMPORTANT`: 重要な注意事項に限定使用
+- [x] **外部関数化による重複削除**（worktree-utils.shに追加）
+  - [x] `initialize_phase()`: フェーズ初期化共通関数
+  - [x] `commit_phase_results()`: フェーズ結果のコミット共通関数
+- [x] **multi-feature-v2.md作成** - 完全に再設計されたバージョン
 
-### multi-refactor.md改善（multi-feature.md分析を適用） [推定: 2-3時間]
+### 🚧 multi-refactor.md改善（multi-feature.md分析を適用） [進行中]
 - [ ] **外部関数化による重複削除**
   - [ ] 各フェーズで重複する環境設定・初期化処理を`initialize_phase()`関数化
   - [ ] Git コミット処理を`commit_phase_results()`関数として統一
@@ -135,6 +139,32 @@
 - [ ] オプション指定時に`run_parallel_agents()`を呼び出す
 - [ ] デフォルトは従来の順次実行を維持
 - [ ] 使用例とパフォーマンス比較をドキュメント化
+
+## 🚧 multi-tdd.md / multi-refactor.md リファクタリング実施手順
+
+### Phase 1: worktree-utils.sh拡張（1日）
+- [ ] TDD固有の共通関数追加（commit_tdd_phase、setup_report_dirs）
+- [ ] リファクタリング固有の共通関数追加（verify_previous_phase）
+- [ ] 関数のテスト実施
+
+### Phase 2: multi-tdd.md改善（1日）
+- [ ] XMLタグ構造の導入
+- [ ] 共通関数への置換
+- [ ] TDDサイクルの構造化
+- [ ] 強調語の体系的適用
+- [ ] 期待される成果: 400行 → 200行以下（50%削減）
+
+### Phase 3: multi-refactor.md改善（1日）
+- [ ] XMLタグ構造の導入
+- [ ] 共通関数への置換
+- [ ] リファクタリングパターンの構造化
+- [ ] 強調語の体系的適用
+- [ ] 期待される成果: 推定300行 → 150行以下（50%削減）
+
+### Phase 4: 統合テスト（1日）
+- [ ] 各コマンドの動作確認
+- [ ] エラーハンドリングの検証
+- [ ] ドキュメント更新
 
 ## 📝 multi-tdd.md リファクタリング分析レポート（2025-06-26）
 
@@ -360,14 +390,22 @@ research_processのような番号付きステップで全体フローを明確�
 ✅ 環境ファイル管理の改善（セキュリティ・並行実行対応）
 ✅ 修正フェーズ3: 検証とテスト（基本動作確認完了）
 ✅ test-worktree-access.shの作成完了（.claude/test/配下）
+✅ 残存worktreeのクリーンアップ（4つのworktree削除完了）
+✅ CLAUDE.mdの更新（test配置場所、新コマンドp.md/t.md追加）
+✅ multi-feature.md改善（XMLタグ構造導入、強調語体系化、v2.0作成）
+✅ worktree-utils.shへの共通関数追加（initialize_phase、commit_phase_results）
+✅ multi-feature.mdのXMLタグ構造統一（統一されたphase構造）
+✅ multi-feature.mdの強調語体系化（ALWAYS/NEVER/MUST/IMPORTANT）
+✅ multi-feature.mdのコード圧縮（worktree作成: 61行→20行、レポート生成: 74行→30行）
 
-### 今週の実施計画
-1. **Day 1**: 残存worktreeクリーンアップ、CLAUDE.md更新（🔴最優先）
-2. **Day 2-3**: 全multiコマンドの統合テスト（🟠高優先）
-3. **Day 3-4**: テストスクリプトの作成（🟠高優先）
-4. **Day 5**: multi-feature.md改善（🟠高優先）
-5. **Day 6**: multi-tdd.mdリファクタリング（🟠高優先）
-6. **Day 7**: multi-refactor.md改善（🟠高優先）
+### 今週の実施計画（更新: 2025-06-26）
+1. **Day 1**: ✅ 残存worktreeクリーンアップ、CLAUDE.md更新（完了）
+2. **Day 2**: ✅ multi-feature.md改善（完了 - v2.0作成済み）
+3. **Day 3**: 🚧 multi-refactor.md改善（進行中）
+4. **Day 4**: 全multiコマンドの統合テスト（🟠高優先）
+5. **Day 5**: テストスクリプトの作成（🟠高優先）
+6. **Day 6**: multi-tdd.mdリファクタリング（🟠高優先）
+7. **Day 7**: 各ワークフローの自動テストスクリプト作成開始（🟡中優先）
 
 ### 重要な依存関係
 - 統合テストは環境ファイル管理改善の完了により実施可能
@@ -394,4 +432,12 @@ research_processのような番号付きステップで全体フローを明確�
 4. **Step 4**: 強調語の体系的適用
    - ALWAYS/NEVER/MUST/IMPORTANTの一貫した使用
    - TDD原則に基づく強調ポイントの明確化
+
+### multi-feature.md v2.0 主要成果（2025-06-26完了）
+- **完全なXML構造化**: `<feature_development_workflow>`によるワークフロー全体の構造化
+- **並列実行機能実装**: Test AgentとImplementation Agentの同時実行
+- **MCP統合強化**: Figma、Playwright、Context7との具体的な連携方法
+- **品質ゲート強化**: 各フェーズでの自動品質チェックと強制実行
+- **エラー回復機能**: 包括的なエラーハンドリングとロールバック戦略
+- **DRY原則適用**: worktree-utils.shへの共通関数移行による重複削除
 

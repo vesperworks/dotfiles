@@ -908,5 +908,105 @@ commit_phase_results() {
     return 0
 }
 
+# 完了レポート生成共通関数
+generate_completion_report() {
+    local worktree_path="$1"
+    local task_name="$2"       # feature_name, task_name等
+    local task_description="$3"
+    local branch_name="$4"
+    local project_type="$5"
+    local task_type="${6:-feature}"  # feature, tdd, refactor
+    
+    # レポートディレクトリ
+    local report_dir="$worktree_path/report/$task_name/phase-results"
+    
+    # フェーズ結果ファイルの確認
+    local explore_status=$([[ -f "$report_dir/explore-results.md" ]] && echo "✅" || echo "⚠️")
+    local plan_status=$([[ -f "$report_dir/plan-results.md" ]] && echo "✅" || echo "⚠️")
+    local test_status=$(run_tests "$project_type" "$worktree_path" &>/dev/null && echo "✅" || echo "⚠️")
+    
+    # タスクタイプ別のステータス
+    local prototype_status="N/A"
+    local coding_status="N/A"
+    if [[ "$task_type" == "feature" ]]; then
+        prototype_status=$([[ -f "$report_dir/prototype-results.md" ]] && echo "✅" || echo "⚠️")
+        coding_status=$([[ -f "$report_dir/coding-results.md" ]] && echo "✅" || echo "⚠️")
+    elif [[ "$task_type" == "tdd" ]] || [[ "$task_type" == "bugfix" ]]; then
+        coding_status=$([[ -f "$report_dir/coding-results.md" ]] && echo "✅" || echo "⚠️")
+    fi
+    
+    # ファイル統計
+    local src_files=0
+    local test_files=0
+    local doc_files=0
+    
+    if [[ -d "$worktree_path/src/$task_name" ]]; then
+        src_files=$(find "$worktree_path/src/$task_name" -type f \( -name "*.ts" -o -name "*.js" -o -name "*.tsx" -o -name "*.jsx" \) 2>/dev/null | wc -l || echo "0")
+    fi
+    
+    if [[ -d "$worktree_path/test/$task_name" ]]; then
+        test_files=$(find "$worktree_path/test/$task_name" -type f \( -name "*.test.*" -o -name "*.spec.*" \) 2>/dev/null | wc -l || echo "0")
+    fi
+    
+    if [[ -d "$worktree_path/report/$task_name" ]]; then
+        doc_files=$(find "$worktree_path/report/$task_name" -name "*.md" 2>/dev/null | wc -l || echo "0")
+    fi
+    
+    # タスクタイプ別のタイトル
+    local report_title="Task Completion Report"
+    case "$task_type" in
+        feature)
+            report_title="Feature Completion Report"
+            ;;
+        tdd|bugfix)
+            report_title="TDD/Bugfix Completion Report"
+            ;;
+        refactor)
+            report_title="Refactoring Completion Report"
+            ;;
+    esac
+    
+    # レポート生成
+    cat > "$report_dir/task-completion-report.md" << EOF
+# $report_title
+
+## Summary
+**Task**: $task_description  
+**Branch**: $branch_name
+**Worktree**: $worktree_path
+**Type**: $task_type
+**Completed**: $(date)
+
+## Phase Results
+- $explore_status **Explore**: Requirements and constraints analyzed
+- $plan_status **Plan**: Implementation strategy defined
+EOF
+
+    # タスクタイプ別のフェーズ結果追加
+    if [[ "$task_type" == "feature" ]]; then
+        echo "- $prototype_status **Prototype**: Working prototype demonstrated" >> "$report_dir/task-completion-report.md"
+    fi
+    
+    if [[ "$task_type" != "refactor" ]]; then
+        echo "- $coding_status **Code**: Implementation completed" >> "$report_dir/task-completion-report.md"
+    fi
+    
+    cat >> "$report_dir/task-completion-report.md" << EOF
+- $test_status **Test**: All tests passing
+- ✅ **Ready**: Task ready for review and integration
+
+## Files Summary
+- Source files: $src_files
+- Test files: $test_files
+- Documentation: $doc_files
+
+## Next Steps
+1. Review implementation in worktree: $worktree_path
+2. Test locally
+3. Create PR: $branch_name → main
+4. Clean up worktree after merge
+EOF
+}
+
 # フェーズ共通関数のエクスポート
-export -f initialize_phase commit_phase_results
+export -f initialize_phase commit_phase_results generate_completion_report

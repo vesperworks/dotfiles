@@ -4,19 +4,36 @@
 
 あなたは現在、マルチエージェント機能開発ワークフローのオーケストレーターです。Anthropic公式の git worktree ベストプラクティス（1機能=1worktree）に基づき、以下の手順で**自動実行**してください。
 
-## 開発する機能
-$ARGUMENTS
-
-## 利用可能なオプション
-- `--keep-worktree`: worktreeを保持（デフォルト: 削除）
-- `--no-merge`: mainへの自動マージをスキップ（デフォルト: マージ）
-- `--pr`: GitHub PRを作成（デフォルト: 作成しない）
-- `--no-draft`: 通常のPRを作成（デフォルト: ドラフト）
-- `--no-cleanup`: 自動クリーンアップを無効化
-- `--cleanup-days N`: N日以上前のworktreeを削除（デフォルト: 7）
-
-## 実行方針
-**1機能 = 1worktree** で全フローを自動実行。ユーザーは指示後、他の作業が可能。このタスクは独立したworktree内で**全フローを自動完了**します。
+<configuration>
+  <task_description>$ARGUMENTS</task_description>
+  
+  <options>
+    <option name="--keep-worktree" default="false">
+      <description>worktreeを保持（デフォルト: 削除）</description>
+    </option>
+    <option name="--no-merge" default="false">
+      <description>mainへの自動マージをスキップ</description>
+    </option>
+    <option name="--pr" default="false">
+      <description>GitHub PRを作成</description>
+    </option>
+    <option name="--no-draft" default="false">
+      <description>通常のPRを作成（デフォルト: ドラフト）</description>
+    </option>
+    <option name="--no-cleanup" default="false">
+      <description>自動クリーンアップを無効化</description>
+    </option>
+    <option name="--cleanup-days" default="7">
+      <description>N日以上前のworktreeを削除</description>
+    </option>
+  </options>
+  
+  <principles>
+    - **1機能 = 1worktree** で全フローを自動実行
+    - ユーザーは指示後、他の作業が可能
+    - 独立したworktree内で**全フローを自動完了**
+  </principles>
+</configuration>
 
 **IMPORTANT**: 以下のquality_gatesは全フェーズで適用されます。
 
@@ -40,30 +57,32 @@ $ARGUMENTS
   </quality_gates>
 
   <implementation>
-### Step 1: 機能用Worktree作成（オーケストレーター）
+### Phase 0: Worktree Setup（オーケストレーター）
 
-**Anthropic公式パターン準拠**：
+**実行主体**: オーケストレーター
+**目的**: 独立worktreeの作成と環境セットアップ
+
 ```bash
-# 共通ユーティリティの読み込みとワークフロー初期化
+# Phase 0: ワークフロー初期化
 source .claude/scripts/worktree-utils.sh || exit 1
 parse_workflow_options $ARGUMENTS
 verify_environment || exit 1
 
-# プロジェクトタイプ検出とオプション処理
+# プロジェクトタイプ検出と古いworktreeクリーンアップ
 PROJECT_TYPE=$(detect_project_type)
 [[ "$AUTO_CLEANUP" == "true" ]] && cleanup_old_worktrees "$CLEANUP_DAYS"
 
-# 機能開発用worktree作成
+# Worktree作成と環境セットアップ
 WORKTREE_INFO=$(create_task_worktree "$TASK_DESCRIPTION" "feature")
 WORKTREE_PATH=$(echo "$WORKTREE_INFO" | cut -d'|' -f1)
 FEATURE_BRANCH=$(echo "$WORKTREE_INFO" | cut -d'|' -f2)
 FEATURE_NAME=$(echo "$WORKTREE_INFO" | cut -d'|' -f3)
 
-# 環境ファイルの生成と保存
+# 環境ファイル生成
 TASK_ID=$(echo "$TASK_DESCRIPTION" | sed 's/[^a-zA-Z0-9]/-/g' | tr '[:upper:]' '[:lower:]' | cut -c1-30)
 ENV_FILE=$(generate_env_file_path "feature" "$TASK_ID" "$(date +%Y%m%d-%H%M%S)")
 
-# 環境変数をファイルに保存
+# 環境変数保存
 cat > "$ENV_FILE" << EOF
 WORKTREE_PATH="$WORKTREE_PATH"
 FEATURE_BRANCH="$FEATURE_BRANCH"
@@ -83,13 +102,12 @@ log_success "Feature worktree created: $WORKTREE_PATH"
 echo "📌 IMPORTANT: Use this environment file in each phase: ENV_FILE='$ENV_FILE'"
 ```
 
-<example>
-```bash
-# 使用例：機能開発の開始
-/project:multi-feature "ユーザープロフィール画像アップロード機能"
-# 出力: worktree作成、環境ファイルパス表示
-```
-</example>
+  <success_criteria>
+    - Worktree successfully created
+    - Environment file saved with all variables
+    - Initial commit on feature branch
+    - Directory structure prepared
+  </success_criteria>
 
   </implementation>
   
@@ -100,11 +118,12 @@ echo "📌 IMPORTANT: Use this environment file in each phase: ENV_FILE='$ENV_FI
   </output>
 </phase>
 
-### Step 2: Worktree内で全フロー自動実行
+## Multi-Agent Feature Development Phases
 
-**Worktree**: `$WORKTREE_PATH` **Branch**: `$FEATURE_BRANCH`
+**IMPORTANT**: 以下のフェーズを**同一worktree内で連続自動実行**します。
 
-**IMPORTANT**: 以下の全フローを**同一worktree内で連続自動実行**します：
+**Worktree**: `$WORKTREE_PATH`  
+**Branch**: `$FEATURE_BRANCH`
 
 <phase name="explore">
   <objectives>
@@ -130,21 +149,18 @@ echo "📌 IMPORTANT: Use this environment file in each phase: ENV_FILE='$ENV_FI
   <implementation>
 #### Phase 1: Explore（探索・要件分析）
 ```bash
-# フェーズ初期化（共通関数使用）
 initialize_phase "$ENV_FILE" "Explore"
 show_progress "Explore" 5 1
-
-# Explorerプロンプトの読み込み
 EXPLORER_PROMPT=$(load_prompt ".claude/prompts/explorer.md" "$DEFAULT_EXPLORER_PROMPT")
 ```
 
 **Explorer指示**:
 $EXPLORER_PROMPT
 
-**開発機能**: $ARGUMENTS
+**開発機能**: $TASK_DESCRIPTION
 **作業ディレクトリ**: $WORKTREE_PATH
 
-**IMPORTANT**: ClaudeCodeのアクセス制限により、worktree内のファイル操作はRead/Write/Editツールで実行してください。
+**IMPORTANT**: worktree内のファイル操作はRead/Write/Editツールを使用し、git操作は`git -C`コマンドを使用してください。
 
 **実行内容**:
 1. 新機能の要件分析・技術調査
@@ -156,13 +172,11 @@ $EXPLORER_PROMPT
 7. **MUST** save results to `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/explore-results.md`
 
 ```bash
-# レポートディレクトリ作成
+# Phase 1 完了処理
 mkdir -p "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results"
-
-# Explore結果のコミット（共通関数使用）
 commit_phase_results "EXPLORE" "$WORKTREE_PATH" \
     "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/explore-results.md" \
-    "Feature analysis complete: $ARGUMENTS"
+    "Feature analysis complete: $TASK_DESCRIPTION"
 ```
 
   </implementation>
@@ -199,11 +213,8 @@ commit_phase_results "EXPLORE" "$WORKTREE_PATH" \
   <implementation>
 #### Phase 2: Plan（実装戦略・アーキテクチャ設計）
 ```bash
-# フェーズ初期化（共通関数使用）
 initialize_phase "$ENV_FILE" "Plan"
 show_progress "Plan" 5 2
-
-# Plannerプロンプトの読み込み
 PLANNER_PROMPT=$(load_prompt ".claude/prompts/planner.md" "$DEFAULT_PLANNER_PROMPT")
 ```
 
@@ -211,7 +222,7 @@ PLANNER_PROMPT=$(load_prompt ".claude/prompts/planner.md" "$DEFAULT_PLANNER_PROM
 $PLANNER_PROMPT
 
 **前フェーズ結果**: `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/explore-results.md`
-**開発機能**: $ARGUMENTS
+**開発機能**: $TASK_DESCRIPTION
 **作業ディレクトリ**: $WORKTREE_PATH
 
 **実行内容**:
@@ -225,10 +236,10 @@ $PLANNER_PROMPT
 8. **MUST** save results to `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/plan-results.md`
 
 ```bash
-# Plan結果のコミット（共通関数使用）
+# Phase 2 完了処理
 commit_phase_results "PLAN" "$WORKTREE_PATH" \
     "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/plan-results.md" \
-    "Architecture design complete: $ARGUMENTS"
+    "Architecture design complete: $TASK_DESCRIPTION"
 ```
 
   </implementation>
@@ -266,7 +277,6 @@ commit_phase_results "PLAN" "$WORKTREE_PATH" \
   <implementation>
 #### Phase 3: Prototype（プロトタイプ作成）
 ```bash
-# フェーズ初期化（共通関数使用）
 initialize_phase "$ENV_FILE" "Prototype"
 show_progress "Prototype" 5 3
 ```
@@ -279,17 +289,16 @@ show_progress "Prototype" 5 3
 5. **MUST** document implementation details in `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/prototype-results.md`
 
 ```bash
-# プロトタイプ実装のコミット
+# Phase 3 完了処理
 if [[ -d "src/" ]] || [[ -d "components/" ]]; then
-    git_commit_phase "PROTOTYPE" "Initial prototype: $ARGUMENTS" "src/ components/" || {
+    git_commit_phase "PROTOTYPE" "Initial prototype: $TASK_DESCRIPTION" "src/ components/" || {
         log_warning "No prototype files to commit"
     }
 fi
 
-# プロトタイプ結果のコミット（共通関数使用）
 commit_phase_results "PROTOTYPE" "$WORKTREE_PATH" \
     "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/prototype-results.md" \
-    "Prototype documentation: $ARGUMENTS" \
+    "Prototype documentation: $TASK_DESCRIPTION" \
     "screenshots/"
 ```
 
@@ -329,11 +338,8 @@ commit_phase_results "PROTOTYPE" "$WORKTREE_PATH" \
   <implementation>
 #### Phase 4: Coding（本格実装）
 ```bash
-# フェーズ初期化（共通関数使用）
 initialize_phase "$ENV_FILE" "Coding"
 show_progress "Coding" 5 4
-
-# Coderプロンプトの読み込み
 CODER_PROMPT=$(load_prompt ".claude/prompts/coder.md" "$DEFAULT_CODER_PROMPT")
 ```
 
@@ -345,7 +351,7 @@ $CODER_PROMPT
 - `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/plan-results.md`
 - `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/prototype-results.md`
 
-**開発機能**: $ARGUMENTS
+**開発機能**: $TASK_DESCRIPTION
 **作業ディレクトリ**: $WORKTREE_PATH
 
 **TDD実行順序（機能開発向け）**:
@@ -361,30 +367,26 @@ $CODER_PROMPT
 - **Context7**: 動的設定・コンテキスト情報活用
 
 ```bash
-# API/コンポーネントテストのコミット
+# Phase 4 実装コミット処理
 if [[ -d "$WORKTREE_PATH/test/$FEATURE_NAME" ]]; then
-    git_commit_phase "TEST" "Interface and integration tests for $FEATURE_NAME: $ARGUMENTS" "test/$FEATURE_NAME"
+    git_commit_phase "TEST" "Interface and integration tests for $FEATURE_NAME: $TASK_DESCRIPTION" "test/$FEATURE_NAME"
 fi
 
-# 機能実装のコミット
 if [[ -d "$WORKTREE_PATH/src/$FEATURE_NAME" ]]; then
-    git_commit_phase "IMPLEMENT" "Core feature implementation for $FEATURE_NAME: $ARGUMENTS" "src/$FEATURE_NAME"
+    git_commit_phase "IMPLEMENT" "Core feature implementation for $FEATURE_NAME: $TASK_DESCRIPTION" "src/$FEATURE_NAME"
 fi
 
-# E2Eテストのコミット
 if [[ -d "$WORKTREE_PATH/test/$FEATURE_NAME/e2e" ]]; then
-    git_commit_phase "E2E" "End-to-end tests for $FEATURE_NAME: $ARGUMENTS" "test/$FEATURE_NAME/e2e"
+    git_commit_phase "E2E" "End-to-end tests for $FEATURE_NAME: $TASK_DESCRIPTION" "test/$FEATURE_NAME/e2e"
 fi
 
-# 最適化ドキュメントのコミット
 if [[ -d "$WORKTREE_PATH/report/$FEATURE_NAME/performance" ]]; then
-    git_commit_phase "OPTIMIZE" "Performance optimization for $FEATURE_NAME: $ARGUMENTS" "report/$FEATURE_NAME/performance"
+    git_commit_phase "OPTIMIZE" "Performance optimization for $FEATURE_NAME: $TASK_DESCRIPTION" "report/$FEATURE_NAME/performance"
 fi
 
-# 最終結果のコミット（共通関数使用）
 commit_phase_results "CODING" "$WORKTREE_PATH" \
     "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/coding-results.md" \
-    "Feature implementation complete: $ARGUMENTS"
+    "Feature implementation complete: $TASK_DESCRIPTION"
 ```
 
   </implementation>
@@ -421,114 +423,47 @@ commit_phase_results "CODING" "$WORKTREE_PATH" \
   </quality_gates>
 
   <implementation>
-### Step 3: 完了通知とPR準備
-
 ```bash
-# フェーズ初期化（共通関数使用）
+# Phase 5: 完了処理初期化
 initialize_phase "$ENV_FILE" "Completion"
 show_progress "Completion" 5 5
 
-# **ALWAYS** run all tests - プロジェクトタイプに応じたテスト
+# テスト実行（品質ゲート）
 if ! run_tests "$PROJECT_TYPE" "$WORKTREE_PATH"; then
     log_error "Tests failed - feature may be incomplete"
-    # **NEVER** proceed with failing tests
+    # 失敗時も処理は継続し、レポートに記録
 fi
 
-# E2Eテスト実行（存在する場合）
-if [[ -f "package.json" ]] && grep -q '"e2e"' package.json; then
-    npm run e2e || log_warning "E2E tests need review"
+# E2E・ビルド検証
+if [[ -f "package.json" ]]; then
+    grep -q '"e2e"' package.json && npm run e2e || log_warning "E2E tests need review"
+    grep -q '"build"' package.json && npm run build || log_warning "Build process needs review"
 fi
 
-# **MUST** run build if available
-if [[ -f "package.json" ]] && grep -q '"build"' package.json; then
-    npm run build || log_warning "Build process needs review"
-fi
+# Phase 5 完了レポート生成・コミット
+generate_completion_report "$WORKTREE_PATH" "$FEATURE_NAME" "$TASK_DESCRIPTION" "$FEATURE_BRANCH" "$PROJECT_TYPE" "feature"
 
-# 完了レポート生成
-# 注: 将来的には.claude/templates/feature-completion-report.mdを使用予定
-generate_feature_completion_report() {
-    local worktree_path="$1"
-    local feature_name="$2"
-    local arguments="$3"
-    local feature_branch="$4"
-    local project_type="$5"
-    
-    # フェーズ結果の確認
-    local explore_status=$([[ -f "$worktree_path/report/$feature_name/phase-results/explore-results.md" ]] && echo "✅" || echo "⚠️")
-    local plan_status=$([[ -f "$worktree_path/report/$feature_name/phase-results/plan-results.md" ]] && echo "✅" || echo "⚠️")
-    local prototype_status=$([[ -f "$worktree_path/report/$feature_name/phase-results/prototype-results.md" ]] && echo "✅" || echo "⚠️")
-    local coding_status=$([[ -f "$worktree_path/report/$feature_name/phase-results/coding-results.md" ]] && echo "✅" || echo "⚠️")
-    local test_status=$(run_tests "$project_type" "$worktree_path" &>/dev/null && echo "✅" || echo "⚠️")
-    
-    cat > "$worktree_path/report/$feature_name/phase-results/task-completion-report.md" << EOF
-# Feature Completion Report
-
-## Feature Summary
-**Feature**: $arguments  
-**Branch**: $feature_branch
-**Worktree**: $worktree_path
-**Completed**: $(date)
-
-## Phase Results
-- $explore_status **Explore**: Requirements and constraints analyzed
-- $plan_status **Plan**: Architecture and implementation strategy defined
-- $prototype_status **Prototype**: Working prototype demonstrated
-- $coding_status **Code**: Full feature implementation completed
-- $test_status **Test**: Comprehensive test coverage achieved
-- ✅ **Ready**: Feature ready for review and integration
-
-## Files Summary
-- Components: $(find "$worktree_path/src/$feature_name" -name "*.tsx" -o -name "*.jsx" 2>/dev/null | wc -l || echo "0")
-- API files: $(find "$worktree_path/src/$feature_name" -name "*.ts" -o -name "*.js" 2>/dev/null | wc -l || echo "0")
-- Test files: $(find "$worktree_path/test/$feature_name" -name "*.test.*" -o -name "*.spec.*" 2>/dev/null | wc -l || echo "0")
-
-## Next Steps
-1. Review implementation in worktree: $worktree_path
-2. Test feature locally
-3. Create PR: $feature_branch → main
-4. Clean up worktree after merge
-EOF
-}
-
-# レポート生成関数の呼び出し
-generate_feature_completion_report "$WORKTREE_PATH" "$FEATURE_NAME" "$ARGUMENTS" "$FEATURE_BRANCH" "$PROJECT_TYPE"
-
-# 完了レポートのコミット（共通関数使用）
 commit_phase_results "COMPLETE" "$WORKTREE_PATH" \
     "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/task-completion-report.md" \
     "Feature ready for integration: $TASK_DESCRIPTION"
 
-# ローカルマージ（オプション）
+# マージ・PR処理（オプション）
 if [[ "$NO_MERGE" != "true" ]] && [[ "$CREATE_PR" != "true" ]]; then
-    log_info "Merging to main branch..."
-    if merge_to_main "$WORKTREE_PATH" "$FEATURE_BRANCH" "$NO_MERGE"; then
-        log_success "Successfully merged to main"
-    else
+    merge_to_main "$WORKTREE_PATH" "$FEATURE_BRANCH" "$NO_MERGE" || \
         log_warning "Merge failed - manual intervention required"
-    fi
 fi
 
-# PR作成（オプション）
 if [[ "$CREATE_PR" == "true" ]]; then
-    log_info "Creating pull request..."
     local is_draft="true"
     [[ "$NO_DRAFT" == "true" ]] && is_draft="false"
-    
-    if create_pull_request "$WORKTREE_PATH" "$FEATURE_BRANCH" "$TASK_DESCRIPTION" "$is_draft"; then
-        log_success "Pull request created"
-    else
+    create_pull_request "$WORKTREE_PATH" "$FEATURE_BRANCH" "$TASK_DESCRIPTION" "$is_draft" || \
         log_warning "Failed to create PR - you can create it manually"
-    fi
 fi
 
-# worktreeクリーンアップ（オプション）
+# クリーンアップ処理
 if [[ "$KEEP_WORKTREE" != "true" ]] && [[ "$CREATE_PR" != "true" ]]; then
     cleanup_worktree "$WORKTREE_PATH" "$KEEP_WORKTREE"
-    # 環境ファイルも削除
-    if [[ -f "$ENV_FILE" ]]; then
-        rm -f "$ENV_FILE"
-        log_info "Environment file cleaned up: $ENV_FILE"
-    fi
+    [[ -f "$ENV_FILE" ]] && rm -f "$ENV_FILE" && log_info "Environment file cleaned up"
     echo "✨ Worktree cleaned up automatically"
 else
     echo "📊 Report: $WORKTREE_PATH/report/$FEATURE_NAME/phase-results/task-completion-report.md"
@@ -540,31 +475,41 @@ else
 fi
 
 log_success "Feature development completed independently!"
-echo ""
 echo "💡 User can now proceed with other tasks."
 
-# エラーが発生していた場合は非ゼロで終了
-if ! run_tests "$PROJECT_TYPE" "$WORKTREE_PATH" &>/dev/null; then
-    exit 1
-fi
+# 最終テスト結果で終了コード決定
+run_tests "$PROJECT_TYPE" "$WORKTREE_PATH" &>/dev/null || exit 1
 ```
 
 ## 使用例
 
-### 基本的な機能開発
-```
+<example>
+<description>基本的な機能開発</description>
+```bash
 /project:multi-feature "ユーザープロフィール画像アップロード機能"
 ```
+</example>
 
-### デザイン連携を含む機能開発
+<example>
+<description>デザイン連携を含む機能開発</description>
+```bash
+/project:multi-feature "Figmaデザインに基づくダッシュボードウィジェット" --keep-worktree
 ```
-/project:multi-feature "Figmaデザインに基づくダッシュボードウィジェット"
-```
+</example>
 
-### API統合を含む機能開発
+<example>
+<description>API統合とPR作成</description>
+```bash
+/project:multi-feature "外部決済システムとのWebhook統合" --pr --no-draft
 ```
-/project:multi-feature "外部決済システムとのWebhook統合"
+</example>
+
+<example>
+<description>自動クリーンアップ無効化</description>
+```bash
+/project:multi-feature "デモ用機能開発" --no-cleanup --keep-worktree
 ```
+</example>
   </implementation>
 
   <output>
@@ -573,6 +518,13 @@ fi
     - PR ready (if requested)
     - Worktree cleaned (if requested)
   </output>
+
+  <quality_checks>
+    - Test coverage > 80%
+    - All tests passing
+    - Build successful
+    - No lint errors
+  </quality_checks>
 </phase>
 
 ## 実行結果
