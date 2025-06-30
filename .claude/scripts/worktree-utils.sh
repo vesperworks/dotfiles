@@ -1010,3 +1010,163 @@ EOF
 
 # フェーズ共通関数のエクスポート
 export -f initialize_phase commit_phase_results generate_completion_report
+
+# ==========================================
+# リファクタリング固有の共通関数
+# ==========================================
+
+# リファクタリングフェーズの初期化と前フェーズチェック
+initialize_refactor_phase() {
+    local env_file="${1:-}"
+    local phase_name="${2:-Unknown}"
+    local previous_phase="${3:-}"
+    local total_phases="${4:-4}"
+    local phase_number="${5:-1}"
+    
+    # 基本的な初期化
+    if ! initialize_phase "$env_file" "$phase_name"; then
+        return 1
+    fi
+    
+    # 進捗表示
+    show_progress "$phase_name" "$total_phases" "$phase_number"
+    
+    # 前フェーズの完了確認（必要な場合）
+    if [[ -n "$previous_phase" ]]; then
+        if ! check_phase_completed "$WORKTREE_PATH" "$previous_phase"; then
+            log_error "$previous_phase phase not completed"
+            handle_error 1 "Cannot proceed without $previous_phase phase" "$WORKTREE_PATH"
+            return 1
+        fi
+    fi
+    
+    # フェーズ開始を記録
+    create_phase_status "$WORKTREE_PATH" "$phase_name" "started"
+    
+    return 0
+}
+
+# リファクタリング結果のコミット（エラーハンドリング付き）
+commit_refactor_phase() {
+    local worktree_path="$1"
+    local phase_name="$2"
+    local phase_tag="$3"
+    local result_file="$4"
+    local commit_message="$5"
+    local task_description="$6"
+    
+    if [[ -f "$result_file" ]]; then
+        git -C "$worktree_path" add "${result_file#$worktree_path/}" || {
+            rollback_on_error "$worktree_path" "$phase_name" "Failed to add $phase_name results"
+            handle_error 1 "$phase_name phase failed" "$worktree_path"
+            return 1
+        }
+        
+        git -C "$worktree_path" commit -m "[$phase_tag] $commit_message: $task_description" || {
+            rollback_on_error "$worktree_path" "$phase_name" "Failed to commit $phase_name results"
+            handle_error 1 "$phase_name phase failed" "$worktree_path"
+            return 1
+        }
+        
+        log_success "Committed: [$phase_tag] $commit_message"
+        update_phase_status "$worktree_path" "$phase_name" "completed"
+    else
+        rollback_on_error "$worktree_path" "$phase_name" "${result_file#$worktree_path/} not found"
+        handle_error 1 "$phase_name results not created" "$worktree_path"
+        return 1
+    fi
+    
+    return 0
+}
+
+# 段階的リファクタリングコミット
+commit_refactor_step() {
+    local worktree_path="$1"
+    local step_name="$2"
+    local commit_message="$3"
+    local task_description="$4"
+    
+    # 変更があるかチェック
+    if [[ -n $(git -C "$worktree_path" diff --name-only) ]]; then
+        git -C "$worktree_path" add . || {
+            log_warning "Failed to add changes for $step_name"
+            return 1
+        }
+        
+        git -C "$worktree_path" commit -m "[REFACTOR] $commit_message: $task_description" || {
+            log_warning "No changes for $step_name"
+            return 1
+        }
+        
+        log_success "Committed refactor step: $commit_message"
+        return 0
+    else
+        log_info "No changes for $step_name"
+        return 1
+    fi
+}
+
+# リファクタリング完了レポート生成
+generate_refactor_completion_report() {
+    local worktree_path="$1"
+    local feature_name="$2"
+    local task_description="$3"
+    local refactor_branch="$4"
+    local project_type="$5"
+    
+    local report_dir="$worktree_path/report/$feature_name/phase-results"
+    
+    # フェーズ結果の確認
+    local analysis_status=$([[ -f "$report_dir/analysis-results.md" ]] && echo "✅" || echo "⚠️")
+    local plan_status=$([[ -f "$report_dir/refactoring-plan.md" ]] && echo "✅" || echo "⚠️")
+    local refactor_status=$([[ -f "$report_dir/refactoring-results.md" ]] && echo "✅" || echo "⚠️")
+    local verify_status=$([[ -f "$report_dir/verification-report.md" ]] && echo "✅" || echo "⚠️")
+    local test_status=$(run_tests "$project_type" "$worktree_path" &>/dev/null && echo "✅" || echo "⚠️")
+    
+    # コミット履歴とファイル変更の取得
+    local commits=$(git -C "$worktree_path" log --oneline origin/main..HEAD 2>/dev/null || git -C "$worktree_path" log --oneline -n 10)
+    local files_changed=$(git -C "$worktree_path" diff --name-only origin/main 2>/dev/null || echo "Unable to compare with origin/main")
+    
+    cat > "$report_dir/task-completion-report.md" << EOF
+# Refactoring Completion Report
+
+## Refactoring Summary
+**Target**: $task_description  
+**Branch**: $refactor_branch
+**Worktree**: $worktree_path
+**Completed**: $(date)
+
+## Phase Results
+- $analysis_status **Analysis**: Current state and risks assessed
+- $plan_status **Plan**: Refactoring strategy defined
+- $refactor_status **Refactor**: Changes implemented incrementally
+- $verify_status **Verify**: Quality and compatibility confirmed
+- $([[ -d "$worktree_path/report/$feature_name" ]] && echo "✅" || echo "⚠️") **Reports**: Quality metrics and coverage reports generated
+- $test_status **Tests**: All tests passing
+
+## Code Quality Improvements
+- 複雑度: 詳細は\`$worktree_path/report/$feature_name/quality/complexity-report.md\`参照
+- テストカバレッジ: 詳細は\`$worktree_path/report/$feature_name/coverage/coverage-report.html\`参照
+- パフォーマンス: 詳細は\`$worktree_path/report/$feature_name/performance/benchmark-results.md\`参照
+
+## Files Modified
+$files_changed
+
+## Commits
+$commits
+
+## Next Steps
+1. Review refactoring in worktree: $worktree_path
+2. Verify all tests pass and performance meets targets
+3. Create PR: $refactor_branch → main
+4. Clean up worktree after merge: \`git worktree remove $worktree_path\`
+
+## Risk Assessment
+- 後方互換性: [Maintained/Breaking changes]
+- 移行ガイド: [Required/Not required]
+
+EOF
+}
+
+# リファクタリング共通関数のエクスポート
+export -f initialize_refactor_phase commit_refactor_phase commit_refactor_step generate_refactor_completion_report

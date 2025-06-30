@@ -1,37 +1,67 @@
 # Multi-Agent Refactoring Workflow
 
-<refactoring_workflow>
-  <metadata>
-    <workflow_type>refactoring</workflow_type>
-    <task_description>$TASK_DESCRIPTION</task_description>
-    <automation_level>full</automation_level>
-  </metadata>
+<refactoring_guidelines>
+リファクタリングワークフローの基本原則：
 
-  <quality_gates>
-    <gate phase="all">
-      <requirement priority="CRITICAL">All existing tests MUST continue to pass</requirement>
-      <requirement priority="HIGH">Code coverage MUST NOT decrease</requirement>
-      <requirement priority="HIGH">Performance MUST NOT degrade</requirement>
-      <requirement priority="MEDIUM">Backward compatibility MUST be maintained</requirement>
-    </gate>
-    <gate phase="analysis">
-      <requirement>Baseline metrics MUST be captured</requirement>
-      <requirement>Technical debt MUST be identified</requirement>
-    </gate>
-    <gate phase="refactor">
-      <requirement>Each refactoring step MUST be atomic and reversible</requirement>
-      <requirement>ALWAYS commit after each successful refactoring pattern</requirement>
-    </gate>
-  </quality_gates>
+1. **動作保証**: 既存機能の動作を完全に保持
+   - MUST: 全ての既存テストがパスすること
+   - NEVER: テストが失敗したままコミットしない
+   - ALWAYS: 各段階でテストを実行
 
-  <emphasis_guidelines>
-    <level name="CRITICAL">System-breaking risks that require immediate attention</level>
-    <level name="ALWAYS">Mandatory actions that must be performed every time</level>
-    <level name="NEVER">Prohibited actions that could cause issues</level>
-    <level name="MUST">Quality requirements that cannot be skipped</level>
-    <level name="IMPORTANT">Key considerations for success</level>
-  </emphasis_guidelines>
-</refactoring_workflow>
+2. **段階的実行**: 小さな変更を積み重ねて安全に進行
+   - ALWAYS: 1つの変更 = 1つのコミット
+   - MUST: 各変更をアトミックで可逆的にする
+   - IMPORTANT: ロールバック可能な状態を維持
+
+3. **測定可能性**: 改善効果を定量的に評価
+   - パフォーマンスベンチマーク
+   - コード複雑度メトリクス
+   - テストカバレッジ率
+
+4. **品質ゲート**: 各フェーズでの必須要件
+   - MUST: コードカバレッジが低下しない
+   - MUST: パフォーマンスが劣化しない
+   - MUST: 後方互換性を維持する
+</refactoring_guidelines>
+
+<refactoring_patterns>
+リファクタリングの実行パターン：
+
+1. **Extract Method**: 長いメソッドを分割
+   - 20行以上のメソッドを対象
+   - 単一責任の原則に従う
+   - 意味のある名前を付ける
+
+2. **Rename**: わかりやすい命名へ変更
+   - 変数・関数・クラス名の改善
+   - 一貫性のある命名規則適用
+   - ドメイン用語への統一
+
+3. **Move**: 適切なモジュールへ移動
+   - 凝集度の高いモジュール構成
+   - 結合度の低減
+   - 依存関係の整理
+
+4. **Replace**: 古いパターンを新しいパターンへ
+   - コールバックからasync/awaitへ
+   - forループからmap/filterへ
+   - クラスベースから関数型へ
+
+5. **Simplify**: 複雑なロジックを簡潔に
+   - ネストの削減
+   - 条件分岐の簡素化
+   - 重複コードの除去
+</refactoring_patterns>
+
+<emphasis_words>
+強調語の使用ガイドライン：
+
+**CRITICAL**: システム破壊リスクがある重要事項
+**ALWAYS**: 毎回必ず実行すべきアクション
+**NEVER**: 絶対に行ってはいけない禁止事項
+**MUST**: スキップできない品質要件
+**IMPORTANT**: 成功のための重要な考慮事項
+</emphasis_words>
 
 あなたは現在、マルチエージェントリファクタリングワークフローのオーケストレーターです。Anthropic公式の git worktree ベストプラクティス（1タスク=1worktree）に基づき、以下の手順で**自動実行**してください。
 
@@ -48,12 +78,6 @@ $TASK_DESCRIPTION
 
 ## 実行方針
 **1リファクタリング = 1worktree** で全フローを自動実行。既存テストを保持しながら段階的に実行。
-
-### リファクタリングの基本原則
-- **動作保証**: 既存機能の動作を完全に保持
-- **段階的実行**: 小さな変更を積み重ねて安全に進行
-- **テスト駆動**: 各段階でテストを実行し、グリーンを維持
-- **測定可能**: パフォーマンス・可読性・保守性の改善を定量化
 
 ### Step 1: リファクタリング用Worktree作成（オーケストレーター）
 
@@ -129,26 +153,44 @@ echo "   ENV_FILE='$ENV_FILE'"
 **重要**: 以下の全フローを**同一worktree内で連続自動実行**します：
 
 #### Phase 1: Analysis（現状分析）
-```bash
-# 共通ユーティリティの再読み込み（セッション分離対応）
-source .claude/scripts/worktree-utils.sh || {
-    echo "Error: worktree-utils.sh not found"
-    exit 1
-}
 
-# 環境ファイルを安全に読み込み
-if ! load_env_file "${ENV_FILE:-}"; then
-    echo "Error: Failed to load environment file"
+<analysis_phase>
+分析フェーズの実行内容：
+
+1. **対象コードの構造調査**
+   - ファイル構成の確認
+   - モジュール間の依存関係
+   - 外部ライブラリの使用状況
+
+2. **テストカバレッジの確認**
+   - 現在のカバレッジ率測定
+   - テストの品質評価
+   - 不足しているテストケースの特定
+
+3. **パフォーマンスベースライン**
+   - 実行時間の測定
+   - メモリ使用量の記録
+   - リソース消費パターンの分析
+
+4. **技術的負債の特定**
+   - コード複雑度の測定
+   - 重複コードの検出
+   - デザインパターンの不一致
+
+5. **リスク評価**
+   - 変更による影響範囲
+   - 後方互換性への影響
+   - 潜在的な破壊的変更
+
+**MUST**: 全てのメトリクスを記録し、後で比較可能にする
+**IMPORTANT**: 主観的な評価ではなく、測定可能な指標を使用
+</analysis_phase>
+
+```bash
+# フェーズ初期化（共通関数使用）
+if ! initialize_refactor_phase "${ENV_FILE:-}" "Analysis" "" 4 1; then
     exit 1
 fi
-
-# ClaudeCodeアクセス制限対応: cdを使用せず、worktree内で作業
-log_info "Working in worktree: $WORKTREE_PATH"
-
-show_progress "Analysis" 4 1
-
-# フェーズ開始を記録
-create_phase_status "$WORKTREE_PATH" "analysis" "started"
 
 # Explorerプロンプトの読み込み（メインディレクトリから）
 EXPLORER_PROMPT=$(load_prompt ".claude/prompts/explorer.md" "$DEFAULT_EXPLORER_PROMPT")
@@ -165,62 +207,64 @@ $EXPLORER_PROMPT
 - ファイル書き込み: `Write $WORKTREE_PATH/ファイル名`
 - ファイル編集: `Edit $WORKTREE_PATH/ファイル名`
 
-**実行内容**:
-1. 対象コードの構造と依存関係を調査
-2. 既存テストのカバレッジと品質を確認
-3. パフォーマンスのベースラインを測定
-4. 技術的負債とコードの複雑度を特定
-5. リファクタリングのリスクと機会を評価
-6. 結果を `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/analysis-results.md` に保存
+**実行内容**: <analysis_phase>ブロックの手順に従って分析を実施
 
 **構造化されたディレクトリ**: 
 - テスト: `$WORKTREE_PATH/test/$FEATURE_NAME/`
 - レポート: `$WORKTREE_PATH/report/$FEATURE_NAME/`
 - ソース: `$WORKTREE_PATH/src/$FEATURE_NAME/`
 
+結果を `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/analysis-results.md` に保存してください。
+
 ```bash
 # レポートディレクトリ作成
 mkdir -p "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results"
 
-# Analysis結果のコミット（worktree内で実行）
-if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/analysis-results.md" ]]; then
-    git -C "$WORKTREE_PATH" add "report/$FEATURE_NAME/phase-results/analysis-results.md"
-    git -C "$WORKTREE_PATH" commit -m "[ANALYSIS] Current state analyzed: $TASK_DESCRIPTION" || {
-        rollback_on_error "$WORKTREE_PATH" "analysis" "Failed to commit analysis results"
-        handle_error 1 "Analysis phase failed" "$WORKTREE_PATH"
-    }
-    log_success "Committed: [ANALYSIS] Current state analyzed"
-    update_phase_status "$WORKTREE_PATH" "analysis" "completed"
-else
-    rollback_on_error "$WORKTREE_PATH" "analysis" "report/$FEATURE_NAME/phase-results/analysis-results.md not found"
-    handle_error 1 "Analysis results not created" "$WORKTREE_PATH"
-fi
+# Analysis結果のコミット（共通関数使用）
+commit_refactor_phase "$WORKTREE_PATH" "analysis" "ANALYSIS" \
+    "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/analysis-results.md" \
+    "Current state analyzed" "$TASK_DESCRIPTION"
 ```
 
 #### Phase 2: Plan（戦略策定）
+
+<planning_phase>
+計画フェーズの実行内容：
+
+1. **段階的リファクタリング計画**
+   - 各段階の具体的な変更内容
+   - 推定作業時間と複雑度
+   - 段階間の依存関係
+
+2. **テスト戦略**
+   - 各段階でのテスト方法
+   - 新規テストケースの追加計画
+   - リグレッションテストの実行タイミング
+
+3. **ロールバック計画**
+   - 各段階でのロールバック手順
+   - チェックポイントの設定
+   - 失敗時の復旧手順
+
+4. **後方互換性維持策**
+   - 非推奨化の段階的実施
+   - 移行期間の設定
+   - 利用者への影響最小化
+
+5. **成功基準の定義**
+   - 定量的な改善目標
+   - 品質メトリクスの閾値
+   - 完了判定の基準
+
+**ALWAYS**: 小さく安全な変更から始める
+**NEVER**: 一度に大きな変更を行わない
+</planning_phase>
+
 ```bash
-# 共通ユーティリティの再読み込み（セッション分離対応）
-source .claude/scripts/worktree-utils.sh || {
-    echo "Error: worktree-utils.sh not found"
-    exit 1
-}
-
-# 環境ファイルを安全に読み込み
-if ! load_env_file "${ENV_FILE:-}"; then
-    echo "Error: Failed to load environment file"
+# フェーズ初期化（共通関数使用）
+if ! initialize_refactor_phase "${ENV_FILE:-}" "Plan" "analysis" 4 2; then
     exit 1
 fi
-
-show_progress "Plan" 4 2
-
-# 前フェーズの完了確認
-if ! check_phase_completed "$WORKTREE_PATH" "analysis"; then
-    log_error "Analysis phase not completed"
-    handle_error 1 "Cannot proceed without analysis phase" "$WORKTREE_PATH"
-fi
-
-# フェーズ開始を記録
-create_phase_status "$WORKTREE_PATH" "plan" "started"
 
 # Plannerプロンプトの読み込み
 PLANNER_PROMPT=$(load_prompt ".claude/prompts/planner.md" "$DEFAULT_PLANNER_PROMPT")
@@ -233,54 +277,53 @@ $PLANNER_PROMPT
 **リファクタリング対象**: $TASK_DESCRIPTION
 **作業ディレクトリ**: $WORKTREE_PATH
 
-**実行内容**:
-1. Analysis結果を基に段階的なリファクタリング計画を策定
-2. 各段階のテスト戦略と検証方法を定義
-3. ロールバック計画とリスク軽減策を準備
-4. 後方互換性の維持方法を設計
-5. 成功基準と改善目標を定義
-6. 結果を `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/refactoring-plan.md` に保存
+**実行内容**: <planning_phase>ブロックの手順に従って計画を策定
+
+結果を `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/refactoring-plan.md` に保存してください。
 
 ```bash
-# Plan結果のコミット（worktree内で実行）
-if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/refactoring-plan.md" ]]; then
-    git -C "$WORKTREE_PATH" add "report/$FEATURE_NAME/phase-results/refactoring-plan.md"
-    git -C "$WORKTREE_PATH" commit -m "[PLAN] Refactoring strategy defined: $TASK_DESCRIPTION" || {
-        rollback_on_error "$WORKTREE_PATH" "plan" "Failed to commit plan results"
-        handle_error 1 "Plan phase failed" "$WORKTREE_PATH"
-    }
-    log_success "Committed: [PLAN] Refactoring strategy defined"
-    update_phase_status "$WORKTREE_PATH" "plan" "completed"
-else
-    rollback_on_error "$WORKTREE_PATH" "plan" "report/$FEATURE_NAME/phase-results/refactoring-plan.md not found"
-    handle_error 1 "Plan results not created" "$WORKTREE_PATH"
-fi
+# Plan結果のコミット（共通関数使用）
+commit_refactor_phase "$WORKTREE_PATH" "plan" "PLAN" \
+    "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/refactoring-plan.md" \
+    "Refactoring strategy defined" "$TASK_DESCRIPTION"
 ```
 
 #### Phase 3: Refactor（段階的実行）
+
+<refactor_execution>
+リファクタリング実行の手順：
+
+1. **ベースライン確立**
+   - MUST: 全テストがグリーンであることを確認
+   - 現在のメトリクスを記録
+   - スナップショットの作成
+
+2. **段階的実行**
+   - Step 1: Extract Method（メソッド抽出）
+   - Step 2: Rename（命名改善）
+   - Step 3: Move（構造整理）
+   - Step 4: Replace（パターン置換）
+   - Step 5: Simplify（簡素化）
+
+3. **各段階での検証**
+   - ALWAYS: 変更後にテストを実行
+   - ALWAYS: グリーンを確認してからコミット
+   - NEVER: テスト失敗のままコミットしない
+
+4. **進捗記録**
+   - 各段階の変更内容
+   - テスト結果
+   - パフォーマンス影響
+
+**CRITICAL**: テストが失敗したら即座にロールバック
+**IMPORTANT**: 1つの段階が完了するまで次に進まない
+</refactor_execution>
+
 ```bash
-# 共通ユーティリティの再読み込み（セッション分離対応）
-source .claude/scripts/worktree-utils.sh || {
-    echo "Error: worktree-utils.sh not found"
-    exit 1
-}
-
-# 環境ファイルを安全に読み込み
-if ! load_env_file "${ENV_FILE:-}"; then
-    echo "Error: Failed to load environment file"
+# フェーズ初期化（共通関数使用）
+if ! initialize_refactor_phase "${ENV_FILE:-}" "Refactor" "plan" 4 3; then
     exit 1
 fi
-
-show_progress "Refactor" 4 3
-
-# 前フェーズの完了確認
-if ! check_phase_completed "$WORKTREE_PATH" "plan"; then
-    log_error "Plan phase not completed"
-    handle_error 1 "Cannot proceed without plan phase" "$WORKTREE_PATH"
-fi
-
-# フェーズ開始を記録
-create_phase_status "$WORKTREE_PATH" "refactor" "started"
 
 # Coderプロンプトの読み込み
 CODER_PROMPT=$(load_prompt ".claude/prompts/coder.md" "$DEFAULT_CODER_PROMPT")
@@ -296,27 +339,16 @@ $CODER_PROMPT
 **リファクタリング対象**: $TASK_DESCRIPTION
 **作業ディレクトリ**: $WORKTREE_PATH
 
-**実行パターン**:
-- **Extract Method**: 長いメソッドを分割
-- **Rename**: わかりやすい命名へ変更
-- **Move**: 適切なモジュールへ移動
-- **Replace**: 古いパターンを新しいパターンへ
-- **Simplify**: 複雑なロジックを簡潔に
+**実行内容**: 
+1. <refactoring_patterns>ブロックのパターンを適用
+2. <refactor_execution>ブロックの手順に従って段階的に実行
+3. <refactoring_guidelines>ブロックの原則を遵守
 
-**成果物**: `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/refactoring-results.md`
+**成果物**: `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/refactoring-results.md`に以下を記録：
 - 実行した変更の詳細
 - 各段階のテスト結果
 - パフォーマンス比較
 - コミット履歴
-
-**リファクタリング実行順序**:
-1. **準備**: ベースラインテストの実行とメトリクス取得
-2. **Extract Method**: 長いメソッドを分割
-3. **Rename**: わかりやすい命名へ変更
-4. **Move**: 適切なモジュールへ移動
-5. **Replace**: 古いパターンを新しいパターンへ
-6. **Simplify**: 複雑なロジックを簡潔に
-7. 結果を `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/refactoring-results.md` に保存
 
 ```bash
 # ベースラインテストの実行
@@ -325,68 +357,66 @@ if ! run_tests "$PROJECT_TYPE" "$WORKTREE_PATH"; then
     handle_error 1 "Tests must pass before refactoring" "$WORKTREE_PATH"
 fi
 
-# 段階的リファクタリングの実行（worktree内で）
+# 段階的リファクタリングの実行（共通関数使用）
 # Step 1: Extract Method
-if [[ -n $(git -C "$WORKTREE_PATH" diff --name-only) ]]; then
-    git -C "$WORKTREE_PATH" add .
-    git -C "$WORKTREE_PATH" commit -m "[REFACTOR] Extract method: $TASK_DESCRIPTION" || {
-        log_warning "No changes for extract method"
-    }
-fi
+commit_refactor_step "$WORKTREE_PATH" "extract-method" "Extract method" "$TASK_DESCRIPTION"
 
 # Step 2: Rename  
-if [[ -n $(git -C "$WORKTREE_PATH" diff --name-only) ]]; then
-    git -C "$WORKTREE_PATH" add .
-    git -C "$WORKTREE_PATH" commit -m "[REFACTOR] Rename for clarity: $TASK_DESCRIPTION" || {
-        log_warning "No rename changes"
-    }
-fi
+commit_refactor_step "$WORKTREE_PATH" "rename" "Rename for clarity" "$TASK_DESCRIPTION"
 
 # Step 3: Reorganize
-if [[ -n $(git -C "$WORKTREE_PATH" diff --name-only) ]]; then
-    git -C "$WORKTREE_PATH" add .
-    git -C "$WORKTREE_PATH" commit -m "[REFACTOR] Reorganize structure: $TASK_DESCRIPTION" || {
-        log_warning "No structural changes"
-    }
-fi
+commit_refactor_step "$WORKTREE_PATH" "reorganize" "Reorganize structure" "$TASK_DESCRIPTION"
 
-# 最終結果保存（worktree内で実行）
+# 最終結果保存（共通関数使用）
 if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/refactoring-results.md" ]]; then
-    git -C "$WORKTREE_PATH" add "report/$FEATURE_NAME/phase-results/refactoring-results.md"
-    git -C "$WORKTREE_PATH" commit -m "[REFACTOR] Implementation complete: $TASK_DESCRIPTION" || {
-        log_warning "Failed to commit refactoring results"
-    }
-    log_success "Committed: [REFACTOR] Implementation complete"
-    update_phase_status "$WORKTREE_PATH" "refactor" "completed"
+    commit_refactor_phase "$WORKTREE_PATH" "refactor" "REFACTOR" \
+        "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/refactoring-results.md" \
+        "Implementation complete" "$TASK_DESCRIPTION"
 else
     log_warning "report/$FEATURE_NAME/phase-results/refactoring-results.md not created, but proceeding to verification"
+    update_phase_status "$WORKTREE_PATH" "refactor" "completed"
 fi
 ```
 
 #### Phase 4: Verify（品質検証）
+
+<verification_phase>
+検証フェーズの実行内容：
+
+1. **全テストスイートの実行**
+   - 単体テスト
+   - 統合テスト
+   - E2Eテスト
+
+2. **パフォーマンス検証**
+   - ベースラインとの比較
+   - ボトルネックの特定
+   - 改善効果の測定
+
+3. **後方互換性チェック**
+   - APIの互換性
+   - 動作の一貫性
+   - エッジケースの確認
+
+4. **コード品質評価**
+   - 複雑度の変化
+   - 可読性の改善度
+   - 保守性指標
+
+5. **改善効果のまとめ**
+   - 定量的な改善結果
+   - 定性的な改善点
+   - 残された課題
+
+**MUST**: 全ての品質基準を満たすことを確認
+**IMPORTANT**: 劣化が見つかった場合は原因を特定
+</verification_phase>
+
 ```bash
-# 共通ユーティリティの再読み込み（セッション分離対応）
-source .claude/scripts/worktree-utils.sh || {
-    echo "Error: worktree-utils.sh not found"
-    exit 1
-}
-
-# 環境ファイルを安全に読み込み
-if ! load_env_file "${ENV_FILE:-}"; then
-    echo "Error: Failed to load environment file"
+# フェーズ初期化（共通関数使用）
+if ! initialize_refactor_phase "${ENV_FILE:-}" "Verify" "refactor" 4 4; then
     exit 1
 fi
-
-show_progress "Verify" 4 4
-
-# 前フェーズの完了確認
-if ! check_phase_completed "$WORKTREE_PATH" "refactor"; then
-    log_error "Refactor phase not completed"
-    handle_error 1 "Cannot proceed without refactor phase" "$WORKTREE_PATH"
-fi
-
-# フェーズ開始を記録
-create_phase_status "$WORKTREE_PATH" "verify" "started"
 
 # Testerプロンプトの読み込み
 TESTER_PROMPT=$(load_prompt ".claude/prompts/tester.md" "# Testerエージェント: リファクタリング後の品質検証を実施してください")
@@ -403,86 +433,123 @@ $TESTER_PROMPT
 **リファクタリング対象**: $TASK_DESCRIPTION
 **作業ディレクトリ**: $WORKTREE_PATH
 
-**実行内容**:
-1. 全テストスイートの実行
-2. パフォーマンステストとベースライン比較
-3. 後方互換性の確認
-4. コード品質メトリクスの比較
-5. 改善効果の測定
-6. 結果を `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/verification-report.md` に保存
+**実行内容**: <verification_phase>ブロックの手順に従って品質検証を実施
+
+結果を `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/verification-report.md` に保存してください。
 
 ```bash
-# 検証結果のコミット（worktree内で実行）
+# 検証結果のコミット（共通関数使用）
 if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/verification-report.md" ]]; then
-    git -C "$WORKTREE_PATH" add "report/$FEATURE_NAME/phase-results/verification-report.md"
-    git -C "$WORKTREE_PATH" commit -m "[VERIFY] Quality verification complete: $TASK_DESCRIPTION" || {
-        rollback_on_error "$WORKTREE_PATH" "verify" "Failed to commit verification results"
-        handle_error 1 "Verification phase failed" "$WORKTREE_PATH"
-    }
-    log_success "Committed: [VERIFY] Quality verification complete"
-    update_phase_status "$WORKTREE_PATH" "verify" "completed"
+    commit_refactor_phase "$WORKTREE_PATH" "verify" "VERIFY" \
+        "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/verification-report.md" \
+        "Quality verification complete" "$TASK_DESCRIPTION"
 else
     log_warning "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/verification-report.md not found, but refactoring is complete"
     update_phase_status "$WORKTREE_PATH" "verify" "completed"
 fi
 ```
 
-## リファクタリング固有の考慮事項
+<quality_assurance>
+リファクタリング固有の品質保証：
 
-### 1. 既存機能の動作保証
-- **Golden Master Test**: 変更前の動作を記録
-- **Characterization Test**: 現状の振る舞いをテスト化
-- **Regression Test**: 意図しない変更を検出
+1. **Golden Master Test**
+   - 変更前の動作を完全に記録
+   - 出力の完全一致を検証
+   - 意図しない変更を検出
 
-### 2. 段階的な変更とコミット
-- **Atomic Commits**: 1つの変更=1つのコミット
-- **Meaningful Messages**: 変更の意図を明確に記述
-- **Reversible Steps**: 各段階でロールバック可能
+2. **Characterization Test**
+   - 現状の振る舞いをテスト化
+   - 未文書化の仕様を明確化
+   - 暗黙の依存関係を発見
 
-### 3. パフォーマンス・可読性の改善測定
-- **ベンチマーク**: 実行時間・メモリ使用量
-- **複雑度メトリクス**: サイクロマティック複雑度
-- **可読性スコア**: コード行数・ネストレベル
-- **保守性指標**: 結合度・凝集度
+3. **Regression Test**
+   - 既存機能の動作確認
+   - エッジケースの検証
+   - パフォーマンス劣化の検出
 
-### 4. 後方互換性の維持
-- **Deprecation Strategy**: 段階的な非推奨化
-- **Facade Pattern**: 新旧インターフェースの共存
-- **Feature Toggle**: 段階的な切り替え
-- **Migration Guide**: 移行ドキュメントの作成
+4. **Migration Support**
+   - 段階的な移行パスの提供
+   - 非推奨警告の実装
+   - 移行ガイドの作成
 
-## コミット戦略
+**ALWAYS**: 測定可能な改善を達成する
+**NEVER**: 「リファクタリングのためのリファクタリング」をしない
+</quality_assurance>
 
-```bash
-# 段階的なコミット例
-git commit -m "refactor: extract validation logic to separate method"
-git commit -m "refactor: rename getUserData to fetchUserProfile for clarity"
-git commit -m "refactor: replace callback with async/await pattern"
-git commit -m "refactor: optimize database queries with batch processing"
-git commit -m "test: add performance benchmarks for refactored code"
-```
+<commit_strategy>
+段階的コミット戦略：
+
+1. **アトミックコミット**
+   ```bash
+   git commit -m "refactor: extract validation logic to separate method"
+   git commit -m "refactor: rename getUserData to fetchUserProfile for clarity"
+   git commit -m "refactor: replace callback with async/await pattern"
+   ```
+
+2. **意味のあるメッセージ**
+   - 変更の種類を明示（refactor:）
+   - 具体的な変更内容を記述
+   - 変更の理由や効果を含める
+
+3. **ロールバック可能性**
+   - 各コミットが独立して動作
+   - テストがパスする状態を維持
+   - 依存関係を明確に管理
+
+**MUST**: 各コミットでテストがグリーンであること
+**IMPORTANT**: コミットメッセージから変更内容が理解できること
+</commit_strategy>
 
 ## 成功基準
 
-### 必須要件
+<success_criteria>
+リファクタリングの成功基準：
+
+**必須要件（MUST）**:
 - ✅ 全既存テストがグリーン
 - ✅ テストカバレッジ維持または向上
 - ✅ パフォーマンス劣化なし
 - ✅ 後方互換性の維持
 
-### 改善目標
+**改善目標**:
 - 📈 コード複雑度の削減（20%以上）
 - 📈 実行速度の向上（10%以上）
 - 📈 メモリ使用量の削減
 - 📈 可読性・保守性の向上
 
-## エラーハンドリング
+**測定指標**:
+- サイクロマティック複雑度
+- コード行数（LOC）
+- テスト実行時間
+- ビルド時間
+</success_criteria>
 
-### リファクタリング中の問題
-- **テスト失敗**: 即座にロールバック
-- **パフォーマンス劣化**: 原因分析と代替案検討
-- **依存関係の破壊**: 影響範囲の再調査
-- **予期せぬ副作用**: 変更の巻き戻しと再計画
+<error_handling>
+エラー時の対処方針：
+
+1. **テスト失敗時**
+   - ALWAYS: 即座にロールバック
+   - 失敗原因を特定して記録
+   - 代替アプローチを検討
+
+2. **パフォーマンス劣化時**
+   - プロファイリングで原因特定
+   - 最適化の余地を探る
+   - トレードオフを明確化
+
+3. **依存関係の破壊時**
+   - 影響範囲を再調査
+   - 段階的な移行計画を立案
+   - 互換性レイヤーの実装
+
+4. **予期せぬ副作用時**
+   - 変更を巻き戻す
+   - より小さな単位で再実行
+   - テストケースを追加
+
+**CRITICAL**: 破壊的な変更は絶対に避ける
+**IMPORTANT**: エラーは学習の機会として活用
+</error_handling>
 
 ## 最終成果物
 
@@ -541,46 +608,8 @@ if ! run_tests "$PROJECT_TYPE" "$WORKTREE_PATH"; then
     log_error "Tests failed after refactoring - review needed"
 fi
 
-# 完了レポート生成
-cat > "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/task-completion-report.md" << EOF
-# Refactoring Completion Report
-
-## Refactoring Summary
-**Target**: $TASK_DESCRIPTION  
-**Branch**: $REFACTOR_BRANCH
-**Worktree**: $WORKTREE_PATH
-**Completed**: $(date)
-
-## Phase Results
-- $(if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/analysis-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Analysis**: Current state and risks assessed
-- $(if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/refactoring-plan.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Plan**: Refactoring strategy defined
-- $(if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/refactoring-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Refactor**: Changes implemented incrementally
-- $(if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/verification-report.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Verify**: Quality and compatibility confirmed
-- $(if [[ -d "$WORKTREE_PATH/report/$FEATURE_NAME" ]]; then echo "✅"; else echo "⚠️"; fi) **Reports**: Quality metrics and coverage reports generated
-- $(if run_tests "$PROJECT_TYPE" "$WORKTREE_PATH" &>/dev/null; then echo "✅"; else echo "⚠️"; fi) **Tests**: All tests passing
-
-## Code Quality Improvements
-- 複雑度: 詳細は`$WORKTREE_PATH/report/$FEATURE_NAME/quality/complexity-report.md`参照
-- テストカバレッジ: 詳細は`$WORKTREE_PATH/report/$FEATURE_NAME/coverage/coverage-report.html`参照
-- パフォーマンス: 詳細は`$WORKTREE_PATH/report/$FEATURE_NAME/performance/benchmark-results.md`参照
-
-## Files Modified
-$(git -C "$WORKTREE_PATH" diff --name-only origin/main 2>/dev/null || echo "Unable to compare with origin/main")
-
-## Commits
-$(git -C "$WORKTREE_PATH" log --oneline origin/main..HEAD 2>/dev/null || git -C "$WORKTREE_PATH" log --oneline -n 10)
-
-## Next Steps
-1. Review refactoring in worktree: $WORKTREE_PATH
-2. Verify all tests pass and performance meets targets
-3. Create PR: $REFACTOR_BRANCH → main
-4. Clean up worktree after merge: \`git worktree remove $WORKTREE_PATH\`
-
-## Risk Assessment
-- 後方互換性: [Maintained/Breaking changes]
-- 移行ガイド: [Required/Not required]
-
-EOF
+# 完了レポート生成（共通関数使用）
+generate_refactor_completion_report "$WORKTREE_PATH" "$FEATURE_NAME" "$TASK_DESCRIPTION" "$REFACTOR_BRANCH" "$PROJECT_TYPE"
 
 # worktree内でコミット
 if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/task-completion-report.md" ]]; then
@@ -662,10 +691,10 @@ fi
 
 ユーザーは指示後すぐに次のタスクに移行可能。このリファクタリングは独立worktree内で以下のフローを自動完了します：
 
-1. **分析フェーズ**: 現状調査・リスク評価・測定
-2. **計画フェーズ**: 段階的実施計画・テスト戦略
-3. **実装フェーズ**: 小さな変更を積み重ねて安全に実施
-4. **検証フェーズ**: 品質・互換性・パフォーマンス検証
+1. **分析フェーズ**: 現状調査・リスク評価・測定（<analysis_phase>参照）
+2. **計画フェーズ**: 段階的実施計画・テスト戦略（<planning_phase>参照）
+3. **実装フェーズ**: 小さな変更を積み重ねて安全に実施（<refactor_execution>参照）
+4. **検証フェーズ**: 品質・互換性・パフォーマンス検証（<verification_phase>参照）
 5. **完了フェーズ**: PR準備完了・改善結果レポート
 
 全工程が自動化され、ユーザーは最終レビュー時のみ関与すれば良い設計です。
