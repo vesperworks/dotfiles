@@ -5,20 +5,35 @@
 ## 実行タスク
 $ARGUMENTS
 
-## 利用可能なオプション
+<workflow_options>
+利用可能なオプション：
 - `--keep-worktree`: worktreeを保持（デフォルト: 削除）
 - `--no-merge`: mainへの自動マージをスキップ（デフォルト: マージ）
 - `--pr`: GitHub PRを作成（デフォルト: 作成しない）
 - `--no-draft`: 通常のPRを作成（デフォルト: ドラフト）
 - `--no-cleanup`: 自動クリーンアップを無効化
 - `--cleanup-days N`: N日以上前のworktreeを削除（デフォルト: 7）
+</workflow_options>
 
-## 実行方針
-**ユーザーは指示後、次のタスクに移行可能**。このタスクは独立したworktree内で**全フローを自動完了**します。
+<execution_policy>
+実行方針：
+1. **ユーザーは指示後、次のタスクに移行可能**
+2. このタスクは独立したworktree内で**全フローを自動完了**
+3. **ALWAYS**: 各フェーズを順番に実行し、飛ばさない
+4. **MUST**: 各フェーズの結果をコミットしてからのみ次に進む
+5. **NEVER**: ユーザーの確認を待たずに自動進行する
+</execution_policy>
 
-### Step 1: タスク用Worktree作成（オーケストレーター）
+## Step 1: タスク用Worktree作成（オーケストレーター）
 
-**Anthropic公式パターン準拠**：
+<worktree_creation_rules>
+Anthropic公式パターン準拠のWorktree作成：
+1. **MUST**: worktree-utils.shの共通関数を使用
+2. **ALWAYS**: .worktreesサブディレクトリ内に作成
+3. **NEVER**: メインディレクトリで直接作業しない
+4. 1タスク = 1worktree = 1ブランチのルールを厳守
+5. **IMPORTANT**: 環境ファイルを使用してセッション間でのデータ共有を実現
+</worktree_creation_rules>
 
 ```bash
 # 共通ユーティリティの読み込み
@@ -27,13 +42,11 @@ source .claude/scripts/worktree-utils.sh || {
     exit 1
 }
 
-# オプション解析
+# オプション解析とタスク説明の抽出
 parse_workflow_options $ARGUMENTS
 
-# 環境検証
+# 環境検証とプロジェクト情報取得
 verify_environment || exit 1
-
-# プロジェクトタイプの検出
 PROJECT_TYPE=$(detect_project_type)
 log_info "Detected project type: $PROJECT_TYPE"
 
@@ -42,18 +55,18 @@ if [[ "$AUTO_CLEANUP" == "true" ]]; then
     cleanup_old_worktrees "$CLEANUP_DAYS"
 fi
 
-# worktree作成
+# worktree作成（共通関数使用）
 WORKTREE_INFO=$(create_task_worktree "$TASK_DESCRIPTION" "tdd")
 WORKTREE_PATH=$(echo "$WORKTREE_INFO" | cut -d'|' -f1)
 TASK_BRANCH=$(echo "$WORKTREE_INFO" | cut -d'|' -f2)
 FEATURE_NAME=$(echo "$WORKTREE_INFO" | cut -d'|' -f3)
 
-# タスクIDを生成（環境ファイル名用）
+# 環境ファイルの生成
 TASK_ID=$(echo "$TASK_DESCRIPTION" | sed 's/[^a-zA-Z0-9]/-/g' | tr '[:upper:]' '[:lower:]' | cut -c1-30)
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 ENV_FILE=$(generate_env_file_path "tdd" "$TASK_ID" "$TIMESTAMP")
 
-# 環境変数をファイルに保存
+# 環境変数の保存
 cat > "$ENV_FILE" << EOF
 WORKTREE_PATH="$WORKTREE_PATH"
 TASK_BRANCH="$TASK_BRANCH"
@@ -76,39 +89,50 @@ echo "🏷️ Feature: $FEATURE_NAME"
 echo "💾 Environment: $ENV_FILE"
 echo "⚙️ Options: keep-worktree=$KEEP_WORKTREE, no-merge=$NO_MERGE, pr=$CREATE_PR"
 
-# 環境ファイルパスを明示的にエクスポート（セッション分離対応）
+# 環境ファイルパスを明示的にエクスポート
 export ENV_FILE
 echo ""
 echo "📌 IMPORTANT: Use this environment file in each phase:"
 echo "   ENV_FILE='$ENV_FILE'"
 ```
 
-### Step 2: Worktree内で全フロー自動実行
+## Step 2: Worktree内で全フロー自動実行
 
 **Worktree**: `$WORKTREE_PATH` **Branch**: `$TASK_BRANCH` **Feature**: `$FEATURE_NAME`
 
-**重要**: 以下の全フローを**同一worktree内で連続自動実行**します：
+<auto_execution_rules>
+全フロー自動実行の原則：
+1. **MUST**: 同一worktree内で連続自動実行
+2. **ALWAYS**: 各フェーズの結果をコミットしてから次へ進む
+3. **NEVER**: フェーズをスキップしない
+4. **IMPORTANT**: ClaudeCodeのアクセス制限により、cdコマンドは使用せず、git -Cとファイルフルパスで操作
+</auto_execution_rules>
 
-#### Phase 1: Explore（探索・調査）
+### Phase 1: Explore（探索・調査）
+
+<explore_phase_instructions>
+Explorer指示：
+1. 現在のコードベースを調査・分析
+2. 問題の根本原因を特定
+3. 影響範囲と依存関係を明確化
+4. 要件と制約を整理
+5. 結果を `explore-results.md` に保存
+
+**作業方法**（ClaudeCodeアクセス制限対応）:
+- ファイル読み取り: `Read $WORKTREE_PATH/ファイル名`
+- ファイル書き込み: `Write $WORKTREE_PATH/ファイル名`
+- ファイル編集: `Edit $WORKTREE_PATH/ファイル名`
+</explore_phase_instructions>
+
 ```bash
-# 共通ユーティリティの再読み込み（セッション分離対応）
-source .claude/scripts/worktree-utils.sh || {
-    echo "Error: worktree-utils.sh not found"
-    exit 1
-}
-
-# 環境ファイルを安全に読み込み
-if ! load_env_file "${ENV_FILE:-}"; then
-    echo "Error: Failed to load environment file"
+# フェーズ初期化（共通関数使用）
+if ! initialize_phase "${ENV_FILE:-}" "Explore"; then
     exit 1
 fi
 
-# ClaudeCodeアクセス制限対応: cdを使用せず、worktree内で作業
-log_info "Working in worktree: $WORKTREE_PATH"
-
 show_progress "Explore" 4 1
 
-# Explorerプロンプトの読み込み（メインディレクトリから）
+# Explorerプロンプトの読み込み
 EXPLORER_PROMPT=$(load_prompt ".claude/prompts/explorer.md" "$DEFAULT_EXPLORER_PROMPT")
 ```
 
@@ -116,14 +140,9 @@ EXPLORER_PROMPT=$(load_prompt ".claude/prompts/explorer.md" "$DEFAULT_EXPLORER_P
 $EXPLORER_PROMPT
 
 **タスク**: $ARGUMENTS
-
 **作業ディレクトリ**: $WORKTREE_PATH
-**注意**: ClaudeCodeのアクセス制限により、直接worktreeディレクトリに移動できません。以下の方法で作業してください：
-- ファイル読み取り: `Read $WORKTREE_PATH/ファイル名`
-- ファイル書き込み: `Write $WORKTREE_PATH/ファイル名`
-- ファイル編集: `Edit $WORKTREE_PATH/ファイル名`
 
-**実行内容**:
+実行内容:
 1. 現在のコードベースを調査・分析
 2. 問題の根本原因を特定
 3. 影響範囲と依存関係を明確化
@@ -136,31 +155,26 @@ $EXPLORER_PROMPT
 # レポートディレクトリ作成
 mkdir -p "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results"
 
-# Explore結果のコミット（worktree内で実行）
-if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/explore-results.md" ]]; then
-    # worktree内でコミット
-    git -C "$WORKTREE_PATH" add "report/$FEATURE_NAME/phase-results/explore-results.md"
-    git -C "$WORKTREE_PATH" commit -m "[EXPLORE] Analysis complete: $ARGUMENTS" || {
-        log_error "Failed to commit explore results"
-        handle_error 1 "Explore phase failed" "$WORKTREE_PATH"
-    }
-    log_success "Committed: [EXPLORE] Analysis complete"
-else
-    log_warning "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/explore-results.md not found, skipping commit"
-fi
+# Explore結果のコミット（共通関数使用）
+commit_phase_results "EXPLORE" "$WORKTREE_PATH" \
+    "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/explore-results.md" \
+    "Analysis complete: $ARGUMENTS"
 ```
 
-#### Phase 2: Plan（計画策定）
-```bash
-# 共通ユーティリティの再読み込み（セッション分離対応）
-source .claude/scripts/worktree-utils.sh || {
-    echo "Error: worktree-utils.sh not found"
-    exit 1
-}
+### Phase 2: Plan（計画策定）
 
-# 環境ファイルを安全に読み込み
-if ! load_env_file "${ENV_FILE:-}"; then
-    echo "Error: Failed to load environment file"
+<plan_phase_instructions>
+Planner指示：
+1. Explore結果を基に実装戦略を策定
+2. TDD手順（Test First）での開発計画
+3. 実装の優先順位と段階分け
+4. テスト戦略とカバレッジ計画
+5. 結果を `plan-results.md` に保存
+</plan_phase_instructions>
+
+```bash
+# フェーズ初期化（共通関数使用）
+if ! initialize_phase "${ENV_FILE:-}" "Plan"; then
     exit 1
 fi
 
@@ -177,7 +191,7 @@ $PLANNER_PROMPT
 **タスク**: $ARGUMENTS
 **作業ディレクトリ**: $WORKTREE_PATH
 
-**実行内容**:
+実行内容:
 1. Explore結果を基に実装戦略を策定
 2. TDD手順（Test First）での開発計画
 3. 実装の優先順位と段階分け
@@ -185,30 +199,25 @@ $PLANNER_PROMPT
 5. 結果を `$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/plan-results.md` に保存
 
 ```bash
-# Plan結果のコミット（worktree内で実行）
-if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/plan-results.md" ]]; then
-    git -C "$WORKTREE_PATH" add "report/$FEATURE_NAME/phase-results/plan-results.md"
-    git -C "$WORKTREE_PATH" commit -m "[PLAN] Strategy complete: $ARGUMENTS" || {
-        log_error "Failed to commit plan results"
-        handle_error 1 "Plan phase failed" "$WORKTREE_PATH"
-    }
-    log_success "Committed: [PLAN] Strategy complete"
-else
-    log_warning "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/plan-results.md not found, skipping commit"
-fi
+# Plan結果のコミット（共通関数使用）
+commit_phase_results "PLAN" "$WORKTREE_PATH" \
+    "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/plan-results.md" \
+    "Strategy complete: $ARGUMENTS"
 ```
 
-#### Phase 3: Coding（TDD実装）
-```bash
-# 共通ユーティリティの再読み込み（セッション分離対応）
-source .claude/scripts/worktree-utils.sh || {
-    echo "Error: worktree-utils.sh not found"
-    exit 1
-}
+### Phase 3: Coding（TDD実装）
 
-# 環境ファイルを安全に読み込み
-if ! load_env_file "${ENV_FILE:-}"; then
-    echo "Error: Failed to load environment file"
+<tdd_implementation_rules>
+TDD実装の原則：
+1. **ALWAYS**: Red → Green → Refactor サイクルを厳守
+2. **MUST**: テストを先に書いてからのみ実装を開始
+3. **NEVER**: テストなしでコードをコミットしない
+4. **IMPORTANT**: 各ステップを個別にコミットして進捗を可視化
+</tdd_implementation_rules>
+
+```bash
+# フェーズ初期化（共通関数使用）
+if ! initialize_phase "${ENV_FILE:-}" "Coding"; then
     exit 1
 fi
 
@@ -237,7 +246,7 @@ $CODER_PROMPT
    - レポートは `report/$FEATURE_NAME/quality/` に保存
 
 ```bash
-# TDD RED Phase - テスト作成（worktree内で実行）
+# TDD RED Phase - テスト作成
 if [[ -d "$WORKTREE_PATH/test/$FEATURE_NAME" ]]; then
     git -C "$WORKTREE_PATH" add "test/$FEATURE_NAME" 2>/dev/null
     git -C "$WORKTREE_PATH" commit -m "[TDD-RED] Failing tests for $FEATURE_NAME: $ARGUMENTS" || {
@@ -247,7 +256,7 @@ else
     log_warning "No test directory found for feature: $FEATURE_NAME"
 fi
 
-# TDD GREEN Phase - 実装（worktree内で実行）
+# TDD GREEN Phase - 実装
 if [[ -d "$WORKTREE_PATH/src/$FEATURE_NAME" ]]; then
     git -C "$WORKTREE_PATH" add "src/$FEATURE_NAME" 2>/dev/null
     git -C "$WORKTREE_PATH" commit -m "[TDD-GREEN] Implementation for $FEATURE_NAME: $ARGUMENTS" || {
@@ -255,7 +264,7 @@ if [[ -d "$WORKTREE_PATH/src/$FEATURE_NAME" ]]; then
     }
 fi
 
-# TDD REFACTOR Phase - リファクタリング（worktree内で実行）
+# TDD REFACTOR Phase - リファクタリング
 if [[ -n $(git -C "$WORKTREE_PATH" diff --name-only) ]]; then
     git -C "$WORKTREE_PATH" add .
     git -C "$WORKTREE_PATH" commit -m "[TDD-REFACTOR] Code quality improvements: $ARGUMENTS" || {
@@ -263,28 +272,25 @@ if [[ -n $(git -C "$WORKTREE_PATH" diff --name-only) ]]; then
     }
 fi
 
-# 最終結果保存（worktree内で実行）
-if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/coding-results.md" ]]; then
-    git -C "$WORKTREE_PATH" add "report/$FEATURE_NAME/phase-results/coding-results.md"
-    git -C "$WORKTREE_PATH" commit -m "[CODING] Implementation complete: $ARGUMENTS" || {
-        log_warning "Failed to commit coding results"
-    }
-    log_success "Committed: [CODING] Implementation complete"
-fi
+# 最終結果保存
+commit_phase_results "CODING" "$WORKTREE_PATH" \
+    "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/coding-results.md" \
+    "Implementation complete: $ARGUMENTS"
 ```
 
-### Step 3: 完了通知とPR準備
+## Step 3: 完了通知とPR準備
+
+<completion_requirements>
+完了時の必須事項：
+1. **MUST**: 全テストが通ることを確認
+2. **ALWAYS**: 完了レポートを生成してコミット
+3. オプションに応じてPR作成またはローカルマージ
+4. **IMPORTANT**: worktreeクリーンアップの判断は設定に従う
+</completion_requirements>
 
 ```bash
-# 共通ユーティリティの再読み込み（セッション分離対応）
-source .claude/scripts/worktree-utils.sh || {
-    echo "Error: worktree-utils.sh not found"
-    exit 1
-}
-
-# 環境ファイルを安全に読み込み
-if ! load_env_file "${ENV_FILE:-}"; then
-    echo "Error: Failed to load environment file"
+# フェーズ初期化（共通関数使用）
+if ! initialize_phase "${ENV_FILE:-}" "Completion"; then
     exit 1
 fi
 
@@ -293,60 +299,16 @@ show_progress "Completion" 4 4
 # 最終検証 - プロジェクトタイプに応じたテスト実行
 if ! run_tests "$PROJECT_TYPE" "$WORKTREE_PATH"; then
     log_error "Tests failed - task may be incomplete"
-    # テスト失敗してもレポートは生成する
 fi
 
-# 完了レポート生成
-cat > "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/task-completion-report.md" << EOF
-# Task Completion Report
+# 完了レポート生成（共通関数使用）
+generate_completion_report "$WORKTREE_PATH" "$FEATURE_NAME" "$TASK_DESCRIPTION" \
+    "$TASK_BRANCH" "$PROJECT_TYPE" "tdd"
 
-## Task Summary
-**Task**: $ARGUMENTS  
-**Branch**: $TASK_BRANCH
-**Worktree**: $WORKTREE_PATH
-**Project Type**: $PROJECT_TYPE
-**Completed**: $(date)
-
-## Phase Results
-- $(if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/explore-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Explore**: Root cause analysis
-- $(if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/plan-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Plan**: Implementation strategy
-- $(if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/coding-results.md" ]]; then echo "✅"; else echo "⚠️"; fi) **Code**: TDD implementation
-- $(if run_tests "$PROJECT_TYPE" "$WORKTREE_PATH" &>/dev/null; then echo "✅"; else echo "⚠️"; fi) **Tests**: All tests passing
-
-## Files Modified
-$(git -C "$WORKTREE_PATH" diff --name-only origin/main 2>/dev/null || echo "Unable to compare with origin/main")
-
-## Commits
-$(git -C "$WORKTREE_PATH" log --oneline origin/main..HEAD 2>/dev/null || git -C "$WORKTREE_PATH" log --oneline -n 10)
-
-## Test Results
-$(if command -v "$PROJECT_TYPE" &>/dev/null; then
-    run_tests "$PROJECT_TYPE" "$WORKTREE_PATH" 2>&1 | tail -20
-else
-    echo "Test command not found for project type: $PROJECT_TYPE"
-fi)
-
-## Test Coverage Report
-Saved in: $WORKTREE_PATH/report/$FEATURE_NAME/coverage/
-
-## Code Quality Report  
-Saved in: $WORKTREE_PATH/report/$FEATURE_NAME/quality/
-
-## Next Steps
-1. Review implementation in worktree: $WORKTREE_PATH
-2. Create PR: $TASK_BRANCH → main
-3. Clean up worktree after merge: \`git worktree remove $WORKTREE_PATH\`
-
-EOF
-
-# worktree内でコミット
-if [[ -f "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/task-completion-report.md" ]]; then
-    git -C "$WORKTREE_PATH" add "report/$FEATURE_NAME/phase-results/task-completion-report.md"
-    git -C "$WORKTREE_PATH" commit -m "[COMPLETE] Task finished: $TASK_DESCRIPTION" || {
-        log_warning "Failed to commit completion report"
-    }
-    log_success "Committed: [COMPLETE] Task finished"
-fi
+# 完了レポートのコミット
+commit_phase_results "COMPLETE" "$WORKTREE_PATH" \
+    "$WORKTREE_PATH/report/$FEATURE_NAME/phase-results/task-completion-report.md" \
+    "Task finished: $TASK_DESCRIPTION"
 
 # ローカルマージ（オプション）
 if [[ "$NO_MERGE" != "true" ]] && [[ "$CREATE_PR" != "true" ]]; then
@@ -398,6 +360,19 @@ if ! run_tests "$PROJECT_TYPE" "$WORKTREE_PATH" &>/dev/null; then
 fi
 ```
 
-**使用例**: `/project:multi-tdd "認証機能のJWT有効期限チェック不具合を修正"`
+<usage_example>
+使用例：
+```
+/project:multi-tdd "認証機能のJWT有効期限チェック不具合を修正"
+/project:multi-tdd "ユーザー登録時のメール重複チェックのバグ修正" --pr
+/project:multi-tdd "API レートリミット機能の実装" --keep-worktree --no-merge
+```
+</usage_example>
 
-**結果**: ユーザーは指示後すぐに次のタスクに移行可能。このタスクは独立worktree内で自動完了し、PR準備まで完了。
+<expected_result>
+期待される結果：
+- ユーザーは指示後すぐに次のタスクに移行可能
+- タスクは独立worktree内で自動完了
+- TDDサイクルに従った品質の高い実装
+- PR準備まで完了した状態
+</expected_result>
