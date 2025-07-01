@@ -1,3 +1,82 @@
+## 2025-07-01 - smart-open.nvim実装：leader-oスマートファイルオープン機能（完了）
+
+### 実装内容:
+- `smart-open.nvim`プラグインの追加とtelescopeとの統合
+- 従来の`leader-o` oldfiles機能をスマートファイルオープンに置き換え
+- frecencyアルゴリズムによる賢いファイル順序付け
+
+### 技術仕様:
+- **smart-open.nvim**: Mozillaのfrecencyアルゴリズムを使用
+- **依存関係**: `kkharji/sqlite.lua`とfzf-nativeを追加
+- **統合表示**: 現在ディレクトリ + 履歴ファイルのスマート統合
+- **学習機能**: 使用パターンを学習して時間と共に改善
+
+### 実装詳細:
+```lua
+-- telescope.lua修正内容
+dependencies = {
+  "nvim-lua/plenary.nvim",
+  "nvim-telescope/telescope-fzf-native.nvim",
+  -- smart-open.nvim用の依存関係
+  {
+    "danielfalk/smart-open.nvim",
+    branch = "0.2.x",
+    dependencies = {
+      "kkharji/sqlite.lua",
+      { "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
+    },
+  },
+},
+
+-- 拡張読み込み
+require("telescope").load_extension("smart_open")
+
+-- キーマップ変更
+vim.keymap.set('n', '<leader>o', function()
+  require("telescope").extensions.smart_open.smart_open()
+end, { desc = "スマートファイルオープン (Leader+O)" })
+```
+
+### 新機能:
+1. **Frecency順序**: 頻度×最近使用度による賢いファイル順序
+2. **統合表示**: ワークスペース内ファイル + 履歴の統合
+3. **自動学習**: 使用習慣を学習して改善
+4. **高速検索**: fzfアルゴリズムによる高速マッチング
+5. **SQLite永続化**: ファイル履歴とスコアの永続保存
+
+### メリット:
+- ✅ **スマートな並び順**: よく使うファイルが上位に表示
+- ✅ **1つのキーマップ**: `<leader>o`だけで全てのファイルアクセス
+- ✅ **プロジェクト対応**: 現在ディレクトリ内ファイルを優先表示
+- ✅ **学習機能**: 使用パターンに適応して最適化
+- ✅ **既存操作感**: 同じキーで更に便利に
+
+### 使用方法:
+- **基本**: `<leader>o` でスマートファイルオープン
+- **学習**: 使用するほど賢くなる自動最適化
+- **検索**: ファイル名の一部入力で瞬時に絞り込み
+- **履歴**: 最近使ったファイルとプロジェクトファイルの統合表示
+
+### 技術的価値:
+- Mozilla Firefox採用のfrecencyアルゴリズム実装
+- SQLiteによる高速な履歴管理
+- Telescopeエコシステムとの完全統合
+- ripgrepとの連携による高速ファイルスキャン
+- ユーザビリティを重視したスマートファイル管理
+
+### 結果:
+🎉 **スマートファイルオープン機能完成**
+- leader-oがoldfilesからsmart-openに進化
+- 頻度と最近使用度による賢いファイル順序
+- プロジェクトファイル + 履歴の統合表示
+- 使用習慣を学習する自動最適化システム
+- **世界一快適なファイルナビゲーション**の実現 🚀
+
+**重要性:**
+この実装により、ファイルオープン機能が単純な履歴表示から、使用パターンを学習する知的なファイル提案システムに進化しました。頻繁に使うファイルが常に上位に表示されるため、日常のファイルアクセス効率が大幅に向上します。
+
+---
+
 ## 2025-07-01 - swapファイル生成回避：remove_lost_tasks()安全化（完了）
 
 ### 問題:

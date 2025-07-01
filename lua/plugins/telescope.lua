@@ -4,6 +4,16 @@ return {
   dependencies = {
     "nvim-lua/plenary.nvim",
     "nvim-telescope/telescope-fzf-native.nvim", -- 高速化（後述）
+    -- smart-open.nvim用の依存関係
+    {
+      "danielfalk/smart-open.nvim",
+      branch = "0.2.x",
+      dependencies = {
+        "kkharji/sqlite.lua",
+        -- Only required if using match_algorithm fzf
+        { "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
+      },
+    },
   },
   build = "make", -- fzf-native用
   config = function()
@@ -61,6 +71,7 @@ return {
       },
     }
     require("telescope").load_extension("fzf")
+    require("telescope").load_extension("smart_open")
     
     -- キーマッピング設定
     local builtin = require('telescope.builtin')
@@ -146,7 +157,9 @@ return {
     
     -- キーマッピング設定
     vim.keymap.set('n', '<leader>p', commands_picker, { desc = "コマンド検索 (Leader+P)" })
-    vim.keymap.set('n', '<leader>o', builtin.oldfiles, { desc = "最近開いたファイル (Leader+O)" })
+    vim.keymap.set('n', '<leader>o', function()
+      require("telescope").extensions.smart_open.smart_open()
+    end, { desc = "スマートファイルオープン (Leader+O)" })
     vim.keymap.set('n', '<leader>k', builtin.keymaps, { desc = "キーマップ検索 (Leader+K)" })
     vim.keymap.set('n', '<leader>f', builtin.find_files, { desc = "ファイル検索 (Leader+F)" })
     vim.keymap.set('n', '<leader>g', builtin.live_grep, { desc = "テキスト検索 (Leader+G)" })
