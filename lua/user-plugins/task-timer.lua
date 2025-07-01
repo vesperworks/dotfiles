@@ -58,7 +58,7 @@ function M.start_timer(task_id, file_path, task_content)
   
   -- 表示を更新
   local bufnr = vim.fn.bufnr(file_path)
-  if bufnr ~= -1 then
+  if bufnr ~= -1 and vim.api.nvim_buf_is_valid(bufnr) then
     display.update_buffer_display(bufnr, active_timers)
   end
 end
@@ -79,7 +79,7 @@ function M.stop_timer(task_id)
     
     -- virtual textをクリア（バッファ全体を更新）
     local bufnr = vim.fn.bufnr(timer_data.file_path)
-    if bufnr ~= -1 then
+    if bufnr ~= -1 and vim.api.nvim_buf_is_valid(bufnr) then
       display.update_buffer_display(bufnr, active_timers)
     end
   end
@@ -577,11 +577,37 @@ function M.show_timer_selection_buffer(timer_options, timer_data_map)
   vim.defer_fn(setup_input_handler, 10)
 end
 
--- 改良されたジャンプ機能（文字列検索ベース + swapファイル対応）
+-- 改良されたジャンプ機能（文字列検索ベース + swapファイル対応 + 詳細エラー）
 function M.jump_to_file_and_line_by_content(file_path, task_id)
+  -- パス展開とアクセス性チェック
+  local expanded_path = vim.fn.expand(file_path)
+  local full_path = vim.fn.fnamemodify(expanded_path, ':p')
+  
   -- ファイルが存在するかチェック
-  if vim.fn.filereadable(file_path) == 0 then
-    vim.notify(string.format("⚠️ ファイルが見つかりません: %s", file_path), vim.log.levels.ERROR)
+  if vim.fn.filereadable(expanded_path) == 0 then
+    local file_name = vim.fn.fnamemodify(file_path, ":t")
+    local dir_path = vim.fn.fnamemodify(expanded_path, ":h")
+    
+    -- ディレクトリが存在するかチェック
+    if vim.fn.isdirectory(dir_path) == 0 then
+      vim.notify(string.format("⚠️ ディレクトリが存在しません: %s", dir_path), vim.log.levels.ERROR)
+      vim.notify("📝 環境変数OBSIDIAN_VAULT_PATHが正しく設定されているか確認してください", vim.log.levels.INFO)
+    else
+      vim.notify(string.format("⚠️ ファイルが見つかりません: %s", file_name), vim.log.levels.ERROR)
+      vim.notify(string.format("📝 フルパス: %s", full_path), vim.log.levels.INFO)
+      
+      -- このタイマーを削除するか確認
+      local choice = vim.fn.confirm(
+        string.format("タイマーを削除しますか？\nファイル: %s", file_name),
+        "&d: 削除する\n&c: キャンセル",
+        2
+      )
+      
+      if choice == 1 then
+        M.stop_timer(task_id)
+        vim.notify("🗑️ タイマーを削除しました", vim.log.levels.INFO)
+      end
+    end
     return
   end
   
@@ -607,16 +633,19 @@ function M.jump_to_file_and_line_by_content(file_path, task_id)
   
   -- swapファイル対応でファイルを安全に開く
   local success, error_msg = pcall(function()
-    -- まずバッファが既に開いているかチェック
-    local existing_bufnr = vim.fn.bufnr(file_path)
-    if existing_bufnr ~= -1 then
-      -- 既存のバッファに切り替え
-      vim.cmd('buffer ' .. existing_bufnr)
-      return
+    -- まずバッファが既に開いているかチェック（E94エラー対策）
+    local existing_bufnr = vim.fn.bufnr(expanded_path)
+    if existing_bufnr ~= -1 and vim.api.nvim_buf_is_valid(existing_bufnr) then
+      -- 既存バッファに安全に切り替え（pcallでE94エラー防止）
+      local buffer_success = pcall(vim.cmd, 'buffer ' .. existing_bufnr)
+      if buffer_success then
+        return
+      end
+      -- バッファ切り替えに失敗した場合は下の通常オープン処理に進む
     end
     
     -- swapファイルの存在確認
-    local swap_file = vim.fn.swapname(file_path)
+    local swap_file = vim.fn.swapname(expanded_path)
     if swap_file ~= "" and vim.fn.filereadable(swap_file) == 1 then
       -- swapファイルが存在する場合は、ユーザーに対処法を提示
       local choice = vim.fn.confirm(
@@ -627,11 +656,11 @@ function M.jump_to_file_and_line_by_content(file_path, task_id)
       
       if choice == 1 then
         -- Read-onlyで開く
-        vim.cmd('view ' .. vim.fn.fnameescape(file_path))
+        vim.cmd('view ' .. vim.fn.fnameescape(expanded_path))
       elseif choice == 2 then
         -- swapファイルを削除してから開く
         vim.fn.delete(swap_file)
-        vim.cmd('edit! ' .. vim.fn.fnameescape(file_path))
+        vim.cmd('edit! ' .. vim.fn.fnameescape(expanded_path))
       else
         -- キャンセル
         vim.notify("ファイルオープンをキャンセルしました", vim.log.levels.INFO)
@@ -639,7 +668,7 @@ function M.jump_to_file_and_line_by_content(file_path, task_id)
       end
     else
       -- 通常通りファイルを開く
-      vim.cmd('edit! ' .. vim.fn.fnameescape(file_path))
+      vim.cmd('edit! ' .. vim.fn.fnameescape(expanded_path))
     end
   end)
   
@@ -658,7 +687,7 @@ function M.jump_to_file_and_line_by_content(file_path, task_id)
     vim.api.nvim_win_set_cursor(0, {line_number, 0})
     vim.cmd('normal! zz')  -- 画面中央にスクロール
     
-    local file_name = vim.fn.fnamemodify(file_path, ":t")
+    local file_name = vim.fn.fnamemodify(expanded_path, ":t")
     vim.notify(string.format("🎯 %s:%d にジャンプしました", file_name, line_number), vim.log.levels.INFO)
   else
     -- タスクが見つからない場合
@@ -692,22 +721,38 @@ function M.remove_lost_tasks()
     else
       -- ファイルを開いてタスクが存在するかチェック
       local bufnr = vim.fn.bufnr(file_path)
-      local need_load = false
       local should_check_task = true
       
       if bufnr == -1 then
-        -- バッファにない場合は一時的に読み込み（エラーハンドリング付き）
-        bufnr = vim.fn.bufnr(file_path, true)
-        local ok, err = pcall(vim.fn.bufload, bufnr)
-        if not ok then
-          -- バッファ読み込みエラーの場合はスキップ（swapファイル等）
-          debug_log(string.format("🔍 バッファ読み込みエラー、スキップ: %s - %s", vim.fn.fnamemodify(file_path, ":t"), tostring(err)))
+        -- 🔒 swapファイル生成回避: ファイル内容を直接読み込み
+        local file_handle = io.open(file_path, 'r')
+        if not file_handle then
+          debug_log(string.format("🔍 ファイル直接読み込みエラー、スキップ: %s", vim.fn.fnamemodify(file_path, ":t")))
           should_check_task = false
-          -- エラーが発生したバッファをクリーンアップ
-          pcall(vim.api.nvim_buf_delete, bufnr, { force = true })
         else
-          need_load = true
+          local file_lines = {}
+          for line in file_handle:lines() do
+            table.insert(file_lines, line)
+          end
+          file_handle:close()
+          
+          -- 直接文字列検索（バッファ作成なし）
+          local found, line_num, found_line = display.find_task_in_file_lines(file_lines, file_path, task_id)
+          
+          if not found then
+            table.insert(lost_tasks, {
+              task_id = task_id,
+              reason = "タスクが見つからない（内容が変更された可能性）",
+              file_name = vim.fn.fnamemodify(file_path, ":t"),
+              task_preview = timer_data.task_content:gsub("-.*%[.-%]", ""):gsub("^%s+", ""):sub(1, 30)
+            })
+          end
+          should_check_task = false  -- 既に処理済み
         end
+      elseif not vim.api.nvim_buf_is_valid(bufnr) then
+        -- バッファが存在するが無効な場合はスキップ（E94エラー対策）
+        debug_log(string.format("🔍 無効バッファ、スキップ: %s", vim.fn.fnamemodify(file_path, ":t")))
+        should_check_task = false
       end
       
       if should_check_task then
@@ -728,10 +773,7 @@ function M.remove_lost_tasks()
         end
       end
       
-      -- 一時的に読み込んだバッファは削除
-      if need_load then
-        pcall(vim.api.nvim_buf_delete, bufnr, { force = true })
-      end
+      -- 注意: 直接ファイル読み込みに変更したためneed_load変数は不要
     end
   end
   

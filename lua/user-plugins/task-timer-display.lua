@@ -156,4 +156,34 @@ function M.clear_all_displays()
   end
 end
 
+-- 🔒 swapファイル生成を避けるための直接ファイル読み込み用ヘルパー関数
+function M.find_task_in_file_lines(file_lines, file_path, target_task_id)
+  -- 完全マッチを探す
+  for line_num, line in ipairs(file_lines) do
+    if line:match('-%s*%[%-%]') then
+      local current_task_id = M.generate_task_id(file_path, line)
+      if current_task_id == target_task_id then
+        return true, line_num, line
+      end
+    end
+  end
+  
+  -- 完全マッチがない場合、部分マッチを試行
+  local target_hash = target_task_id:match("::(.+)$")
+  if target_hash then
+    for line_num, line in ipairs(file_lines) do
+      if line:match('-%s*%[%-%]') then
+        local current_task_id = M.generate_task_id(file_path, line)
+        local current_hash = current_task_id:match("::(.+)$")
+        -- ハッシュの前半が一致する場合（部分マッチ）
+        if current_hash and target_hash:sub(1, 8) == current_hash:sub(1, 8) then
+          return true, line_num, line
+        end
+      end
+    end
+  end
+  
+  return false, nil, nil -- 見つからない場合
+end
+
 return M
