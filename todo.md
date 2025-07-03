@@ -385,18 +385,8 @@ research_processのような番号付きステップで全体フローを明確�
 
 ## 📋 実施順序サマリー
 
-### 完了済みタスク（2025-06-26 更新）
-✅ 全multiコマンドのセッション分離問題修正
-✅ 環境ファイル管理の改善（セキュリティ・並行実行対応）
-✅ 修正フェーズ3: 検証とテスト（基本動作確認完了）
-✅ test-worktree-access.shの作成完了（.claude/test/配下）
-✅ 残存worktreeのクリーンアップ（4つのworktree削除完了）
-✅ CLAUDE.mdの更新（test配置場所、新コマンドp.md/t.md追加）
-✅ multi-feature.md改善（XMLタグ構造導入、強調語体系化、v2.0作成）
-✅ worktree-utils.shへの共通関数追加（initialize_phase、commit_phase_results）
-✅ multi-feature.mdのXMLタグ構造統一（統一されたphase構造）
-✅ multi-feature.mdの強調語体系化（ALWAYS/NEVER/MUST/IMPORTANT）
-✅ multi-feature.mdのコード圧縮（worktree作成: 61行→20行、レポート生成: 74行→30行）
+### 完了済みタスク（2025-07-03 更新）
+3つの項目がdone.mdへアーカイブされました（残存worktreeクリーンアップ、CLAUDE.md更新、multi-feature.md改善）
 
 ### 今週の実施計画（更新: 2025-06-26）
 1. **Day 1**: ✅ 残存worktreeクリーンアップ、CLAUDE.md更新（完了）
