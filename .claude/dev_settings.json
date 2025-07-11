@@ -1,0 +1,193 @@
+{
+  "permissions": {
+    "allow": [
+      // ============ 基本読み取りツール（広く許可） ============
+      "Read(**)", // 全ファイル読み取り許可（参考設定と同様）
+      "LS", // ディレクトリ一覧
+      "Grep", // ファイル内検索
+      "Glob", // パターンマッチング
+      "TodoRead", // Todoファイル読み取り
+      "NotebookRead", // Jupyter notebook読み取り
+      // ============ 編集・書き込みツール（スコープ限定） ============
+      "Write(src/**)", // ソースコードディレクトリ
+      "Write(docs/**)", // ドキュメントディレクトリ  
+      "Write(.tmp/**)", // 一時ファイルディレクトリ
+      "Write(~/Works/**)", // 個人作業ディレクトリ
+      "Edit(src/**)", // ソースコード編集
+      "Edit(docs/**)", // ドキュメント編集
+      "Edit(~/Works/**)", // 個人作業ディレクトリ編集
+      "MultiEdit", // 複数ファイル同時編集
+      "TodoWrite", // Todoファイル書き込み
+      "NotebookEdit", // Jupyter notebook編集
+      // ============ Git関連コマンド（安全な操作のみ） ============
+      "Bash(git init:*)", // リポジトリ初期化
+      "Bash(git add:*)", // ステージング
+      "Bash(git commit:*)", // コミット
+      "Bash(git status:*)", // ステータス確認
+      "Bash(git log:*)", // ログ表示
+      "Bash(git diff:*)", // 差分表示
+      "Bash(git show:*)", // コミット詳細表示
+      "Bash(git branch:*)", // ブランチ操作（安全な範囲）
+      // ============ パッケージマネージャー（モダン統一） ============
+      "Bash(ni:*)", // ni - ユニバーサルインストール（npm/yarn/pnpm/bun自動検出）
+      "Bash(nr:*)", // nr - ユニバーサルラン
+      "Bash(nlx:*)", // nlx - ユニバーサルexec
+      "Bash(nu:*)", // nu - ユニバーサルアンインストール
+      "Bash(bun:*)", // Bun - 高速JS実行環境（直接実行用）
+      "Bash(deno:*)", // Deno - モダンJS/TS実行環境
+      // ============ ファイル操作コマンド（モダンのみ） ============
+      "Bash(eza:*)", // eza - lsのモダン代替（カラー、Git情報、ツリー表示）
+      "Bash(bat:*)", // bat - catのモダン代替（シンタックスハイライト）
+      "Bash(rg:*)", // ripgrep - grepのモダン代替（高速）
+      "Bash(fd:*)", // fd - findのモダン代替（高速、直感的）
+      // ============ ファイル操作（基本） ============
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Bash(mv:*)",
+      "Bash(touch:*)",
+      // ============ テキスト処理（モダン重視） ============
+      "Bash(jq:*)", // JSON処理（awk/sed の多くを代替）
+      "Bash(yq:*)", // YAML処理
+      "Bash(choose:*)", // cut のモダン代替
+      // ============ レガシーテキスト処理（互換性のため） ============
+      "Bash(sed:*)", // 古いスクリプト互換性のため
+      "Bash(awk:*)", // 複雑なテキスト処理用
+      "Bash(cut:*)", // 基本的な列抽出用
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(sort:*)",
+      "Bash(uniq:*)",
+      "Bash(tr:*)",
+      "Bash(wc:*)",
+      // ============ シェル制御・環境（簡潔化） ============
+      "Bash(*)", // 基本的なシェルコマンドを一括許可
+      // ============ モダンシステムツール ============
+      "Bash(zoxide:*)", // cd のスマート代替（履歴ベースジャンプ）
+      "Bash(z:*)", // zoxide のエイリアス
+      "Bash(zi:*)", // zoxide の対話モード
+      "Bash(fzf:*)", // ファジーファインダー（超強力）
+      "Bash(delta:*)", // git diff のモダン表示
+      "Bash(dust:*)", // du のモダン代替（ディスク使用量）
+      "Bash(duf:*)", // df のモダン代替（ディスク情報）
+      "Bash(btm:*)", // top/htop のモダン代替
+      "Bash(procs:*)", // ps のモダン代替
+      "Bash(hyperfine:*)", // ベンチマークツール
+      "Bash(tldr:*)", // man のわかりやすい代替
+      // ============ Web検索・フェッチ ============
+      "WebSearch",
+      "WebFetch(domain:docs.anthropic.com)",
+      "WebFetch(domain:docs.github.com)",
+      "WebFetch(domain:developer.mozilla.org)",
+      "WebFetch(domain:docs.python.org)",
+      "WebFetch(domain:nodejs.org)",
+      "WebFetch(domain:docs.npmjs.com)",
+      "WebFetch(domain:stackoverflow.com)",
+      "WebFetch(domain:qiita.com)",
+      "WebFetch(domain:tauri.app)",
+      "WebFetch(domain:mastra.ai)",
+      "WebFetch(domain:nextjs.org)",
+      "WebFetch(domain:dify.ai)",
+      "WebFetch(domain:n8n.io)",
+      "WebFetch(domain:tailwindcss.com)",
+      "WebFetch(domain:biomejs.dev)",
+      "WebFetch(domain:vitest.dev)",
+      "WebFetch(domain:bun.sh)",
+      "WebFetch(domain:code.visualstudio.com)",
+      "WebFetch(domain:typescriptlang.org)",
+      // ============ タスク・プラン管理 ============
+      "Task",
+      "exit_plan_mode",
+      // ============ MCP: IDE統合 ============
+      "mcp__ide__getDiagnostics",
+      "mcp__ide__executeCode",
+      // ============ MCP: ドキュメント検索 ============
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__get-library-docs",
+      // ============ MCP: ブラウザ自動化 (Puppeteer) ============
+      "mcp__puppeteer__puppeteer_navigate",
+      "mcp__puppeteer__puppeteer_screenshot",
+      "mcp__puppeteer__puppeteer_click",
+      "mcp__puppeteer__puppeteer_fill",
+      "mcp__puppeteer__puppeteer_select",
+      "mcp__puppeteer__puppeteer_hover",
+      "mcp__puppeteer__puppeteer_evaluate",
+      // ============ MCP: ブラウザ自動化 (Playwright) ============
+      "mcp__playwright__browser_close",
+      "mcp__playwright__browser_resize",
+      "mcp__playwright__browser_console_messages",
+      "mcp__playwright__browser_handle_dialog",
+      "mcp__playwright__browser_file_upload",
+      "mcp__playwright__browser_install",
+      "mcp__playwright__browser_press_key",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_navigate_back",
+      "mcp__playwright__browser_navigate_forward",
+      "mcp__playwright__browser_network_requests",
+      "mcp__playwright__browser_pdf_save",
+      "mcp__playwright__browser_take_screenshot",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_click",
+      "mcp__playwright__browser_drag",
+      "mcp__playwright__browser_hover",
+      "mcp__playwright__browser_type",
+      "mcp__playwright__browser_select_option",
+      "mcp__playwright__browser_tab_list",
+      "mcp__playwright__browser_tab_new",
+      "mcp__playwright__browser_tab_select",
+      "mcp__playwright__browser_tab_close",
+      "mcp__playwright__browser_generate_playwright_test",
+      "mcp__playwright__browser_wait_for",
+      // ============ MCP: Playwright Server (追加サーバー) ============
+      "mcp__playwright-server__browser_navigate",
+      "mcp__playwright-server__browser_snapshot",
+      "mcp__playwright-server__browser_take_screenshot",
+      "mcp__playwright-server__browser_type",
+      "mcp__playwright-server__browser_click",
+      "mcp__playwright-server__browser_console_messages",
+      "mcp__playwright-server__browser_wait_for",
+      "mcp__playwright-server__browser_network_requests",
+      "mcp__playwright-server__browser_press_key",
+      // ============ MCP: リソース管理 ============
+      "ListMcpResourcesTool",
+      "ReadMcpResourceTool"
+    ],
+    "deny": [
+      // ============ 危険なファイル操作 ============
+      "Bash(rm -rf:*)", // 再帰削除（超危険）
+      "Bash(dd:*)", // ディスク書き込み
+      "Bash(format:*)", // フォーマット
+      "Bash(fdisk:*)", // ディスクパーティション
+      // ============ 権限昇格 ============
+      "Bash(sudo:*)", // 管理者権限実行
+      "Bash(chmod 777:*)", // 危険な権限変更
+      // ============ 危険なGit操作 ============
+      "Bash(git push:*)", // プッシュは手動で行う
+      "Bash(git reset:*)", // 履歴改変（危険）
+      "Bash(git rebase:*)", // リベース（危険）
+      "Bash(git force:*)", // 強制操作
+      "Bash(git push --force:*)", // 強制プッシュ
+      // ============ ネットワーク（制限付き） ============
+      "Bash(curl:*)", // 任意のネットワークアクセス
+      "Bash(wget:*)", // 任意のダウンロード
+      "WebFetch(domain:*)", // 任意のWeb取得
+      // ============ 機密ファイル（包括的） ============
+      "Read(.env)", // 環境変数ファイル
+      "Read(.env.*)", // 環境変数ファイル（パターン）
+      "Read(secrets/**)", // secretsディレクトリ
+      "Read(.git/config)", // Git設定
+      "Read(node_modules/**)", // node_modules
+      "Read(id_rsa)", // SSH秘密鍵
+      "Read(id_ed25519)", // SSH秘密鍵
+      "Read(id_ecdsa)", // SSH秘密鍵
+      "Read(*.pem)", // 証明書ファイル
+      "Read(*.key)", // 鍵ファイル
+      "Write(.env*)", // 環境変数ファイル書き込み
+      // ============ 非推奨の古いコマンド（モダンツール移行） ============
+      "Bash(ls:*)", // eza を使用
+      "Bash(cat:*)", // bat を使用  
+      "Bash(find:*)", // fd を使用
+      "Bash(grep:*)" // rg を使用
+    ],
+    "includeCoAuthoredBy": false
+  }
+}
