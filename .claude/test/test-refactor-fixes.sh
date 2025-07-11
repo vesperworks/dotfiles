@@ -161,7 +161,7 @@ test_error_handling() {
     
     # ステータスがfailedになったか確認
     if [[ -f "$test_dir/.status/test-phase.json" ]]; then
-        local status=$(grep '"status"' "$test_dir/.status/test-phase.json" | cut -d'"' -f4)
+        local status=$(rg '"status"' "$test_dir/.status/test-phase.json" | cut -d'"' -f4)
         if [[ "$status" != "failed" ]]; then
             log_error "Phase status should be 'failed', got: $status"
             ((TESTS_FAILED++))

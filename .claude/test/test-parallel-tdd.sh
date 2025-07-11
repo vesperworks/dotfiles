@@ -171,7 +171,7 @@ test_worktree_creation() {
                 log_error "  - $worktree_path/report/$feature_name"
                 # 実際に存在するディレクトリを表示
                 log_info "Actual directories in worktree:"
-                ls -la "$worktree_path" 2>/dev/null || true
+                eza -la "$worktree_path" 2>/dev/null || true
                 return 1
             fi
         else
@@ -264,7 +264,7 @@ test_impl_agent_functions() {
             log_error "  - $test_worktree_path/report/$feature_name/performance/optimization.md"
             log_error "  - $test_worktree_path/implementation-report.md"
             log_info "Actual files:"
-            find "$test_worktree_path" -type f -name "*.js" -o -name "*.md" 2>/dev/null | grep -v package.json || true
+            fd -t f '\.(js|md)$' "$test_worktree_path" 2>/dev/null | rg -v package.json || true
             return 1
         fi
     else
@@ -372,8 +372,8 @@ test_prompt_files() {
         log_info "Specialized agent prompt files exist"
         
         # プロンプトファイルの内容確認
-        if grep -q "Coder-Test Agent" "$prompts_dir/coder-test.md" &&
-           grep -q "Coder-Impl Agent" "$prompts_dir/coder-impl.md"; then
+        if rg -q "Coder-Test Agent" "$prompts_dir/coder-test.md" &&
+           rg -q "Coder-Impl Agent" "$prompts_dir/coder-impl.md"; then
             log_info "Prompt files contain expected content"
             return 0
         else
