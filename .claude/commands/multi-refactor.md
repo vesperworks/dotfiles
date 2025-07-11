@@ -1,3 +1,9 @@
+---
+name: multi-refactor
+description: リファクタリングを段階的に実行（分析→計画→実装→検証）- テストを保持しながら安全に改善
+usage: /multi-refactor "リファクタリング対象の説明" [--keep-worktree] [--pr] [--no-merge]
+---
+
 # Multi-Agent Refactoring Workflow
 
 <refactoring_guidelines>
@@ -675,18 +681,37 @@ fi
 
 ### コードのモダナイゼーション
 ```
-/project:multi-refactor "auth/*.js を TypeScript + async/await に移行"
+/multi-refactor "auth/*.js を TypeScript + async/await に移行"
 ```
 
 ### アーキテクチャ改善
 ```
-/project:multi-refactor "database層をRepository Patternでリファクタリング"
+/multi-refactor "database層をRepository Patternでリファクタリング"
 ```
 
 ### API設計の改善
 ```
-/project:multi-refactor "レガシーAPIをRESTful設計に改善"
+/multi-refactor "レガシーAPIをRESTful設計に改善"
 ```
+
+### テストカバレッジの向上
+```
+/multi-refactor "payment moduleのテストカバレッジを80%以上に改善" --keep-worktree
+```
+
+### PR作成してレビュー
+```
+/multi-refactor "認証処理のエラーハンドリング改善" --pr --no-draft
+```
+
+## オプション
+
+- `--keep-worktree`: 作業用worktreeを削除せずに保持
+- `--no-merge`: mainブランチへの自動マージをスキップ
+- `--pr`: GitHub Pull Requestを作成
+- `--no-draft`: 通常のPR作成（デフォルトはドラフト）
+- `--no-cleanup`: 古いworktreeの自動クリーンアップを無効化
+- `--cleanup-days N`: N日以上前のworktreeを削除（デフォルト: 7）
 
 ## 実行結果
 

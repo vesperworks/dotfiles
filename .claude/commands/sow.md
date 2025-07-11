@@ -1,6 +1,7 @@
 ---
 name: sow
 description: 問題修正のための作業仕様書（SOW）をdiff付きで作成
+usage: /sow ["問題の説明"]
 ---
 
 # SOW - 作業仕様書作成コマンド

@@ -1,3 +1,9 @@
+---
+name: s
+description: スマートコミット - git diffを分析して適切なコミットメッセージを自動生成
+usage: /s [コミットの意図やコンテキスト]
+---
+
 # Smart Commit
 
 現在のgit diffを分析し、変更内容を理解して適切なコミットメッセージを生成し、コミットを実行します。
@@ -60,6 +66,38 @@ $ARGUMENTSの内容: <ユーザーの意図>
 
 # 使用例3: 詳細な意図
 /s CLAUDE.mdの改善とカスタムコマンドの追加
+```
+
+## 詳細な使用例
+
+### ドキュメント更新
+```bash
+/s READMEにインストール手順を追加
+# → docs: add installation instructions to README
+```
+
+### バグ修正
+```bash
+/s null参照エラーの修正
+# → fix: handle null reference in user validation
+```
+
+### 機能追加
+```bash
+/s ダークモード対応
+# → feat: implement dark mode theme support
+```
+
+### リファクタリング
+```bash
+/s 重複コードの削除
+# → refactor: remove duplicate code in auth module
+```
+
+### テスト追加
+```bash
+/s ユーザー認証のユニットテスト
+# → test: add unit tests for user authentication
 ```
 
 ## 注意事項

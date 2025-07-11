@@ -1,3 +1,9 @@
+---
+name: multi-feature
+description: 新機能開発をマルチエージェントで自動実行（探索→設計→実装→テスト）
+usage: /multi-feature "開発する機能の説明" [--keep-worktree] [--pr] [--no-draft]
+---
+
 <feature_development_workflow>
 
 # Multi-Agent Feature Development Workflow
@@ -488,30 +494,39 @@ run_tests "$PROJECT_TYPE" "$WORKTREE_PATH" &>/dev/null || exit 1
 <example>
 <description>基本的な機能開発</description>
 ```bash
-/project:multi-feature "ユーザープロフィール画像アップロード機能"
+/multi-feature "ユーザープロフィール画像アップロード機能"
 ```
 </example>
 
 <example>
 <description>デザイン連携を含む機能開発</description>
 ```bash
-/project:multi-feature "Figmaデザインに基づくダッシュボードウィジェット" --keep-worktree
+/multi-feature "Figmaデザインに基づくダッシュボードウィジェット" --keep-worktree
 ```
 </example>
 
 <example>
 <description>API統合とPR作成</description>
 ```bash
-/project:multi-feature "外部決済システムとのWebhook統合" --pr --no-draft
+/multi-feature "外部決済システムとのWebhook統合" --pr --no-draft
 ```
 </example>
 
 <example>
 <description>自動クリーンアップ無効化</description>
 ```bash
-/project:multi-feature "デモ用機能開発" --no-cleanup --keep-worktree
+/multi-feature "デモ用機能開発" --no-cleanup --keep-worktree
 ```
 </example>
+
+## オプション
+
+- `--keep-worktree`: 作業用worktreeを削除せずに保持
+- `--no-merge`: mainブランチへの自動マージをスキップ
+- `--pr`: GitHub Pull Requestを作成
+- `--no-draft`: 通常のPR作成（デフォルトはドラフト）
+- `--no-cleanup`: 古いworktreeの自動クリーンアップを無効化
+- `--cleanup-days N`: N日以上前のworktreeを削除（デフォルト: 7）
   </implementation>
 
   <output>

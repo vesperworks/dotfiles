@@ -1,3 +1,9 @@
+---
+name: multi-tdd
+description: TDD（テスト駆動開発）で実装 - Red→Green→Refactorサイクルを自動実行
+usage: /multi-tdd "実装するタスクの説明" [--keep-worktree] [--pr] [--no-cleanup]
+---
+
 # Multi-Agent TDD Workflow
 
 あなたは現在、マルチエージェント TDD ワークフローのオーケストレーターです。Anthropic公式の git worktree ベストプラクティス（1タスク=1worktree）に基づき、以下の手順で**自動実行**してください。
@@ -364,11 +370,40 @@ fi
 <usage_example>
 使用例：
 ```
-/project:multi-tdd "認証機能のJWT有効期限チェック不具合を修正"
-/project:multi-tdd "ユーザー登録時のメール重複チェックのバグ修正" --pr
-/project:multi-tdd "API レートリミット機能の実装" --keep-worktree --no-merge
+/multi-tdd "認証機能のJWT有効期限チェック不具合を修正"
+/multi-tdd "ユーザー登録時のメール重複チェックのバグ修正" --pr
+/multi-tdd "API レートリミット機能の実装" --keep-worktree --no-merge
 ```
 </usage_example>
+
+## 詳細な使用例
+
+### バグ修正でTDD実践
+```bash
+# 失敗するテストを先に書いてから修正
+/multi-tdd "ユーザー名に絵文字が含まれる場合のバリデーションエラー修正"
+```
+
+### 新機能をTDDで実装
+```bash
+# テストファーストで新機能を追加
+/multi-tdd "パスワードリセット機能の実装" --pr --no-draft
+```
+
+### 複雑なロジックの実装
+```bash
+# worktreeを保持してステップごとに確認
+/multi-tdd "価格計算ロジックの割引適用処理" --keep-worktree
+```
+
+## オプション
+
+- `--keep-worktree`: 作業用worktreeを削除せずに保持
+- `--no-merge`: mainブランチへの自動マージをスキップ
+- `--pr`: GitHub Pull Requestを作成
+- `--no-draft`: 通常のPR作成（デフォルトはドラフト）
+- `--no-cleanup`: 古いworktreeの自動クリーンアップを無効化
+- `--cleanup-days N`: N日以上前のworktreeを削除（デフォルト: 7）
 
 <expected_result>
 期待される結果：
