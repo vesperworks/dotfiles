@@ -1,8 +1,6 @@
 ---
 name: multi-tdd
-description: TDDで実装（テスト→実装→リファクタ）
-arguments: "機能名と修正内容" (例: "JWT期限チェックバグ修正")
-usage: /multi-tdd "機能名と修正内容" [オプション]
+description: 'Implement with TDD cycle: /multi-tdd "task description" [--keep-worktree] [--pr]'
 ---
 
 # Multi-Agent TDD Workflow

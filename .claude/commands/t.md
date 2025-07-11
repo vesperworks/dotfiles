@@ -1,8 +1,6 @@
 ---
 name: t
-description: 完了タスクをdone.mdへ移動
-arguments: なし
-usage: /t
+description: 'Archive completed tasks to done.md: /t'
 ---
 
 # TODO管理コマンド

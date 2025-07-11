@@ -1,8 +1,6 @@
 ---
 name: p
-description: リサーチしてアクションを選択
-arguments: "調査内容" (例: "認証エラーの原因", "API遅延のボトルネック")
-usage: /p "調査内容" → 後で /p add-todo または /p execute
+description: 'Research and plan actions: /p "topic" then /p add-todo or /p execute'
 ---
 
 # Plan Mode - リサーチ・計画・管理

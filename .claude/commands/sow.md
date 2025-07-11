@@ -1,8 +1,6 @@
 ---
 name: sow
-description: 修正仕様書をdiff付きで作成
-arguments: "[問題の説明]" (例: "認証エラー", "null参照") - 省略可
-usage: /sow [問題の説明]
+description: 'Create fix specification with diffs: /sow [problem description]'
 ---
 
 # SOW - 作業仕様書作成コマンド

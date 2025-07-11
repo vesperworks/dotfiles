@@ -1,8 +1,6 @@
 ---
 name: multi-feature
-description: 新機能をマルチエージェントで開発
-arguments: "機能名と要件" (例: "ユーザー認証機能 JWT対応")
-usage: /multi-feature "機能名と要件" [オプション]
+description: 'Develop new feature with multi-agents: /multi-feature "feature name and requirements" [--keep-worktree] [--pr]'
 ---
 
 <feature_development_workflow>

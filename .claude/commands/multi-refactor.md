@@ -1,8 +1,6 @@
 ---
 name: multi-refactor
-description: コードを安全にリファクタリング
-arguments: "対象と改善内容" (例: "authモジュール TypeScript化")
-usage: /multi-refactor "対象と改善内容" [オプション]
+description: 'Safely refactor code with tests: /multi-refactor "target and improvement" [--keep-worktree] [--pr]'
 ---
 
 # Multi-Agent Refactoring Workflow

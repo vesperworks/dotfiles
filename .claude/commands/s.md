@@ -1,8 +1,6 @@
 ---
 name: s
-description: 変更内容からコミットメッセージを自動生成
-arguments: "[意図]" (例: "README改善", "バグ修正") - 省略可
-usage: /s [意図]
+description: 'Smart commit with auto-generated message: /s [optional context]'
 ---
 
 # Smart Commit
