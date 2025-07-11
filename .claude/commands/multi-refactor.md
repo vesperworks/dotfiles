@@ -106,6 +106,7 @@ if [[ "$AUTO_CLEANUP" == "true" ]]; then
 fi
 
 # worktree作成
+# 明示的に ./.worktrees/ ディレクトリ以下に作成
 WORKTREE_INFO=$(create_task_worktree "$TASK_DESCRIPTION" "refactor")
 WORKTREE_PATH=$(echo "$WORKTREE_INFO" | cut -d'|' -f1)
 REFACTOR_BRANCH=$(echo "$WORKTREE_INFO" | cut -d'|' -f2)

@@ -54,6 +54,7 @@
     - MUST verify git repository status before creation
     - MUST generate unique worktree name
     - ALWAYS save environment variables securely
+    - ALWAYS create worktrees in ./.worktrees/ directory
   </quality_gates>
 
   <implementation>
@@ -73,6 +74,7 @@ PROJECT_TYPE=$(detect_project_type)
 [[ "$AUTO_CLEANUP" == "true" ]] && cleanup_old_worktrees "$CLEANUP_DAYS"
 
 # Worktree作成と環境セットアップ
+# 明示的に ./.worktrees/ ディレクトリ以下に作成
 WORKTREE_INFO=$(create_task_worktree "$TASK_DESCRIPTION" "feature")
 WORKTREE_PATH=$(echo "$WORKTREE_INFO" | cut -d'|' -f1)
 FEATURE_BRANCH=$(echo "$WORKTREE_INFO" | cut -d'|' -f2)

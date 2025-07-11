@@ -29,7 +29,7 @@ $ARGUMENTS
 <worktree_creation_rules>
 Anthropic公式パターン準拠のWorktree作成：
 1. **MUST**: worktree-utils.shの共通関数を使用
-2. **ALWAYS**: .worktreesサブディレクトリ内に作成
+2. **ALWAYS**: ./.worktrees/サブディレクトリ内に作成（明示的に./.worktrees/を指定）
 3. **NEVER**: メインディレクトリで直接作業しない
 4. 1タスク = 1worktree = 1ブランチのルールを厳守
 5. **IMPORTANT**: 環境ファイルを使用してセッション間でのデータ共有を実現
@@ -56,6 +56,7 @@ if [[ "$AUTO_CLEANUP" == "true" ]]; then
 fi
 
 # worktree作成（共通関数使用）
+# 明示的に ./.worktrees/ ディレクトリ以下に作成
 WORKTREE_INFO=$(create_task_worktree "$TASK_DESCRIPTION" "tdd")
 WORKTREE_PATH=$(echo "$WORKTREE_INFO" | cut -d'|' -f1)
 TASK_BRANCH=$(echo "$WORKTREE_INFO" | cut -d'|' -f2)
