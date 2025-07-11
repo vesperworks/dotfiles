@@ -9,18 +9,30 @@ description: 'Archive completed tasks to done.md: /t'
 
 ## 実行手順
 
-1. **todo.mdを読み込み**
+1. **tmp/ディレクトリの準備**
+   - `./tmp/`ディレクトリを作成（存在しない場合）
+   - バックアップファイルの保存場所として使用
+
+2. **バックアップの作成**
+   - todo.mdとdone.mdのバックアップを`./tmp/`に保存
+   - タイムスタンプ付きでバックアップ
+
+3. **todo.mdを読み込み**
    - 完了済み項目（[x]マーク付き）を特定
 
-2. **done.mdへのアーカイブ**
+4. **done.mdへのアーカイブ**
    - 完了日時を記録
    - 適切なセクションに分類して追加
    - 実施内容の詳細を保存
 
-3. **todo.mdの更新**
+5. **todo.mdの更新**
    - 完了済みセクションを削除
    - 残タスクの優先順位を再整理
    - 次のアクションを明確化
+
+6. **アーカイブレポートの生成**
+   - `./tmp/`にアーカイブレポートを保存
+   - 何が移動されたかを記録
 
 ## 使用例
 
@@ -35,24 +47,51 @@ description: 'Archive completed tasks to done.md: /t'
 
 ## 実行内容
 
-### Step 1: 完了項目の特定
+### Step 1: tmpディレクトリの準備とバックアップ
+```bash
+# tmpディレクトリを作成
+mkdir -p ./tmp
+
+# タイムスタンプを生成
+TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+
+# バックアップファイルを作成
+if [ -f todo.md ]; then
+    cp todo.md "./tmp/todo-backup-${TIMESTAMP}.md"
+fi
+if [ -f done.md ]; then
+    cp done.md "./tmp/done-backup-${TIMESTAMP}.md"
+fi
+```
+
+### Step 2: 完了項目の特定
 ```bash
 # todo.mdから[x]マークの項目を検索
 grep -n "^\s*- \[x\]" todo.md || echo "No completed items found"
 ```
 
-### Step 2: done.mdへの追加
+### Step 3: done.mdへの追加
 完了項目を適切にフォーマットしてdone.mdに追加：
 - 完了日時の記録
 - カテゴリ別の整理
 - 実施内容の要約
 
-### Step 3: todo.mdのクリーンアップ
+### Step 4: todo.mdのクリーンアップ
 - 完了済みセクションの削除
 - 残タスクの再整理
 - 優先順位の更新
 
-### Step 4: コミット
+### Step 5: アーカイブレポートの生成
+```bash
+# アーカイブレポートを生成
+ARCHIVE_REPORT="./tmp/archive-report-${TIMESTAMP}.md"
+echo "# Archive Report - ${TIMESTAMP}" > "$ARCHIVE_REPORT"
+echo "" >> "$ARCHIVE_REPORT"
+echo "## Archived Tasks" >> "$ARCHIVE_REPORT"
+# アーカイブされたタスクの詳細を記録
+```
+
+### Step 6: コミット
 ```bash
 git add todo.md done.md
 git commit -m "chore: アーカイブ完了タスクをdone.mdへ移動"
@@ -62,6 +101,8 @@ git commit -m "chore: アーカイブ完了タスクをdone.mdへ移動"
 - 完了マーク（[x]）が付いているセクション全体を移動
 - セクションの階層構造を保持
 - 日付と実施内容を記録
+- すべての中間ファイル（バックアップ、レポート）は`./tmp/`ディレクトリに保存
+- タイムスタンプ形式: `YYYYMMDD-HHMMSS`
 
 ## 詳細な動作
 
@@ -96,3 +137,15 @@ git commit -m "chore: アーカイブ完了タスクをdone.mdへ移動"
 - todo.mdから完了項目が削除されているか
 - done.mdに適切に追加されているか
 - コミットが正しく作成されているか
+- `./tmp/`ディレクトリに以下のファイルが作成されているか：
+  - `todo-backup-{timestamp}.md`
+  - `done-backup-{timestamp}.md`
+  - `archive-report-{timestamp}.md`
+
+## 生成される中間ファイル
+
+| ファイル名 | 説明 |
+|-----------|------|
+| `./tmp/todo-backup-{timestamp}.md` | todo.mdのバックアップ |
+| `./tmp/done-backup-{timestamp}.md` | done.mdのバックアップ |
+| `./tmp/archive-report-{timestamp}.md` | アーカイブ作業のレポート |

@@ -1,0 +1,265 @@
+diff --git a/.claude/commands/p.md b/.claude/commands/p.md
+index 67bb108..562d322 100644
+--- a/.claude/commands/p.md
++++ b/.claude/commands/p.md
+@@ -15,19 +15,24 @@ description: 'Research and plan actions: /p "topic" then /p add-todo or /p execu
+ ### Step 1: Plan Modeで調査・分析
+ あなたの要求に基づいて以下を実行します：
+ 
+-1. **徹底的なリサーチ**
++1. **tmpディレクトリの準備**
++   - `./tmp/`ディレクトリを作成（存在しない場合）
++   - リサーチレポートの保存場所として使用
++
++2. **徹底的なリサーチ**
+    - コードベースの調査
+    - 現在の実装状況の確認
+    - 問題点や改善点の特定
+    - 技術的な実現可能性の検証
+ 
+-2. **詳細な分析レポート**
++3. **詳細な分析レポート**
+    - 現状の把握
+    - 発見した問題点
+    - 解決案の提示
+    - 実装に必要な手順
++   - レポートを`./tmp/research-report-{timestamp}.md`に保存
+ 
+-3. **影響範囲の評価**
++4. **影響範囲の評価**
+    - 既存機能への影響
+    - リスクの評価
+    - 必要な作業量の見積もり
+@@ -40,12 +45,14 @@ description: 'Research and plan actions: /p "topic" then /p add-todo or /p execu
+ - リサーチ結果を整理してtodo.mdに新しいタスクとして追加
+ - 優先度の設定
+ - 具体的なアクションアイテムの作成
++- 実行計画を`./tmp/task-plan-{timestamp}.md`に保存
+ 
+ #### 2️⃣ **すぐに実行** (`/p execute`)
+ - Taskに追加
+ - 必要なファイルの編集
+ - コードの実装
+ - テストの作成
++- 実行ログを`./tmp/execution-log-{timestamp}.md`に保存
+ 
+ 
+ ## 使用例
+@@ -86,6 +93,7 @@ description: 'Research and plan actions: /p "topic" then /p add-todo or /p execu
+ - **包括的な調査**: 関連するすべてのファイルを調査
+ - **構造化された報告**: 明確で実用的な情報を提供
+ - **次のステップの明確化**: 具体的なアクションを提案
++- **レポートの保存**: すべてのリサーチ結果は`./tmp/`ディレクトリに保存
+ 
+ ## 出力形式
+ 
+@@ -125,4 +133,19 @@ description: 'Research and plan actions: /p "topic" then /p add-todo or /p execu
+ 
+ - Plan Mode中はファイルの変更は行われません
+ - 調査は徹底的に行われますが、実装は選択後に行われます
+-- todo.mdへの追加は適切な優先度と構造で行われます
+\ No newline at end of file
++- todo.mdへの追加は適切な優先度と構造で行われます
++- すべての中間ファイル（レポート、計画、ログ）は`./tmp/`ディレクトリに保存されます
++- タイムスタンプ形式: `YYYYMMDD-HHMMSS`
++
++## 生成される中間ファイル
++
++| ファイル名 | 説明 |
++|-----------|------|
++| `./tmp/research-report-{timestamp}.md` | 調査・分析結果の詳細レポート |
++| `./tmp/task-plan-{timestamp}.md` | タスク実行計画（add-todo選択時） |
++| `./tmp/execution-log-{timestamp}.md` | 実行ログ（execute選択時） |
++
++これらのファイルにより、以下が可能になります：
++- リサーチ結果の後からの参照
++- 実行計画の履歴管理
++- 作業ログの追跡
+\ No newline at end of file
+diff --git a/.claude/commands/s.md b/.claude/commands/s.md
+index f2ea2ab..636bb29 100644
+--- a/.claude/commands/s.md
++++ b/.claude/commands/s.md
+@@ -14,23 +14,32 @@ description: 'Smart commit with auto-generated message: /s [optional context]'
+ 
+ 以下の手順で自動的にコミットを作成します：
+ 
+-1. **変更内容の確認**
++1. **tmpディレクトリの準備**
++   - `./tmp/`ディレクトリを作成（存在しない場合）
++   - 中間ファイルの保存場所として使用
++
++2. **変更内容の確認**
+    - `git status`で変更ファイルを確認
+    - `git diff --cached`でステージング済みの変更を確認
+    - `git diff`でステージングされていない変更を確認
+ 
+-2. **コミットメッセージの生成**
++3. **差分の保存**
++   - 現在の差分を`./tmp/commit-diff-{timestamp}.diff`に保存
++   - コミット時点の変更内容を記録
++
++4. **コミットメッセージの生成**
+    - 変更内容を分析し、以下の形式でメッセージを生成：
+      - 変更の種類を判定（feat/fix/docs/style/refactor/test/chore）
+      - 影響範囲を特定（どのモジュール/機能か）
+      - 変更の要約を作成（50文字以内）
+      - 必要に応じて詳細説明を追加
++   - 生成したメッセージを`./tmp/commit-msg-{timestamp}.txt`に保存
+ 
+-3. **ユーザーの意図の反映**
++5. **ユーザーの意図の反映**
+    - `$ARGUMENTS`で提供された意図やコンテキストを考慮
+    - 意図が明確な場合は、それを優先してメッセージに反映
+ 
+-4. **コミットの実行**
++6. **コミットの実行**
+    - 全ての変更をステージング（`git add -A`）
+    - 生成したメッセージでコミット実行
+    - **注意**: Co-Authored-Byは追加しません（settings.local.jsonの設定に従う）
+@@ -103,4 +112,18 @@ $ARGUMENTSの内容: <ユーザーの意図>
+ 
+ - ステージングされていない変更も自動的にステージングされます
+ - コミット前に変更内容を確認することを推奨します
+-- 大きな変更の場合は、複数のコミットに分割することを検討してください
+\ No newline at end of file
++- 大きな変更の場合は、複数のコミットに分割することを検討してください
++- すべての中間ファイル（差分、コミットメッセージ）は`./tmp/`ディレクトリに保存されます
++- タイムスタンプ形式: `YYYYMMDD-HHMMSS`
++
++## 生成される中間ファイル
++
++| ファイル名 | 説明 |
++|-----------|------|
++| `./tmp/commit-diff-{timestamp}.diff` | コミット時点のgit diff全体 |
++| `./tmp/commit-msg-{timestamp}.txt` | 生成されたコミットメッセージ |
++
++これらのファイルにより、以下が可能になります：
++- コミット履歴の追跡
++- 生成されたメッセージのレビュー
++- 差分のアーカイブ
+\ No newline at end of file
+diff --git a/.claude/commands/t.md b/.claude/commands/t.md
+index 78f2f4f..aae1dfa 100644
+--- a/.claude/commands/t.md
++++ b/.claude/commands/t.md
+@@ -9,19 +9,31 @@ description: 'Archive completed tasks to done.md: /t'
+ 
+ ## 実行手順
+ 
+-1. **todo.mdを読み込み**
++1. **tmp/ディレクトリの準備**
++   - `./tmp/`ディレクトリを作成（存在しない場合）
++   - バックアップファイルの保存場所として使用
++
++2. **バックアップの作成**
++   - todo.mdとdone.mdのバックアップを`./tmp/`に保存
++   - タイムスタンプ付きでバックアップ
++
++3. **todo.mdを読み込み**
+    - 完了済み項目（[x]マーク付き）を特定
+ 
+-2. **done.mdへのアーカイブ**
++4. **done.mdへのアーカイブ**
+    - 完了日時を記録
+    - 適切なセクションに分類して追加
+    - 実施内容の詳細を保存
+ 
+-3. **todo.mdの更新**
++5. **todo.mdの更新**
+    - 完了済みセクションを削除
+    - 残タスクの優先順位を再整理
+    - 次のアクションを明確化
+ 
++6. **アーカイブレポートの生成**
++   - `./tmp/`にアーカイブレポートを保存
++   - 何が移動されたかを記録
++
+ ## 使用例
+ 
+ ```bash
+@@ -35,24 +47,51 @@ description: 'Archive completed tasks to done.md: /t'
+ 
+ ## 実行内容
+ 
+-### Step 1: 完了項目の特定
++### Step 1: tmpディレクトリの準備とバックアップ
++```bash
++# tmpディレクトリを作成
++mkdir -p ./tmp
++
++# タイムスタンプを生成
++TIMESTAMP=$(date +%Y%m%d-%H%M%S)
++
++# バックアップファイルを作成
++if [ -f todo.md ]; then
++    cp todo.md "./tmp/todo-backup-${TIMESTAMP}.md"
++fi
++if [ -f done.md ]; then
++    cp done.md "./tmp/done-backup-${TIMESTAMP}.md"
++fi
++```
++
++### Step 2: 完了項目の特定
+ ```bash
+ # todo.mdから[x]マークの項目を検索
+ grep -n "^\s*- \[x\]" todo.md || echo "No completed items found"
+ ```
+ 
+-### Step 2: done.mdへの追加
++### Step 3: done.mdへの追加
+ 完了項目を適切にフォーマットしてdone.mdに追加：
+ - 完了日時の記録
+ - カテゴリ別の整理
+ - 実施内容の要約
+ 
+-### Step 3: todo.mdのクリーンアップ
++### Step 4: todo.mdのクリーンアップ
+ - 完了済みセクションの削除
+ - 残タスクの再整理
+ - 優先順位の更新
+ 
+-### Step 4: コミット
++### Step 5: アーカイブレポートの生成
++```bash
++# アーカイブレポートを生成
++ARCHIVE_REPORT="./tmp/archive-report-${TIMESTAMP}.md"
++echo "# Archive Report - ${TIMESTAMP}" > "$ARCHIVE_REPORT"
++echo "" >> "$ARCHIVE_REPORT"
++echo "## Archived Tasks" >> "$ARCHIVE_REPORT"
++# アーカイブされたタスクの詳細を記録
++```
++
++### Step 6: コミット
+ ```bash
+ git add todo.md done.md
+ git commit -m "chore: アーカイブ完了タスクをdone.mdへ移動"
+@@ -62,6 +101,8 @@ git commit -m "chore: アーカイブ完了タスクをdone.mdへ移動"
+ - 完了マーク（[x]）が付いているセクション全体を移動
+ - セクションの階層構造を保持
+ - 日付と実施内容を記録
++- すべての中間ファイル（バックアップ、レポート）は`./tmp/`ディレクトリに保存
++- タイムスタンプ形式: `YYYYMMDD-HHMMSS`
+ 
+ ## 詳細な動作
+ 
+@@ -95,4 +136,16 @@ git commit -m "chore: アーカイブ完了タスクをdone.mdへ移動"
+ 
+ - todo.mdから完了項目が削除されているか
+ - done.mdに適切に追加されているか
+-- コミットが正しく作成されているか
+\ No newline at end of file
++- コミットが正しく作成されているか
++- `./tmp/`ディレクトリに以下のファイルが作成されているか：
++  - `todo-backup-{timestamp}.md`
++  - `done-backup-{timestamp}.md`
++  - `archive-report-{timestamp}.md`
++
++## 生成される中間ファイル
++
++| ファイル名 | 説明 |
++|-----------|------|
++| `./tmp/todo-backup-{timestamp}.md` | todo.mdのバックアップ |
++| `./tmp/done-backup-{timestamp}.md` | done.mdのバックアップ |
++| `./tmp/archive-report-{timestamp}.md` | アーカイブ作業のレポート |
+\ No newline at end of file

@@ -15,19 +15,24 @@ description: 'Research and plan actions: /p "topic" then /p add-todo or /p execu
 ### Step 1: Plan Modeで調査・分析
 あなたの要求に基づいて以下を実行します：
 
-1. **徹底的なリサーチ**
+1. **tmpディレクトリの準備**
+   - `./tmp/`ディレクトリを作成（存在しない場合）
+   - リサーチレポートの保存場所として使用
+
+2. **徹底的なリサーチ**
    - コードベースの調査
    - 現在の実装状況の確認
    - 問題点や改善点の特定
    - 技術的な実現可能性の検証
 
-2. **詳細な分析レポート**
+3. **詳細な分析レポート**
    - 現状の把握
    - 発見した問題点
    - 解決案の提示
    - 実装に必要な手順
+   - レポートを`./tmp/research-report-{timestamp}.md`に保存
 
-3. **影響範囲の評価**
+4. **影響範囲の評価**
    - 既存機能への影響
    - リスクの評価
    - 必要な作業量の見積もり
@@ -40,12 +45,14 @@ description: 'Research and plan actions: /p "topic" then /p add-todo or /p execu
 - リサーチ結果を整理してtodo.mdに新しいタスクとして追加
 - 優先度の設定
 - 具体的なアクションアイテムの作成
+- 実行計画を`./tmp/task-plan-{timestamp}.md`に保存
 
 #### 2️⃣ **すぐに実行** (`/p execute`)
 - Taskに追加
 - 必要なファイルの編集
 - コードの実装
 - テストの作成
+- 実行ログを`./tmp/execution-log-{timestamp}.md`に保存
 
 
 ## 使用例
@@ -86,6 +93,7 @@ description: 'Research and plan actions: /p "topic" then /p add-todo or /p execu
 - **包括的な調査**: 関連するすべてのファイルを調査
 - **構造化された報告**: 明確で実用的な情報を提供
 - **次のステップの明確化**: 具体的なアクションを提案
+- **レポートの保存**: すべてのリサーチ結果は`./tmp/`ディレクトリに保存
 
 ## 出力形式
 
@@ -126,3 +134,18 @@ description: 'Research and plan actions: /p "topic" then /p add-todo or /p execu
 - Plan Mode中はファイルの変更は行われません
 - 調査は徹底的に行われますが、実装は選択後に行われます
 - todo.mdへの追加は適切な優先度と構造で行われます
+- すべての中間ファイル（レポート、計画、ログ）は`./tmp/`ディレクトリに保存されます
+- タイムスタンプ形式: `YYYYMMDD-HHMMSS`
+
+## 生成される中間ファイル
+
+| ファイル名 | 説明 |
+|-----------|------|
+| `./tmp/research-report-{timestamp}.md` | 調査・分析結果の詳細レポート |
+| `./tmp/task-plan-{timestamp}.md` | タスク実行計画（add-todo選択時） |
+| `./tmp/execution-log-{timestamp}.md` | 実行ログ（execute選択時） |
+
+これらのファイルにより、以下が可能になります：
+- リサーチ結果の後からの参照
+- 実行計画の履歴管理
+- 作業ログの追跡
