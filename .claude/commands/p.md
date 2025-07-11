@@ -1,9 +1,8 @@
 ---
 name: p
-description: Plan Mode - リサーチ・分析を行い、todo追加または即実行を選択
-usage: |
-  /p "調査したい内容"
-  調査後: /p add-todo (todo.mdに追加) または /p execute (すぐに実行)
+description: リサーチしてアクションを選択
+arguments: "調査内容" (例: "認証エラーの原因", "API遅延のボトルネック")
+usage: /p "調査内容" → 後で /p add-todo または /p execute
 ---
 
 # Plan Mode - リサーチ・計画・管理

@@ -1,6 +1,7 @@
 ---
 name: t
-description: TODO管理 - 完了タスクをdone.mdへアーカイブし、todo.mdを整理
+description: 完了タスクをdone.mdへ移動
+arguments: なし
 usage: /t
 ---
 

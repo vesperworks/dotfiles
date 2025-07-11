@@ -1,7 +1,8 @@
 ---
 name: s
-description: スマートコミット - git diffを分析して適切なコミットメッセージを自動生成
-usage: /s [コミットの意図やコンテキスト]
+description: 変更内容からコミットメッセージを自動生成
+arguments: "[意図]" (例: "README改善", "バグ修正") - 省略可
+usage: /s [意図]
 ---
 
 # Smart Commit

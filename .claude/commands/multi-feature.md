@@ -1,7 +1,8 @@
 ---
 name: multi-feature
-description: 新機能開発をマルチエージェントで自動実行（探索→設計→実装→テスト）
-usage: /multi-feature "開発する機能の説明" [--keep-worktree] [--pr] [--no-draft]
+description: 新機能をマルチエージェントで開発
+arguments: "機能名と要件" (例: "ユーザー認証機能 JWT対応")
+usage: /multi-feature "機能名と要件" [オプション]
 ---
 
 <feature_development_workflow>

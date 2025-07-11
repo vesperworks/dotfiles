@@ -1,7 +1,8 @@
 ---
 name: multi-refactor
-description: リファクタリングを段階的に実行（分析→計画→実装→検証）- テストを保持しながら安全に改善
-usage: /multi-refactor "リファクタリング対象の説明" [--keep-worktree] [--pr] [--no-merge]
+description: コードを安全にリファクタリング
+arguments: "対象と改善内容" (例: "authモジュール TypeScript化")
+usage: /multi-refactor "対象と改善内容" [オプション]
 ---
 
 # Multi-Agent Refactoring Workflow

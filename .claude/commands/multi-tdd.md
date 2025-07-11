@@ -1,7 +1,8 @@
 ---
 name: multi-tdd
-description: TDD（テスト駆動開発）で実装 - Red→Green→Refactorサイクルを自動実行
-usage: /multi-tdd "実装するタスクの説明" [--keep-worktree] [--pr] [--no-cleanup]
+description: TDDで実装（テスト→実装→リファクタ）
+arguments: "機能名と修正内容" (例: "JWT期限チェックバグ修正")
+usage: /multi-tdd "機能名と修正内容" [オプション]
 ---
 
 # Multi-Agent TDD Workflow
