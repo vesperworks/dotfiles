@@ -1170,3 +1170,169 @@ EOF
 
 # リファクタリング共通関数のエクスポート
 export -f initialize_refactor_phase commit_refactor_phase commit_refactor_step generate_refactor_completion_report
+
+# ==========================================
+# ccmanager統合関数
+# ==========================================
+
+# ccmanagerの利用可能性チェック
+check_ccmanager() {
+    if command -v ccmanager &>/dev/null; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# ccmanagerフェーズ状態更新
+update_ccm_phase() {
+    local worktree_path="$1"
+    local phase="$2"
+    local status="$3"
+    
+    local config_file="$worktree_path/.ccmanager/feature-config.json"
+    
+    if [[ ! -f "$config_file" ]]; then
+        log_warning "ccmanager config not found at $config_file"
+        return 1
+    fi
+    
+    # jqを使ってJSONを更新
+    if command -v jq &>/dev/null; then
+        local tmp_file=$(mktemp)
+        jq ".phases.${phase}.status = \"${status}\" | .currentPhase = \"${phase}\"" \
+            "$config_file" > "$tmp_file" && mv "$tmp_file" "$config_file"
+        log_info "Updated ccmanager phase: $phase -> $status"
+    else
+        log_warning "jq not found, cannot update ccmanager phase status"
+        return 1
+    fi
+    
+    return 0
+}
+
+# ccmanager設定初期化
+initialize_ccm_config() {
+    local worktree_path="$1"
+    local feature_name="$2"
+    local branch_name="$3"
+    local preset_base="${4:-feature}"
+    
+    # ccmanager設定ディレクトリ作成
+    mkdir -p "$worktree_path/.ccmanager"
+    
+    # 設定ファイル作成
+    cat > "$worktree_path/.ccmanager/feature-config.json" << EOF
+{
+  "featureName": "$feature_name",
+  "branch": "$branch_name",
+  "worktreePath": "$worktree_path",
+  "presetBase": "$preset_base",
+  "phases": {
+    "explorer": {
+      "preset": "${preset_base}-explorer",
+      "prompt": "@${HOME}/.claude/prompts/explorer.md",
+      "status": "pending"
+    },
+    "planner": {
+      "preset": "${preset_base}-planner",
+      "prompt": "@${HOME}/.claude/prompts/planner.md",
+      "status": "pending"
+    },
+    "prototype": {
+      "preset": "${preset_base}-prototype",
+      "status": "pending"
+    },
+    "coder": {
+      "preset": "${preset_base}-coder",
+      "prompt": "@${HOME}/.claude/prompts/coder.md",
+      "status": "pending"
+    },
+    "completion": {
+      "preset": "${preset_base}-completion",
+      "status": "pending"
+    }
+  },
+  "currentPhase": "explorer",
+  "startTime": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+}
+EOF
+    
+    log_success "Initialized ccmanager config for $feature_name"
+    return 0
+}
+
+# ccmanagerプリセット名取得
+get_ccm_preset_name() {
+    local phase="$1"
+    local preset_base="${2:-feature}"
+    
+    echo "${preset_base}-${phase}"
+}
+
+# ccmanagerセッション開始（オプション）
+start_ccm_session() {
+    local preset="$1"
+    local worktree_path="$2"
+    local auto_start="${3:-false}"
+    
+    if [[ "$auto_start" == "true" ]] && check_ccmanager; then
+        log_info "Starting ccmanager session with preset: $preset"
+        cd "$worktree_path"
+        ccmanager start --preset "$preset" &
+        return 0
+    else
+        log_info "Manual ccmanager start required:"
+        echo "  1. Run 'ccm' in another terminal"
+        echo "  2. Select the worktree: $(basename "$worktree_path")"
+        echo "  3. Choose preset: $preset"
+        return 0
+    fi
+}
+
+# ccmanager統計情報取得
+get_ccm_statistics() {
+    local worktree_path="$1"
+    local config_file="$worktree_path/.ccmanager/feature-config.json"
+    
+    if [[ ! -f "$config_file" ]] || ! command -v jq &>/dev/null; then
+        echo "N/A"
+        return 1
+    fi
+    
+    jq -r '
+        "Feature: \(.featureName)",
+        "Branch: \(.branch)",
+        "Started: \(.startTime)",
+        "Current Phase: \(.currentPhase)",
+        "Phases Completed: \(.phases | to_entries | map(select(.value.status == "completed")) | length)/5"
+    ' "$config_file"
+}
+
+# ccmanager統合状態確認
+check_ccm_integration() {
+    local use_ccm="${1:-true}"
+    
+    if [[ "$use_ccm" != "true" ]]; then
+        echo "disabled"
+        return 1
+    fi
+    
+    if ! check_ccmanager; then
+        echo "not_available"
+        return 1
+    fi
+    
+    if ! command -v jq &>/dev/null; then
+        echo "jq_missing"
+        return 1
+    fi
+    
+    echo "ready"
+    return 0
+}
+
+# ccmanager関数のエクスポート
+export -f check_ccmanager update_ccm_phase initialize_ccm_config
+export -f get_ccm_preset_name start_ccm_session get_ccm_statistics
+export -f check_ccm_integration
