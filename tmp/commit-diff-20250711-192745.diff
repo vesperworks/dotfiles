@@ -1,0 +1,75 @@
+diff --git a/.claude/hooks/stop-send-notification.sh b/.claude/hooks/stop-send-notification.sh
+index 3afdf91..fc1218d 100755
+--- a/.claude/hooks/stop-send-notification.sh
++++ b/.claude/hooks/stop-send-notification.sh
+@@ -18,4 +18,15 @@ else
+     STATUS_EMOJI="❌"
+ fi
+ 
+-osascript -e "display notification \"${STATUS_EMOJI} ${PROJECT_NAME}\" with title \"Claude Code - ${DISPLAY_PATH}\" sound name \"Glass\""
+\ No newline at end of file
++# Check if terminal-notifier is installed
++if command -v terminal-notifier &> /dev/null; then
++    # Use terminal-notifier with click action to open VSCode
++    terminal-notifier -message "${STATUS_EMOJI} ${PROJECT_NAME}" \
++                     -title "🤖 ${PROJECT_NAME}" \
++                     -sound Glass \
++                     -activate "com.microsoft.VSCode" \
++                     -execute "open -a 'Visual Studio Code' '${PROJECT_DIR}'"
++else
++    # Fallback to osascript if terminal-notifier is not installed
++    osascript -e "display notification \"${STATUS_EMOJI} ${PROJECT_NAME}\" with title \"🤖 ${PROJECT_NAME}\" sound name \"Glass\""
++fi
+\ No newline at end of file
+diff --git a/.claude/settings.json b/.claude/settings.json
+index 0a40fb3..4fa7b52 100644
+--- a/.claude/settings.json
++++ b/.claude/settings.json
+@@ -1,4 +1,28 @@
+ {
++  "hooks": {
++    "Stop": [
++      {
++        "matcher": "",
++        "hooks": [
++          {
++            "type": "command",
++            "command": "~/.claude/hooks/stop-send-notification.sh"
++          }
++        ]
++      }
++    ],
++    "PostToolUse": [
++      {
++        "matcher": "Write|Edit|MultiEdit",
++        "hooks": [
++          {
++            "type": "command",
++            "command": "~/.claude/hooks/textlint-hook.sh"
++          }
++        ]
++      }
++    ]
++  },
+   "permissions": {
+     "allow": [
+       "Read(**)",
+diff --git a/setup-links.sh b/setup-links.sh
+index b5aa5e2..b9ca9aa 100755
+--- a/setup-links.sh
++++ b/setup-links.sh
+@@ -106,4 +106,13 @@ if [ -d "$BACKUP_DIR" ] && [ "$(ls -A "$BACKUP_DIR")" ]; then
+     echo "$BACKUP_DIR"
+ fi
+ 
++# Hooksのセットアップ
++echo -e "\n${YELLOW}Hooksのセットアップを実行中...${NC}"
++if [ -x "$PROJECT_DIR/setup-hooks.sh" ]; then
++    "$PROJECT_DIR/setup-hooks.sh"
++else
++    echo -e "${RED}setup-hooks.sh が見つからないか実行可能ではありません${NC}"
++    echo -e "${YELLOW}Hooksを手動でセットアップするには ./setup-hooks.sh を実行してください${NC}"
++fi
++
+ echo -e "\n${GREEN}これで、このプロジェクトでClaudeコマンドの開発ができます！${NC}"
+\ No newline at end of file
