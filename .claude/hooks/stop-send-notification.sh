@@ -18,4 +18,15 @@ else
     STATUS_EMOJI="❌"
 fi
 
-osascript -e "display notification \"${STATUS_EMOJI} ${PROJECT_NAME}\" with title \"Claude Code - ${DISPLAY_PATH}\" sound name \"Glass\""
+# Check if terminal-notifier is installed
+if command -v terminal-notifier &> /dev/null; then
+    # Use terminal-notifier with click action to open VSCode
+    terminal-notifier -message "${STATUS_EMOJI} ${PROJECT_NAME}" \
+                     -title "🤖 ${PROJECT_NAME}" \
+                     -sound Glass \
+                     -activate "com.microsoft.VSCode" \
+                     -execute "open -a 'Visual Studio Code' '${PROJECT_DIR}'"
+else
+    # Fallback to osascript if terminal-notifier is not installed
+    osascript -e "display notification \"${STATUS_EMOJI} ${PROJECT_NAME}\" with title \"🤖 ${PROJECT_NAME}\" sound name \"Glass\""
+fi
