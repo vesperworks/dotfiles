@@ -43,6 +43,7 @@
       "Bash(yq:*)",
       "Bash(choose:*)",
       "Bash(sed:*)",
+      "Bash(gemini:*)",
       "Bash(awk:*)",
       "Bash(cut:*)",
       "Bash(head:*)",
