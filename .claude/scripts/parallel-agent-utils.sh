@@ -150,9 +150,9 @@ monitor_parallel_execution() {
     local spinner_chars="⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
     local spinner_index=0
     
-    while [[ "$(cat "$test_status_file" 2>/dev/null)" == "running" ]] || [[ "$(cat "$impl_status_file" 2>/dev/null)" == "running" ]]; do
+    while [[ "$(bat --style=plain "$test_status_file" 2>/dev/null)" == "running" ]] || [[ "$(bat --style=plain "$impl_status_file" 2>/dev/null)" == "running" ]]; do
         local spinner_char="${spinner_chars:$spinner_index:1}"
-        echo -ne "\r${spinner_char} Test Agent: $(cat "$test_status_file" 2>/dev/null || echo "starting") | Impl Agent: $(cat "$impl_status_file" 2>/dev/null || echo "starting")"
+        echo -ne "\r${spinner_char} Test Agent: $(bat --style=plain "$test_status_file" 2>/dev/null || echo "starting") | Impl Agent: $(bat --style=plain "$impl_status_file" 2>/dev/null || echo "starting")"
         
         spinner_index=$(( (spinner_index + 1) % ${#spinner_chars} ))
         sleep 0.5
@@ -171,8 +171,8 @@ merge_parallel_results() {
     log_info "Merging parallel execution results..."
     
     # 結果ファイルの存在確認
-    local test_result=$(cat "$temp_dir/test-agent.result" 2>/dev/null || echo "1")
-    local impl_result=$(cat "$temp_dir/impl-agent.result" 2>/dev/null || echo "1")
+    local test_result=$(bat --style=plain "$temp_dir/test-agent.result" 2>/dev/null || echo "1")
+    local impl_result=$(bat --style=plain "$temp_dir/impl-agent.result" 2>/dev/null || echo "1")
     
     # 統合レポート作成
     cat > "$worktree_path/parallel-tdd-report.md" << EOF
@@ -187,7 +187,7 @@ merge_parallel_results() {
 
 ### Test Creation Summary
 $(if [[ -f "$worktree_path/test-agent.log" ]]; then
-    grep -E "\[Test Agent\].*:" "$worktree_path/test-agent.log" | tail -10 || echo "No test log found"
+    rg -E "\[Test Agent\].*:" "$worktree_path/test-agent.log" | tail -10 || echo "No test log found"
 else
     echo "No test log found"
 fi)
@@ -198,7 +198,7 @@ fi)
 
 ### Implementation Summary
 $(if [[ -f "$worktree_path/impl-agent.log" ]]; then
-    grep -E "\[Impl Agent\].*:" "$worktree_path/impl-agent.log" | tail -10 || echo "No impl log found"
+    rg -E "\[Impl Agent\].*:" "$worktree_path/impl-agent.log" | tail -10 || echo "No impl log found"
 else
     echo "No impl log found"
 fi)
@@ -210,10 +210,10 @@ fi)
 
 ## Files Created
 ### Test Files
-$(find "$worktree_path/test/$feature_name" -name "*.test.*" -o -name "*.spec.*" 2>/dev/null | head -10 || echo "No test files found")
+$(fd -t f '\.(test|spec)\.' "$worktree_path/test/$feature_name" 2>/dev/null | head -10 || echo "No test files found")
 
 ### Implementation Files
-$(find "$worktree_path/src/$feature_name" -name "*.*" 2>/dev/null | head -10 || echo "No implementation files found")
+$(fd -t f . "$worktree_path/src/$feature_name" 2>/dev/null | head -10 || echo "No implementation files found")
 
 ## Next Steps
 1. Review test coverage
@@ -356,7 +356,7 @@ create_test_report() {
 - Accessibility testing
 
 ## Test Files Created
-$(find "$worktree_path/test/$feature_name" -type f 2>/dev/null | head -20 || echo "No test files found")
+$(fd -t f . "$worktree_path/test/$feature_name" 2>/dev/null | head -20 || echo "No test files found")
 
 ## TDD Red Phase Status
 ✅ Failing tests created
@@ -499,7 +499,7 @@ create_impl_report() {
 ✅ Code quality improvements
 
 ## Implementation Files Created
-$(find "$worktree_path/src/$feature_name" -type f 2>/dev/null | head -20 || echo "No implementation files found")
+$(fd -t f . "$worktree_path/src/$feature_name" 2>/dev/null | head -20 || echo "No implementation files found")
 
 ## TDD Green Phase Status
 ✅ Tests passing

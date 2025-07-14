@@ -111,7 +111,7 @@ fi
 # 7. コマンドの更新確認
 log_info "Checking command updates..."
 for cmd in multi-tdd.md multi-feature.md multi-refactor.md; do
-    if grep -q "parse_workflow_options" ".claude/commands/$cmd"; then
+    if rg -q "parse_workflow_options" ".claude/commands/$cmd"; then
         log_success "✓ $cmd updated with new options"
     else
         log_error "✗ $cmd not updated"
