@@ -418,6 +418,8 @@ function M.change_callout_type(start_row, end_row)
     { "tip", "💡 Tip", "g" },
     { "success", "✅ Success", "h" },
     { "question", "❓ Question", "j" },
+    { "think", "🤔 Think", "t" },
+    { "idea", "💡 Idea", "i" },
     { "quote", "💬 Quote (普通のクオート)", "k" },
     { "code", "💻 Code Block", "c" },
   }
@@ -451,7 +453,15 @@ function M.change_callout_type(start_row, end_row)
         if string.match(line, "^%s*>%s*%[!") then
           -- Calloutヘッダーを置き換え
           local indent = string.match(line, "^(%s*)")
-          table.insert(new_lines, indent .. "> [!" .. callout_type .. "]")
+          local callout_header
+          if callout_type == "think" then
+            callout_header = indent .. "> [!" .. callout_type .. "] #think"
+          elseif callout_type == "idea" then
+            callout_header = indent .. "> [!" .. callout_type .. "] #idea"
+          else
+            callout_header = indent .. "> [!" .. callout_type .. "]"
+          end
+          table.insert(new_lines, callout_header)
         else
           table.insert(new_lines, line)
         end
@@ -721,6 +731,8 @@ function M.create_new_callout(start_row, end_row)
     { "tip", "💡 Tip", "g" },
     { "success", "✅ Success", "h" },
     { "question", "❓ Question", "j" },
+    { "think", "🤔 Think", "t" },
+    { "idea", "💡 Idea", "i" },
     { "quote", "💬 Quote (普通のクオート)", "k" },
     { "code", "💻 Code Block", "c" },
   }
@@ -763,7 +775,15 @@ function M.create_new_callout(start_row, end_row)
       end
     else
       -- 通常のCalloutの場合
-      table.insert(new_lines, common_indent .. "> [!" .. callout_type .. "]")
+      local callout_header
+      if callout_type == "think" then
+        callout_header = common_indent .. "> [!" .. callout_type .. "] #think"
+      elseif callout_type == "idea" then
+        callout_header = common_indent .. "> [!" .. callout_type .. "] #idea"
+      else
+        callout_header = common_indent .. "> [!" .. callout_type .. "]"
+      end
+      table.insert(new_lines, callout_header)
       
       for _, line in ipairs(lines) do
         if line == "" then

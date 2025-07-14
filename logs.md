@@ -1,3 +1,248 @@
+## 2025-07-14 - Think & Idea Callout追加：思考・アイデア記録機能実装（完了）
+
+### 実装内容:
+- `<leader>c`のCallout機能に`think`と`idea`を追加
+- 自動でタイトルに`#think`・`#idea`を挿入
+- 思考プロセスとアイデアの明確な可視化
+- 既存のCallout機能と完全統合
+
+### 新しいCallout種類:
+- **Think Callout**: `> [!think] #think` - 思考プロセス記録用
+- **Idea Callout**: `> [!idea] #idea` - アイデア・ひらめき記録用
+
+### キーバインド:
+- `<leader>c` → `t` → 🤔 Think callout作成
+- `<leader>c` → `i` → 💡 Idea callout作成
+
+### 技術仕様:
+```lua
+-- 新規追加されたCallout種類
+{ "think", "🤔 Think", "t" },
+{ "idea", "💡 Idea", "i" },
+
+-- 自動タイトル挿入ロジック
+if callout_type == "think" then
+  callout_header = common_indent .. "> [!" .. callout_type .. "] #think"
+elseif callout_type == "idea" then
+  callout_header = common_indent .. "> [!" .. callout_type .. "] #idea"
+else
+  callout_header = common_indent .. "> [!" .. callout_type .. "]"
+end
+```
+
+### 修正箇所:
+- `M.create_new_callout()` 関数: 新規Callout作成時の自動タイトル挿入
+- `M.change_callout_type()` 関数: 既存Callout変更時の自動タイトル挿入
+- 2箇所の`callout_types`配列に`think`と`idea`を追加
+
+### 使用例:
+```markdown
+> [!think] #think
+> この問題の根本原因は何だろう？データ構造の設計に問題があるかも。
+
+> [!idea] #idea  
+> 文字列ベースでタスクIDを生成すれば行番号依存を回避できるのでは？
+```
+
+### メリット:
+- ✅ **思考の可視化**: 考察プロセスを明確に記録・追跡
+- ✅ **アイデアの強調**: 重要なひらめきを見逃し防止
+- ✅ **ノート構造化**: 事実・思考・アイデアの明確な分離
+- ✅ **統一されたタイトル**: `#think`・`#idea`で検索・整理が容易
+- ✅ **既存機能統合**: 現在のCalloutシステムに自然に統合
+- ✅ **ワークフロー改善**: 思考プロセスとアイデアの体系的管理
+
+### 技術的価値:
+- ObsidianのCallout標準に準拠した実装
+- 自動タイトル挿入による一貫性確保
+- 既存のInsert modeベースUI活用
+- 思考とアイデアの分離による認知負荷軽減
+- ナレッジマネジメントの効率化
+
+### 結果:
+🎉 **Think & Idea Callout機能完成**
+- 思考プロセスとアイデアの明確な記録システム
+- 自動タイトル挿入による一貫性と検索性向上
+- 既存Calloutシステムとの完全統合
+- **世界一快適なMarkdown思考・アイデア管理システム**の実現 🚀
+
+**重要性:**
+この実装により、日常のノートテイキングにおいて「事実の記録」「思考の記録」「アイデアの記録」を明確に分離できるようになりました。特に、自動でタイトルに`#think`・`#idea`が挿入されることで、後から検索・整理する際の一貫性が大幅に向上し、知識管理とアイデア発想の効率が飛躍的に向上します。
+
+### 追加実装: render-markdown.nvimアイコン表示対応
+
+**背景:**
+- 機能は正常動作していたがNeovimでアイコンが表示されない問題を発見
+- 既存の`render-markdown.nvim`プラグインを活用してアイコン表示を実現
+
+**追加修正:**
+```lua
+-- render-markdown.luaに追加
+think = { raw = '[!think]', rendered = '🤔 Think', highlight = 'RenderMarkdownThink' },
+idea = { raw = '[!idea]', rendered = '💡 Idea', highlight = 'RenderMarkdownIdea' },
+
+-- ハイライトグループ追加
+vim.api.nvim_set_hl(0, 'RenderMarkdownThink', { fg = '#fab387', bold = true })  -- オレンジ色
+vim.api.nvim_set_hl(0, 'RenderMarkdownIdea', { fg = '#f9e2af', bold = true })   -- 黄色
+```
+
+**結果:**
+- Neovimで`🤔 Think #think`と`💡 Idea #idea`が美しく表示
+- カラーハイライトでthinkはオレンジ、ideaは黄色で視覚的に区別
+- 既存のrender-markdown.nvimとの完全統合
+
+**最終形態:**
+🎉 **完全版：アイコン付きThink & Idea Calloutシステム完成**
+- markdown-helper.luaでCallout生成機能
+- render-markdown.nvimで美しいアイコン表示
+- 自動タイトル挿入による一貫性確保
+- **世界一美しく機能的なMarkdown思考・アイデア管理システム**の完成 🚀
+
+---
+
+## 2025-07-14 - vw commitコマンド実装：Git commit結果のクリップボード自動コピー機能（完了）
+
+### 実装内容:
+- `vw commit`コマンドでgit commit実行結果をクリップボードに自動コピー
+- 絵文字プレフィックス（`<<`形式）でわかりやすい表示
+- 成功・エラー問わず実行結果をpbcopyで自動コピー
+- vwツールセットに統合されたシームレスなGitワークフロー
+
+### 技術仕様:
+- **スクリプトファイル**: `~/.vw/commit`
+- **引数サポート**: すべてのgit commitオプションに対応（`-m`, `-am`, `--amend`等）
+- **クリップボード**: macOSの`pbcopy`コマンドを使用
+- **エラーハンドリング**: 成功・失敗両方の結果をキャプチャ&コピー
+
+### 実装詳細:
+```bash
+#!/bin/bash
+# Git commit実行 + クリップボードコピー機能
+echo "📝 << git commit実行中..."
+commit_result=$(git commit "$@" 2>&1)
+commit_exit_code=$?
+
+if [ $commit_exit_code -eq 0 ]; then
+    echo "✅ << $commit_result"
+    echo "$commit_result" | pbcopy
+    echo "📋 << コミット結果をクリップボードにコピーしました"
+else
+    echo "❌ << $commit_result"
+    echo "$commit_result" | pbcopy
+    echo "📋 << エラー内容をクリップボードにコピーしました"
+fi
+```
+
+### 使用方法:
+```bash
+# 基本的なコミット
+vw commit -m "実装完了"
+
+# 全ファイルステージ + コミット
+vw commit -am "機能追加"
+
+# 直前コミットの修正
+vw commit --amend -m "修正版"
+```
+
+### 表示例:
+```
+📝 << git commit実行中...
+✅ << [main abc1234] 実装完了
+ 2 files changed, 15 insertions(+), 3 deletions(-)
+📋 << コミット結果をクリップボードにコピーしました
+```
+
+### メリット:
+- ✅ **絵文字で直感的**: 📝実行中 → ✅成功/❌失敗 → 📋コピー完了の流れ
+- ✅ **結果の即座活用**: コミットハッシュやメッセージをすぐにペースト可能
+- ✅ **エラー内容も保存**: 失敗時のエラーメッセージもクリップボードに
+- ✅ **vwエコシステム統合**: 既存のgit-commit-gen、git-templとシームレス連携
+- ✅ **全オプション対応**: git commitの全パラメータをそのまま使用可能
+
+### 技術的価値:
+- bash $@を使った引数の完全転送
+- 2>&1でstdoutとstderrの両方をキャプチャ
+- $?による終了コードの適切な判定と伝播
+- pbcopyを使ったmacOS環境での効率的クリップボード連携
+- 絵文字とテキストを組み合わせた視覚的に分かりやすい出力
+
+### vw関数更新（手動設定必要）:
+```bash
+# .zshrcのvw関数に以下を追加
+"commit")
+  "$HOME/.vw/commit" "${@:2}"
+  ;;
+```
+
+### 設定反映手順:
+1. `chmod +x ~/.vw/commit` で実行権限付与
+2. .zshrcのvw関数に"commit"ケース追加
+3. `source ~/.zshrc` で設定反映
+
+### 結果:
+🎉 **vw commitコマンド完成**
+- Git commit結果の自動クリップボードコピー
+- 絵文字プレフィックスでわかりやすい表示
+- vwツールセットの機能拡張
+- **世界一快適なGitコミットワークフロー**の実現 🚀
+
+**重要性:**
+この実装により、git commitの実行結果（コミットハッシュ、変更ファイル数、エラーメッセージ等）が自動でクリップボードにコピーされ、プルリクエスト作成やドキュメント更新時にすぐに活用できるようになりました。特に、絵文字を使った視覚的フィードバックにより、コマンドの実行状況が一目で分かる使いやすいインターフェースを実現しました。
+
+---
+
+## 2025-07-14 - git-commit-gen機能拡張：生成コマンドのクリップボード自動コピー機能（完了）
+
+### 実装内容:
+- 既存の`git-commit-gen`スクリプトを機能拡張
+- AIで生成されたコミットコマンドをクリップボードに自動コピー
+- 絵文字プレフィックス（`<<`形式）でわかりやすい表示
+- エラーハンドリングと適切なフィードバック追加
+
+### 技術仕様:
+- **スクリプトファイル**: `~/.vw/git-commit-gen`（既存ファイルを修正）
+- **AI分析**: ClaudeでGit diff内容を分析してコミットメッセージ生成
+- **クリップボード**: macOSの`pbcopy`で生成コマンドを自動コピー
+- **プレフィックス処理**: `> `プレフィックスを除去してコピー
+
+### 使用方法:
+```bash
+# 基本使用
+vw git-commit-gen
+vw commit-gen
+vw commit  # エイリアスでも使用可能
+
+# 直接実行も可能
+git-commit-gen
+```
+
+### 表示例:
+```
+🤖 << AI分析中...
+✅ << > git add . && git commit -m "Add git-commit-gen clipboard copy feature"
+📋 << 生成されたコマンドをクリップボードにコピーしました
+```
+
+### メリット:
+- ✅ **AI生成コマンドの即座実行**: コピーしてすぐにペースト&実行
+- ✅ **絵文字で直感的**: 🤖AI分析 → ✅成功/❌失敗 → 📋コピー完了
+- ✅ **プレフィックス処理**: `> `を除去してクリーンなコマンドをコピー
+- ✅ **エラーハンドリング**: 失敗時の適切なメッセージ表示
+- ✅ **既存機能保持**: 元のAI分析機能はそのままで機能拡張
+
+### 結果:
+🎉 **git-commit-gen機能拡張完成**
+- AI生成コマンドの自動クリップボードコピー
+- 絵文字プレフィックスでわかりやすい表示
+- 既存機能を保持しつつ使いやすさ向上
+- **世界一簡単なAI支援Gitコミットシステム**の完成 🚀
+
+**重要性:**
+この機能拡張により、AIで生成されたコミットコマンドが自動でクリップボードにコピーされ、すぐにペーストして実行できるようになりました。特に、`> `プレフィックスを適切に除去することで、クリーンなコマンドとしてコピーされ、日常のGitワークフローが大幅に効率化されました。
+
+---
+
 ## 2025-07-14 - E94エラー完全解決：iCloudパス対応のタスクタイマージャンプ機能修正（完了）
 
 ### 問題:

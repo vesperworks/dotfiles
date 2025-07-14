@@ -22,6 +22,8 @@ return {
           tip = { raw = '[!tip]', rendered = '💡 Tip', highlight = 'RenderMarkdownHint' },
           success = { raw = '[!success]', rendered = '✅ Success', highlight = 'RenderMarkdownSuccess' },
           question = { raw = '[!question]', rendered = '❓ Question', highlight = 'RenderMarkdownInfo' },
+          think = { raw = '[!think]', rendered = '🤔 Think', highlight = 'RenderMarkdownThink' },
+          idea = { raw = '[!idea]', rendered = '💡 Idea', highlight = 'RenderMarkdownIdea' },
           quote = { raw = '[!quote]', rendered = '💬 Quote', highlight = 'RenderMarkdownQuote' },
         },
       }
@@ -48,6 +50,8 @@ return {
       vim.api.nvim_set_hl(0, 'RenderMarkdownError', { fg = '#f38ba8', bold = true })
       vim.api.nvim_set_hl(0, 'RenderMarkdownHint', { fg = '#a6e3a1', bold = true })
       vim.api.nvim_set_hl(0, 'RenderMarkdownSuccess', { fg = '#a6e3a1', bold = true })
+      vim.api.nvim_set_hl(0, 'RenderMarkdownThink', { fg = '#fab387', bold = true })  -- オレンジ色
+      vim.api.nvim_set_hl(0, 'RenderMarkdownIdea', { fg = '#f9e2af', bold = true })   -- 黄色
       vim.api.nvim_set_hl(0, 'RenderMarkdownQuote', { fg = '#b4befe', bold = true })
       
       -- タスクのハイライトを適用するautocmd
