@@ -15,11 +15,11 @@ function M.toggle_debug_mode()
   end
 end
 
--- デバッグログヘルパー関数
+-- デバッグログヘルパー関数（一時無効化）
 local function debug_log(message)
-  if debug_mode then
-    vim.notify(message, vim.log.levels.INFO)  -- DEBUGではなくINFOで表示
-  end
+  -- if debug_mode then
+  --   vim.notify(message, vim.log.levels.INFO)
+  -- end
 end
 
 local storage = require('user-plugins.task-timer-storage')
@@ -577,11 +577,16 @@ function M.show_timer_selection_buffer(timer_options, timer_data_map)
   vim.defer_fn(setup_input_handler, 10)
 end
 
--- 改良されたジャンプ機能（文字列検索ベース + swapファイル対応 + 詳細エラー）
+-- 🔒 改良されたジャンプ機能（iCloudパス対応版）
 function M.jump_to_file_and_line_by_content(file_path, task_id)
   -- パス展開とアクセス性チェック
   local expanded_path = vim.fn.expand(file_path)
   local full_path = vim.fn.fnamemodify(expanded_path, ':p')
+  
+  -- 📝 デバッグ: パス情報を表示（簡略版）
+  if debug_mode then
+    vim.notify(string.format("🔍 ジャンプ先: %s", vim.fn.fnamemodify(file_path, ":t")), vim.log.levels.INFO)
+  end
   
   -- ファイルが存在するかチェック
   if vim.fn.filereadable(expanded_path) == 0 then
@@ -631,51 +636,92 @@ function M.jump_to_file_and_line_by_content(file_path, task_id)
     -- choice == 2 なら保存せずに続行
   end
   
-  -- swapファイル対応でファイルを安全に開く
+  -- 🔒 iCloudパス対応の安全なファイルオープン
   local success, error_msg = pcall(function()
-    -- まずバッファが既に開いているかチェック（E94エラー対策）
+    -- 1. バッファが既に開いているかチェック（複数の方法で確認）
     local existing_bufnr = vim.fn.bufnr(expanded_path)
-    if existing_bufnr ~= -1 and vim.api.nvim_buf_is_valid(existing_bufnr) then
-      -- 既存バッファに安全に切り替え（pcallでE94エラー防止）
-      local buffer_success = pcall(vim.cmd, 'buffer ' .. existing_bufnr)
-      if buffer_success then
-        return
-      end
-      -- バッファ切り替えに失敗した場合は下の通常オープン処理に進む
+    
+    -- デバッグ: バッファ情報（簡略版）
+    if debug_mode then
+      vim.notify(string.format("🔍 既存バッファ: %d", existing_bufnr), vim.log.levels.INFO)
     end
     
-    -- swapファイルの存在確認
-    local swap_file = vim.fn.swapname(expanded_path)
-    if swap_file ~= "" and vim.fn.filereadable(swap_file) == 1 then
-      -- swapファイルが存在する場合は、ユーザーに対処法を提示
-      local choice = vim.fn.confirm(
-        string.format("swapファイルが検出されました:\n%s\n\nどうしますか？", swap_file),
-        "&r: Read-only で開く\n&d: swapファイルを削除して開く\n&c: キャンセル",
-        1
-      )
+    -- 既存バッファが見つかった場合の安全な処理
+    if existing_bufnr ~= -1 then
+      debug_log("🔍 既存バッファ発見、有効性チェック中...")
       
-      if choice == 1 then
-        -- Read-onlyで開く
-        vim.cmd('view ' .. vim.fn.fnameescape(expanded_path))
-      elseif choice == 2 then
-        -- swapファイルを削除してから開く
-        vim.fn.delete(swap_file)
-        vim.cmd('edit! ' .. vim.fn.fnameescape(expanded_path))
+      if vim.api.nvim_buf_is_valid(existing_bufnr) then
+        debug_log("🔍 バッファは有効、切り替え試行中...")
+        
+        -- より安全なバッファ切り替え（複数の方法で試行）
+        local buffer_switch_success = pcall(function()
+          -- まずシンプルなbufferコマンドを試す
+          vim.cmd('buffer ' .. existing_bufnr)
+        end)
+        
+        if not buffer_switch_success then
+          debug_log("🔍 bufferコマンド失敗、dropコマンド試行...")
+          -- bufferコマンドが失敗した場合、dropコマンドを試す
+          buffer_switch_success = pcall(function()
+            vim.cmd('drop ' .. vim.fn.fnameescape(expanded_path))
+          end)
+        end
+        
+        if buffer_switch_success then
+      if debug_mode then
+        vim.notify("🔍 バッファ切替成功", vim.log.levels.INFO)
+      end
+          return true -- 成功したのでここで終了
+        else
+        if debug_mode then
+          vim.notify("🔍 バッファ切替失敗→通常オープン", vim.log.levels.INFO)
+        end
+        end
       else
-        -- キャンセル
-        vim.notify("ファイルオープンをキャンセルしました", vim.log.levels.INFO)
-        return
+        if debug_mode then
+          vim.notify("🔍 バッファ無効→通常オープン", vim.log.levels.INFO)
+        end
       end
     else
-      -- 通常通りファイルを開く
-      vim.cmd('edit! ' .. vim.fn.fnameescape(expanded_path))
+      if debug_mode then
+        vim.notify("🔍 既存バッファなし→新規オープン", vim.log.levels.INFO)
+      end
     end
+    
+    -- 🔒 iCloudパス対応の直接ファイルオープン（swapチェックスキップ）
+    local escaped_path = vim.fn.fnameescape(expanded_path)
+    local drop_command = 'drop ' .. escaped_path
+    if debug_mode then
+      vim.notify(string.format("🔍 実行予定: %s", drop_command), vim.log.levels.INFO)
+    end
+    
+    local open_success = pcall(function()
+      vim.cmd(drop_command)
+    end)
+    
+    if not open_success then
+      if debug_mode then
+        vim.notify("🔍 drop失敗→edit試行", vim.log.levels.INFO)
+      end
+      -- dropが失敗した場合のみeditを試す
+      local edit_command = 'edit! ' .. escaped_path
+      vim.cmd(edit_command)
+    else
+      if debug_mode then
+        vim.notify("🔍 drop成功", vim.log.levels.INFO)
+      end
+    end
+    
+    return true
   end)
   
   if not success then
     vim.notify(string.format("⚠️ ファイルオープンエラー: %s", error_msg), vim.log.levels.ERROR)
     return
   end
+  
+  -- 🔍 ファイルオープン成功後の処理
+  debug_log("🔍 ファイルオープン成功、タスク検索開始")
   
   local bufnr = vim.api.nvim_get_current_buf()
   
@@ -684,6 +730,7 @@ function M.jump_to_file_and_line_by_content(file_path, task_id)
   
   if line_number then
     -- タスクが見つかった場合
+    debug_log(string.format("🔍 タスク発見: %d行目", line_number))
     vim.api.nvim_win_set_cursor(0, {line_number, 0})
     vim.cmd('normal! zz')  -- 画面中央にスクロール
     
@@ -691,6 +738,7 @@ function M.jump_to_file_and_line_by_content(file_path, task_id)
     vim.notify(string.format("🎯 %s:%d にジャンプしました", file_name, line_number), vim.log.levels.INFO)
   else
     -- タスクが見つからない場合
+    debug_log("🔍 タスクが見つからない")
     vim.notify("⚠️ 該当するタスクが見つかりません（内容が変更された可能性があります）", vim.log.levels.WARN)
     
     -- タスク内容の一部を表示してヒントを提供
@@ -702,7 +750,7 @@ function M.jump_to_file_and_line_by_content(file_path, task_id)
   end
 end
 
--- 🗑️ 見失ったタスクを削除する機能
+-- 🗑️ 見失ったタスクを削除する機能（iCloudパス対応版）
 function M.remove_lost_tasks()
   local removed_count = 0
   local lost_tasks = {}
