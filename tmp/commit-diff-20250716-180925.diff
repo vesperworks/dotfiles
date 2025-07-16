@@ -1,0 +1,52 @@
+diff --git a/.claude/settings.json b/.claude/settings.json
+index 4fa7b52..28e56e3 100644
+--- a/.claude/settings.json
++++ b/.claude/settings.json
+@@ -86,6 +86,9 @@
+       "Bash(command:*)",
+       "Bash(type:*)",
+       "Bash(date:*)",
++      "Bash(timestamp=*)",
++      "Bash(local timestamp=*)",
++      "Bash(*date +%Y%m%d-%H%M%S*)",
+       "Bash(basename:*)",
+       "Bash(dirname:*)",
+       "WebSearch",
+diff --git a/CLAUDE.md b/CLAUDE.md
+index 2edb05a..4130bac 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -33,13 +33,16 @@ worktreeを使わないシンプルなアプローチに移行しました：
+ ccSlashCmd-dev/
+ ├── .claude/
+ │   ├── commands/           # カスタムコマンド定義 
+-│   │   ├── init-permissions.md    # プロジェクト権限初期化
++│   │   ├── contexteng-exe-prp.md # Context Engineering 実行用プロンプト
++│   │   ├── contexteng-gen-prp.md # Context Engineering 生成用プロンプト
+ │   │   ├── multi-tdd.md          # TDD特化ワークフロー
+ │   │   ├── multi-feature.md      # 新機能開発ワークフロー
+ │   │   ├── multi-refactor.md     # リファクタリング専用ワークフロー
+ │   │   ├── multi-feature-ccm.md  # ccmanager統合版（レガシー）
+ │   │   ├── s.md                  # スマートコミット
+ │   │   ├── p.md                  # プロジェクト切替
++│   │   ├── search.md             # 高度な検索コマンド
++│   │   ├── sow.md                # 作業計画書生成
+ │   │   └── t.md                  # タスク管理
+ │   ├── prompts/           # エージェント別プロンプト
+ │   │   ├── explorer.md    # 探索・調査専門
+@@ -58,6 +61,7 @@ ccSlashCmd-dev/
+ │   │   ├── test-workflow-improvements.sh
+ │   │   ├── test-refactor-fixes.sh
+ │   │   └── test-parallel-tdd.sh
++│   ├── hooks/             # フック処理スクリプト
+ │   └── settings.local.json # ローカル設定（権限等）
+ ├── tmp/                   # 中間成果物（gitignore対象）
+ ├── setup-links.sh         # シンボリックリンクセットアップ
+@@ -74,6 +78,7 @@ ccSlashCmd-dev/
+ - `~/.claude/prompts` → `ccSlashCmd-dev/.claude/prompts`
+ - `~/.claude/scripts` → `ccSlashCmd-dev/.claude/scripts`
+ - `~/.claude/templates` → `ccSlashCmd-dev/.claude/templates`
++- `~/.claude/hooks` → `ccSlashCmd-dev/.claude/hooks`
+ 
+ ## 開発方針
+ 

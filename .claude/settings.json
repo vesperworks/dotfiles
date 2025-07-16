@@ -17,7 +17,18 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/textlint-hook.sh"
+            "command": "~/.claude/hooks/auto-format.sh"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/scripts/command-logger.sh"
           }
         ]
       }
