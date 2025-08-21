@@ -1,0 +1,8 @@
+feat(commands): add language requirements to contexteng commands
+
+- Add MUST directive for thinking in English and communicating in Japanese
+- Apply to both contexteng-exe-prp.md and contexteng-gen-prp.md commands
+- Update CLAUDE.md with memory section about symlink structure
+- Remove local settings file and update timestamp patterns in settings.json
+
+英語で考えて日本語で会話する指示を追加
