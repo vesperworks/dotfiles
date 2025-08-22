@@ -134,9 +134,12 @@
       "mcp__playwright-server__browser_wait_for",
       "mcp__playwright-server__browser_network_requests",
       "mcp__playwright-server__browser_press_key",
+      "mcp__playwright",
+      "mcp__serena",
       "ListMcpResourcesTool",
       "ReadMcpResourceTool",
-      "Bash(date:*)"
+      "Bash(date:*)",
+      "Bash(~/.claude/scripts/smart-commit.sh:*)"
     ],
     "deny": [
       "Bash(rm -rf:*)",

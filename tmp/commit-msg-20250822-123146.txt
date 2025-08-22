@@ -1,0 +1,3 @@
+docs: update settings.json
+
+hooks と agents のシンボリックリンク設定を完了
