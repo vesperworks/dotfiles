@@ -1,0 +1,3 @@
+docs: update multi-feature-ccm.md
+
+CLAUDE.mdに推奨ワークフローガイドを追加
