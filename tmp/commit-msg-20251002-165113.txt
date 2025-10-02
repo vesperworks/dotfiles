@@ -1,0 +1,3 @@
+chore: update settings.json
+
+を /scにリネーム。

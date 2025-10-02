@@ -174,6 +174,10 @@
     ],
     "includeCoAuthoredBy": false
   },
+  "statusLine": {
+    "type": "command",
+    "command": "input=$(cat); printf '\\e[90m⚡mur41\\e[0m'; if git rev-parse --git-dir >/dev/null 2>&1; then branch=$(git branch --show-current 2>/dev/null || echo 'detached'); printf ' \\e[90m±\\e[0m \\e[90m%s\\e[0m' \"$branch\"; fi; printf ' \\e[90m%s\\e[0m' \"$(echo \"$input\" | jq -r '.model.display_name // \"Claude\"')\"; if [ -n \"$AWS_PROFILE\" ] && [ \"$AWS_PROFILE\" != \"aiss-ClaudeCode-murai\" ]; then printf ' \\e[90mAWS:%s\\e[0m' \"$AWS_PROFILE\"; elif [ \"$AWS_PROFILE\" = \"aiss-ClaudeCode-murai\" ]; then printf ' \\e[42m\\e[30m \\e[0m'; fi; cwd=\"$(echo \"$input\" | jq -r '.workspace.current_dir // \"\"')\"; if [ -n \"$cwd\" ]; then printf ' \\e[90m%s\\e[0m' \"$(basename \"$cwd\")\"; fi"
+  },
   "hooks": {
     "Stop": [
       {
@@ -208,5 +212,6 @@
         ]
       }
     ]
-  }
+  },
+  "alwaysThinkingEnabled": true
 }
