@@ -1,6 +1,50 @@
 # Neovim Development Logs
 
-## 📅 2025年7月（現在の月）
+## 📅 2025年9月（現在の月）
+
+### 2025-09-24 - tmux-continuum自動保存修復：1ヶ月間停止していた自動保存機能復旧（完了）
+
+**背景**: tmux-resurrect/continuumの自動保存が8月22日以降停止し、古すぎるセッションが復元されていた
+**解決**: continuumプラグインの手動再起動とタイマー設定の再初期化により15分間隔での自動保存復活
+**使用方法**: 自動保存（15分間隔）、手動保存（Ctrl+a + Ctrl+s）、手動復元（Ctrl+a + Ctrl+r）
+
+**技術的レガシー**:
+- tmux-continuumはtmux内部タイマーを使用（独立プロセスなし）
+- プラグイン停止時は`tmux run-shell continuum.tmux`で再起動
+- 保存場所: `~/.local/share/tmux/resurrect/`（XDG準拠）
+- テスト方法: 間隔を短縮（5分）して動作確認後に元設定（15分）に戻す
+
+---
+
+### 2025-09-18 - vw photos_monitorコマンド実装：Photos/iCloud同期モニタリング機能（完了）
+
+**背景**: Photos/iCloudの同期状況を視覚的に監視し、I/O状況とphotolibrarydプロセスの進捗を同時に追跡したい
+**解決**: 既存のbashスクリプトを`vw photos_monitor`として`.vw`ディレクトリに配置、統一されたvwツールセットに追加
+**使用方法**: `vw photos_monitor --volume /Volumes/MyBook4TB --library "/path/to/Photo Library.photoslibrary"` - ボリュームI/Oとphotolibrarydログを並列監視
+
+**技術的レガシー**:
+- 外部スクリプトのvwツールセット統合パターン
+- 複数プロセス並列監視（I/O + ログストリーム）
+- iostat + log streamコマンドによるmacOSシステム監視手法
+
+---
+
+## 📅 2025年8月
+
+### 2025-08-18 - VW CCC実装：Claude Code文脈コマンド生成機能（完了）
+
+**背景**: Claude Codeに現在の文脈に沿ったコマンドを考えてもらい、クリップボードにペーストしたい
+**解決**: `vw ccc`コマンドでClaude Codeの`-p`モードを活用し、プロジェクト文脈でコマンド生成＆クリップボードコピー
+**使用方法**: `vw ccc "ghでpr作るコマンド考えて"` - 生成されたコマンドが自動でクリップボードにコピー
+
+**技術的レガシー**:
+- Claude Code CLIとの外部連携パターン
+- プロンプト強化による実行可能コマンド出力の制御
+- 既存vwツールセットとの統一インターフェース設計
+
+---
+
+## 📅 2025年7月
 
 ### 2025-07-14 - Think & Idea Callout追加：思考・アイデア記録機能実装（完了）
 
@@ -93,6 +137,8 @@
 - `vw commit` → Git commit + クリップボードコピー
 - `vw git-commit-gen` → AI生成コミットコマンド + クリップボードコピー
 - `vw git-templ` → GitHubプライベートテンプレート作成
+- `vw ccc` → Claude Code文脈コマンド生成 + クリップボードコピー
+- `vw photos_monitor` → Photos/iCloud同期モニタリング（I/O + プロセスログ）
 
 ---
 
