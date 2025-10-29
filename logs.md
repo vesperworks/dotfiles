@@ -5,17 +5,24 @@
 ### 2025-10-28 - gp.nvim導入：OpenAI GPT統合とカスタムプロンプト実装（完了）
 
 **背景**: Visual modeで選択したテキストに特定のプロンプトを適用し、構造化されたノートに変換したい
-**解決**: gp.nvimプラグインを導入し、カスタムhooksで独自プロンプトを実装。選択範囲を「＝（同格/What）」と「→（因果/Why）」で再構成するノート整理機能を追加
+**解決**: gp.nvimプラグインを導入し、`<leader>c`風のInsert modeメニューUIで複数のGPTプロンプトを実装。ノート整理・翻訳・コード説明・文法修正・リファクタリング・要約の6種類を実装
 **使用方法**: 
-- `<leader>an` → Visual選択範囲をノート整理（rewrite）
-- `:GpCompactNote` → コマンドでノート整理実行
-- `:10,20GpCompactNote` → 範囲指定でノート整理
+- `<leader>l` → LLMプロンプトメニューを表示
+  - `n` → 📝 ノート整理 (書き換え)
+  - `t` → 🇯🇵 日本語翻訳 (追加)
+  - `e` → 💡 コード説明 (ポップアップ)
+  - `f` → ✍️  文法修正 (書き換え)
+  - `r` → 🔧 リファクタリング (分割)
+  - `s` → 📋 要約 (追加)
+- 個別コマンド: `<leader>ln`, `<leader>lt`, `<leader>le`, `<leader>lf`, `<leader>lr`, `<leader>ls`
+- コマンド直接実行: `:GpCompactNote`, `:GpTranslateJP`, `:GpExplainCode`, `:GpFixGrammar`, `:GpRefactorCode`, `:GpSummarize`
 
 **技術的レガシー**:
 - gp.nvim hooksによるGPTs風カスタムプロンプト実装パターン
+- `<leader>c`風Insert modeメニューUIとの統一感
 - Luaの長文字列リテラル`[[...]]`でXMLタグをそのまま記述
 - `{{selection}}`変数による選択範囲の自動挿入
-- `gp.Target.rewrite`による選択範囲の直接書き換え
+- 出力ターゲットの使い分け: `rewrite`(書き換え), `append`(追加), `popup`(ポップアップ), `vnew`(分割)
 - 環境変数`OPENAI_API_KEY`によるAPI認証
 
 ---
@@ -149,6 +156,16 @@
 - `<leader>Tq` → 全タイマー停止
 - `<leader>Tc` → タイマーデータクリア
 - `<leader>TD` → デバッグモード切替
+
+### LLMプロンプト
+- `<leader>l` → LLMプロンプトメニュー
+  - `n` → 📝 ノート整理
+  - `t` → 🇯🇵 日本語翻訳
+  - `e` → 💡 コード説明
+  - `f` → ✍️  文法修正
+  - `r` → 🔧 リファクタリング
+  - `s` → 📋 要約
+- 個別コマンド: `<leader>ln/lt/le/lf/lr/ls`
 
 ### ファイル操作
 - `<leader>o` → スマートファイルオープン（smart-open.nvim）
