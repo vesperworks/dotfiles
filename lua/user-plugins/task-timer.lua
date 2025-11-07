@@ -869,6 +869,53 @@ function M.remove_lost_tasks()
   end
 end
 
+-- 🗑️ 現在のバッファ内の全進行中タスク[-]を中止[/]に変換
+function M.cancel_all_in_progress_tasks()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local file_path = vim.api.nvim_buf_get_name(bufnr)
+  
+  if vim.bo[bufnr].filetype ~= 'markdown' then
+    vim.notify("📊 Markdownファイルでのみ実行できます", vim.log.levels.WARN)
+    return
+  end
+  
+  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  local count = 0
+  local stopped_timers = {}
+  
+  -- 変換前にタイマーを特定して停止
+  for line_num, line in ipairs(lines) do
+    if line:match('-%s*%[%-%]') then
+      -- タスクIDを生成（変換前の内容で）
+      local task_id = display.generate_task_id(file_path, line)
+      
+      -- タイマーが動いている場合は記録
+      if active_timers[task_id] then
+        table.insert(stopped_timers, task_id)
+      end
+      
+      -- [-]を[/]に置換
+      local new_line = line:gsub('%[%-%]', '[/]')
+      lines[line_num] = new_line
+      count = count + 1
+    end
+  end
+  
+  if count > 0 then
+    -- バッファを更新
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+    
+    -- タイマーを停止
+    for _, task_id in ipairs(stopped_timers) do
+      M.stop_timer(task_id)
+    end
+    
+    vim.notify(string.format("🗑️ %d個のタスクを中止しました（タイマー停止: %d個）", count, #stopped_timers), vim.log.levels.INFO)
+  else
+    vim.notify("📊 進行中のタスクはありません", vim.log.levels.INFO)
+  end
+end
+
 -- Insertモードから抜けた時のタイマー自動復元（デバッグ版）
 function M.auto_restore_timers(bufnr)
   local file_path = vim.api.nvim_buf_get_name(bufnr)
