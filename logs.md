@@ -2,6 +2,88 @@
 
 ## 📅 2025年11月（現在の月）
 
+### 2025-11-10 - Markdown callout fold機能修正：親見出しと兄弟関係に変更（完了）
+
+**背景**: callout foldが動作せず、`zc`すると親見出しが閉じられてしまう。calloutを見出しの子供ではなく兄弟として扱う必要があった
+**解決**: calloutのfoldlevelを固定値7から親見出しと同じレベルに変更。`get_parent_heading_level()`関数で親見出しレベルを取得し、calloutを兄弟関係として配置
+**使用方法**: 
+- `zc` → callout上でcalloutのみ閉じる ✅
+- `zc` → 見出し上で見出しのみ閉じる ✅
+- calloutと見出しが独立して操作可能
+
+**技術的レガシー**:
+- Vimのfold階層：親子関係vs兄弟関係の理解が重要
+- 固定foldlevel → 動的foldlevelへの変更パターン
+- 上方向への見出し検索アルゴリズム（`get_parent_heading_level()`）
+- callout終了処理（`<7`）は不要（親レベルで自動終了）
+
+### 2025-11-10 - Markdown callout fold機能デバッグ：callout終端でfoldを確実に閉じる修正（完了）
+
+**背景**: `is_callout_start()` は正しく機能していたが、callout本体の末尾で foldexpr が `<レベル` を返していなかったため、callout行で `zc` を実行すると親見出し全体が閉じてしまっていた
+**解決**: 次行の状態を確認する `getline_or_empty()` を追加し、callout本体の最終行で `<parent_level` を返すように変更。デバッグ版でも同様の挙動を記録してログ出力するように調整
+**使用方法**:
+- `setlocal foldexpr=v:lua.require('user-plugins.markdown-fold').foldexpr()` で callout 単位の開閉が可能
+- `zc` を callout 開始行で実行 → callout ブロックのみ閉じる
+- 親見出しを `zo` してから `zc` → 見出しと独立して callout を閉じられる
+
+**技術的レガシー**:
+- foldexpr で `<n` を返すと、その行で fold が確実に終端する
+- `getline_or_empty()` のようなガード付きヘルパーで範囲外アクセスを防止
+- デバッグ版でも本番と同じ fold レベルを返すことでログの信頼性を担保
+
+### 2025-11-10 - Markdown callout fold適用の自動化：after/ftpluginへ移動（完了）
+
+**背景**: Neovim標準の`ftplugin/markdown.vim`が後段で再度`foldexpr=MarkdownFold()`を設定してしまい、手動で`setlocal foldexpr=v:lua.require('user-plugins.markdown-fold').foldexpr()`を実行しないとカスタムfoldが使えなかった
+**解決**: ユーザー定義のftpluginを`after/ftplugin/markdown.vim`に移動し、標準設定が適用された後にカスタムfoldexpr/foldtextを上書きするよう調整。これによりMarkdownファイルを開くだけでcallout foldが有効になる
+**使用方法**:
+- Markdownファイルを開くだけで自動的に`foldexpr`と`foldtext`がカスタム実装に切り替わる
+- デバッグ等で一時的に別foldexprを設定しても、バッファを開き直せば `after/ftplugin` が再度適用される
+
+**技術的レガシー**:
+- Neovimの`'runtimepath'`順序：ユーザーの`ftplugin`は標準より後に配置することで上書きが可能
+- `after/ftplugin`ディレクトリを使うと、標準設定を保持したまま追加/修正ができる
+
+---
+
+### 2025-11-10 - Markdown callout fold機能デバッグ：foldlevel階層修正（完了）
+
+**背景**: callout foldが動作せず、ファイルが存在していなかった。calloutが見出しよりも先に（浅く）畳まれる問題が発生していた
+**解決**: `markdown-fold.lua`を実装し、foldlevelを正しく設定。見出し（foldlevel 1-6）よりもcallout（foldlevel 7）を深い階層に配置
+**使用方法**: 
+- `za` → calloutの折りたたみトグル
+- `zM` → すべて閉じる（見出しが先、calloutは後）
+- `zR` → すべて開く
+
+**技術的レガシー**:
+- Vimのfoldlevel仕様：値が小さいほど優先的に畳まれる
+- 見出し階層：`#`=1, `##`=2, ..., `######`=6
+- callout階層：foldlevel=7（見出しよりも深く）
+- callout検出パターン：`^%s*>%s*%[!%w+%]`（Lua正規表現）
+- callout本体継続判定：`^%s*>`（開始行以外）
+- foldexprでの階層制御：`>7`（開始）、`7`（継続）、`<7`（終了）
+
+---
+
+### 2025-11-07 - Markdown callout fold機能実装：callout専用の折りたたみ機能追加（完了）
+
+**背景**: `> [!type]`形式のObsidian calloutをzcで折りたたみたい。通常のblock quoteは対象外とし、見出しfoldと共存させたい
+**解決**: カスタムLua関数でfoldexprを実装。calloutパターン（`> [!type]`）を検出し、callout本体のみを折りたたみ対象とする。見出しfoldは既存通り動作を維持
+**使用方法**: 
+- `za` → calloutの折りたたみトグル
+- `zc` → calloutを閉じる
+- `zo` → calloutを開く
+- `zM` → すべて閉じる（見出し + callout）
+- `zR` → すべて開く
+
+**技術的レガシー**:
+- Vim標準の`MarkdownFold()`からLuaカスタム実装への移行パターン
+- 正規表現による高度なパターンマッチング（`^%s*>%s*%[!%w+%]`）
+- 見出しfold（既存）とcalloutfold（新規）の共存アーキテクチャ
+- カスタムfoldtext：calloutタイプ別アイコン表示（📝/⚠️/❌/ℹ️/💡/✅/❓/🤔）
+- `v:lua.require()`によるVimscriptからLua関数の呼び出しパターン
+
+---
+
 ### 2025-11-07 - gp.nvim ツリー化プロンプト追加：文章の階層的構造化機能（完了）
 
 **背景**: 長文や複雑な文章を意味・構造ごとに階層的に分解して整理したい
