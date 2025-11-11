@@ -2,6 +2,42 @@
 
 ## 📅 2025年11月（現在の月）
 
+### 2025-11-11 - Markdown callout fold機能更新：専用foldlevel 7を復活（完了）
+
+**背景**: calloutを親見出しと同じfoldlevelにしていたため、`zc`を2回押してもH6→H1のような段階的なクローズ挙動にならず、callout単体の開閉感が薄れていた。
+**解決**: `markdown-fold.lua`に`CALLOUT_LEVEL = 7`を導入し、callout開始行は常に`">7"`でfoldを開くよう変更。callout本体は`7`を維持しつつ、末尾では`<parent_level`を返し、さらに直後の行で親レベルに戻す分岐を追加してfoldリークを防止。
+**使用方法**:
+- callout行で`zc` → callout（foldlevel 7）のみ閉じる
+- 同じ位置で再度`zc` → 親見出し（foldlevel 1-6）が閉じる
+- 見出しのないcalloutでも常にfoldlevel 7として扱われる
+
+**技術的レガシー**:
+- fold階層を定数で固定する`CALLOUT_LEVEL`パターン
+- `get_parent_heading_level()`を用いてcallout終端と直後の行で親レベルへ戻し、`=`によるレベル継承を断ち切る実装
+- `<parent_level`と直後の明示レベル指定でfold終端を確実に制御するテクニック
+
+### 2025-11-10 - Markdown helperリーダーキー常時有効化 & Alt移動キー送出テンプレ追加（完了）
+
+**背景**: Cursor/VSCode起動時は`vim.g.vscode`で`init.lua`が早期returnするため、Markdown helperの`<leader>`系マップが読み込まれていなかった。またAlt+hjklでmini.moveを動かす際、VSCodeがキーイベントを受け取らずNeovimに到達していなかった。
+**解決**: `init.lua`の冒頭で`require('user-plugins.markdown-helper').setup_keymaps()`を実行してからVSCode判定するよう変更し、通常/VSCode双方で同じMarkdownショートカットを利用可能にした。併せて`vscode-alt-move-keybindings.json`を追加し、`"command": "vscode-neovim.send"`経由で`Alt+hjkl`をNeovimへ送信するキーバインド例を共有。
+**使用方法**:
+- VSCode/Cursorの`keybindings.json`に`vscode-alt-move-keybindings.json`の内容を追記すると、`Alt+hjkl`がmini.moveへ届く
+- Markdownファイルで`<leader>1-6`, `<leader>*`, `<leader>-`, `<leader>x`, `<leader>c`などがVSCode上でも即時利用可能
+**技術的レガシー**:
+- VSCode用ガード前に副作用を持つ`require`を済ませることで、共有キーマップを維持しつつ二重ロードを避けるパターン
+- `vscode-neovim.send`コマンドを用いたキー送出例をテンプレ化しておくと、追加のCtrl/Alt系マップにも流用しやすい
+
+### 2025-11-10 - VSCode Neovim分岐と専用設定の導入（完了）
+
+**背景**: Cursor/VSCode上でvscode-neovimを使う際、従来のVSCodeVim設定が混在して競合していた。Neovim側でも通常UI用設定を読み込むため、キーやプラグイン挙動が不安定になっていた。
+**解決**: `init.lua`で`vim.g.vscode`判定を追加し、VSCode環境では早期に`lua/vscode-config.lua`を読み込む構成へ変更。`vscode-config.lua`ではVSCode APIキーマップ、相対番号/サインカラム無効化、最小構成のlazy.nvimセットアップ（mini.move/surround/comment, leap）を定義し、通常Neovim側とは独立した挙動に分離。
+**使用方法**: VSCode/Cursorでvscode-neovimを起動すると自動的に専用設定が読み込まれる。`<leader>ff`でQuick Open、`gd`で定義ジャンプ、`<C-h/j/k/l>`でエディタグループ移動など、VSCodeアクションへ透過的にアクセスできる。通常のNeovim起動時は従来の`config.lazy`やユーザープラグインがそのまま動作。
+**技術的レガシー**:
+- `vim.g.vscode`判定で設定を二分し、副作用のあるrequireをVSCode側から遮断する実装パターン
+- VSCode内ではUI系オプションをNeovim側で無効化し、VSCode APIを`require('vscode').action()`経由で呼び出す
+- lazy.nvimを複数回セットアップするケース（VSCode専用 vs 通常）でも同一`lazypath`を共有しつつ衝突を防ぐ手順
+- VSCode用プラグインは必要最低限のモーション/編集系に限定し、UI依存プラグインは読み込まない
+
 ### 2025-11-10 - Markdown callout fold機能修正：親見出しと兄弟関係に変更（完了）
 
 **背景**: callout foldが動作せず、`zc`すると親見出しが閉じられてしまう。calloutを見出しの子供ではなく兄弟として扱う必要があった

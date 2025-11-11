@@ -1,6 +1,10 @@
--- init.lua / early‐init.lua など、マッピングより前で
 vim.g.mapleader = " "          -- <- Space をリーダーに
-vim.g.maplocalleader = ","     -- ローカルリーダー（ftplugin 専用など）
+vim.g.maplocalleader = " "     -- VSCode統合でも統一
+
+if vim.g.vscode then
+  require("vscode-config")
+  return
+end
 
 -- 起動時 lazy.nvim を読み込む
 require("config.lazy")

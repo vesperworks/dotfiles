@@ -4,6 +4,9 @@
 
 local M = {}
 
+-- calloutは常にfoldlevel 7とする（見出しと独立した階層）
+local CALLOUT_LEVEL = 7
+
 -- calloutアイコンマッピング
 local callout_icons = {
   note = "📝",
@@ -72,6 +75,7 @@ end
 function M.foldexpr()
   local lnum = vim.v.lnum
   local line = vim.fn.getline(lnum)
+  local prev_line = getline_or_empty(lnum - 1)
   local next_line = getline_or_empty(lnum + 1)
   
   -- 見出し検出（優先度：高）
@@ -80,19 +84,23 @@ function M.foldexpr()
     return ">" .. heading_level
   end
   
-  -- callout開始行検出（親見出しと同じレベル = 兄弟関係）
+  -- callout開始行検出（専用foldlevel 7）
   if is_callout_start(line) then
-    local parent_level = get_parent_heading_level(lnum)
-    return ">" .. parent_level
+    return ">" .. CALLOUT_LEVEL
   end
   
-  -- callout本体（親見出しと同じレベルを維持）
+  -- callout本体（専用foldlevelを維持）
   if is_callout_body(line) then
     local parent_level = get_parent_heading_level(lnum)
     if not is_callout_body(next_line) then
       return "<" .. parent_level
     end
-    return parent_level
+    return CALLOUT_LEVEL
+  end
+
+  -- calloutが終わった直後の行では親見出しのレベルに戻す
+  if (is_callout_start(prev_line) or is_callout_body(prev_line)) and not is_callout_body(line) then
+    return get_parent_heading_level(lnum)
   end
   
   -- デフォルト：親のfoldレベルを継承

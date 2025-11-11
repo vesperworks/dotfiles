@@ -2,7 +2,7 @@
 
 これは見出し1の内容です。
 
-> [!note] ノート（foldlevel 2 = 1+1）
+> [!note] ノート（foldlevel 7 = 固定階層）
 > これはノートの内容です。
 > 複数行にわたる内容も
 > 折りたたむことができます。
@@ -11,7 +11,7 @@
 
 これは見出し2の内容です。
 
-> [!warning] 警告（foldlevel 3 = 2+1）
+> [!warning] 警告（foldlevel 7 = 固定階層）
 > この警告は見出し2の子要素として
 > 見出し2よりも深い階層になります。
 
@@ -19,13 +19,13 @@
 
 これは見出し3の内容です。
 
-> [!think] #think（foldlevel 4 = 3+1）
+> [!think] #think（foldlevel 7 = 固定階層）
 > 思考メモです。
 > 見出し3の子要素として扱われます。
 
 #### さらに深い見出し4
 
-> [!tip] ヒント（foldlevel 5 = 4+1）
+> [!tip] ヒント（foldlevel 7 = 固定階層）
 > 見出し4の中のcallout
 
 ## テスト2：カーソル操作確認用
@@ -34,7 +34,7 @@
 
 見出し3の中に：
 
-> [!info] 情報（foldlevel 4 = 3+1）
+> [!info] 情報（foldlevel 7 = 固定階層）
 > calloutが入っています。
 > カーソルをcallout上に置いて `zc` → calloutのみ閉じる
 > カーソルを見出し上に置いて `zc` → 見出し全体が閉じる
@@ -45,10 +45,8 @@
 
 ## 見出しなしのcallout
 
-> [!note] トップレベルのcallout（foldlevel 2 = 1+1）
-> 親見出しがない場合、デフォルトでfoldlevel 1として扱われ
-> calloutはfoldlevel 2になります
-
+> [!note] トップレベルのcallout（foldlevel 7 = 固定階層）
+> 親見出しがない場合でも callout は foldlevel 7 のまま扱われます
 
 
 
