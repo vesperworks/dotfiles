@@ -1,4 +1,8 @@
 local vscode = require("vscode")
+local markdown_helper = require("user-plugins.markdown-helper")
+
+-- VSCode側でもMarkdownリーダー系ショートカットを有効化
+markdown_helper.setup_keymaps()
 
 local function vscode_action(action)
   return function()
