@@ -32,6 +32,8 @@ vim.keymap.set("n", "<C-k>", vscode_action("workbench.action.navigateUp"))
 vim.keymap.set("n", "<C-l>", vscode_action("workbench.action.navigateRight"))
 
 vim.keymap.set({ "n", "v" }, "<leader>/", vscode_action("editor.action.commentLine"))
+-- Move the current visual selection to the end of the file
+vim.keymap.set("v", "<leader>m", ":move $<CR>gv=gv", { desc = "Move selection to end" })
 
 -- VSCode用の限定プラグインセット
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"

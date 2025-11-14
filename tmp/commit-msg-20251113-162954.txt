@@ -1,0 +1,5 @@
+feat(vscode): enable markdown-helper keymaps in VSCode mode
+
+- Add markdown_helper module integration to vscode-config
+- Enable Markdown reader shortcuts in VSCode environment
+- Ensure consistent keybindings across Neovim and VSCode

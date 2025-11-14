@@ -97,9 +97,12 @@ if ok then
     local backup_status = stats.backup_exists and "💾 あり" or "❌ なし"
     vim.notify(string.format("📋 ストレージ統計:\n総タイマー数: %d個\nバックアップ: %s", stats.total_timers, backup_status), vim.log.levels.INFO)
   end, { desc = "📋 ストレージ統計", silent = true })
-  vim.keymap.set('n', '<leader>j', function() task_timer.jump_to_active_timer() end, 
+vim.keymap.set('n', '<leader>j', function() task_timer.jump_to_active_timer() end, 
     { desc = "🎯 稼働中タイマーにジャンプ", silent = true })
 end
+
+-- Move the current visual selection to the end of the file in native Neovim
+vim.keymap.set("v", "<leader>m", ":move $<CR>gv=gv", { desc = "Move selection to end", silent = true })
 
 -- Cmd+S で保存
 vim.keymap.set('n', '<C-s>', ':w<CR>', { desc = "ファイル保存", silent = true })
