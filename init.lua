@@ -61,6 +61,9 @@ vim.api.nvim_create_autocmd("FileType", {
 vim.keymap.set({ "n", "v" }, "L", "$", { noremap = true, silent = true })
 vim.keymap.set({ "n", "v" }, "H", "^", { noremap = true, silent = true })
 
+-- Escで検索ハイライトをクリア
+vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>', { noremap = true, silent = true })
+
 -- システムクリップボードにyank
 vim.opt.clipboard:append("unnamedplus")
 -- 次の飛び先も記録

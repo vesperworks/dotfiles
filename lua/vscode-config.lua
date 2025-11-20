@@ -15,6 +15,16 @@ vim.opt.number = false
 vim.opt.relativenumber = false
 vim.opt.signcolumn = "no"
 
+-- VSCode利用時はモードごとにカーソル形状を出し分ける
+local cursor_shapes = table.concat({
+  "n-v-c:block",   -- Normal/Visual/Command-line
+  "i-ci:ver25",    -- Insert/Command-line insert
+  "r-cr:hor20",    -- Replace/Confirm
+  "o:hor35",       -- Operator-pending
+  "sm:block",      -- showmatch
+}, ",")
+vim.opt.guicursor = cursor_shapes
+
 -- VSCode連携キーマップ
 vim.keymap.set("n", "<leader>ff", vscode_action("workbench.action.quickOpen"))
 vim.keymap.set("n", "<leader>fg", vscode_action("workbench.action.findInFiles"))
