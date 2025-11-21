@@ -1,0 +1,34 @@
+# vwCleanAnon Project Tasks
+
+- [/] **プロジェクト初期化**
+    - [x] Bun + Vite + React + TypeScript プロジェクトの初期化 <!-- id: 0 -->
+    - [x] 依存関係のインストール (Mastra, Tailwind CSS, etc.) via Bun <!-- id: 1 -->
+    - [x] Tailwind CSS の設定 <!-- id: 2 -->
+    - [x] プロジェクト構造のセットアップ (components, hooks, utils, mastra) <!-- id: 3 -->
+- [ ] **Mastra セットアップ**
+    - [x] Mastra Init (Playground ベース) <!-- id: 4 -->
+    - [x] Gemini Flash 2.0 連携の設定 <!-- id: 5 -->
+    - [x] ワークフロー用 Zod スキーマの定義 <!-- id: 6 -->
+- [ ] **ワークフロー実装**
+    - [x] `validate-and-parse-files` ステップの実装 <!-- id: 7 -->
+    - [x] `analyze-content` ステップの実装 <!-- id: 8 -->
+    - [x] `anonymize-text` ステップの実装 <!-- id: 9 -->
+    - [x] `gemini-confirmation` ステップの実装 <!-- id: 10 -->
+    - [x] `remove-fillers` ステップの実装 (Gemini Tool) <!-- id: 11 -->
+    - [x] `generate-output` ステップの実装 <!-- id: 12 -->
+    - [x] `vwCleanAnonWorkflow` の構築 <!-- id: 13 -->
+- [ ] **UI 実装**
+    - [x] レイアウトと基本スタイルの作成 <!-- id: 14 -->
+    - [x] `EnhancedFileDropZone` の実装 <!-- id: 15 -->
+    - [x] APIクライアントのリファクタリング (`create-run` -> `start` -> ポーリング パターン) <!-- id: 3 -->
+    - [x] 公式Mastra APIパターンの調査 (OpenAPI/Docs) <!-- id: 4 -->
+    - [x] 正しいAPIポート(4112)とワークフローID(`vwCleanAnonWorkflow`)の特定 <!-- id: 5 -->
+    - [x] 実行の永続化検証またはステータス確認用 `watch` エンドポイントの使用 <!-- id: 6 -->
+    - [x] `pollWorkflowResult` または `watchWorkflow` ロジックの実装 <!-- id: 7 -->
+    - [x] `useWorkflowProcessor` フックの更新 <!-- id: 8 -->
+- [ ] **統合と検証**
+    - [x] UI と Mastra Workflow の接続 <!-- id: 20 -->
+    - [x] Git 初期化とブランチ作成 <!-- id: 23 -->
+    - [x] サンプルデータによる E2E フロー検証 (Mastra APIエンドポイントのデバッグ) <!-- id: 21 -->
+    - [x] CLI実行スクリプト (`scripts/run-workflow.ts`) の作成と検証 <!-- id: 26 -->
+    - [ ] パフォーマンス最適化とエラーハンドリング <!-- id: 22 -->
