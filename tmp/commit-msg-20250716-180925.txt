@@ -1,9 +1,0 @@
-docs: update CLAUDE.md with latest command structure and symlink configuration
-
-- Add new Context Engineering commands (contexteng-exe-prp.md, contexteng-gen-prp.md)
-- Add search.md and sow.md commands to the command list
-- Include hooks directory in project structure
-- Update symlink configuration to include ~/.claude/hooks
-- Add timestamp-related Bash permissions to settings.json
-
-$ARGUMENTSの内容: CLAUDE.md のシンボリック構成を現状の最新にして

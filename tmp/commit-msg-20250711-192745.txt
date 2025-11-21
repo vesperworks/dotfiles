@@ -1,8 +1,0 @@
-feat(hooks): enhance notification with terminal-notifier and simplify UI
-
-- Replace osascript with terminal-notifier for click actions
-- Click notification to open project in VSCode
-- Simplify title to show only project name with robot emoji
-- Add fallback to osascript when terminal-notifier is not installed
-- Configure hooks in settings.json for Stop and PostToolUse events
-- Update setup-links.sh to automatically run setup-hooks.sh

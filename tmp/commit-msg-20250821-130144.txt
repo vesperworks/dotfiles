@@ -1,3 +1,0 @@
-docs: update s.md
-
-ccSlashCmd-dev の /s コマンド修正 - スクリプト分離とワンライナー化

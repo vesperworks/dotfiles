@@ -1,3 +1,0 @@
-chore: update miscellaneous changes
-
-エージェントファイル作成・修正ガイドラインをプロジェクトルートに配置

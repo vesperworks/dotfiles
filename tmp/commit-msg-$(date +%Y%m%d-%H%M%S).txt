@@ -1,7 +1,0 @@
-feat(commands): add tmp directory integration for better workflow tracking
-
-- Add tmp directory creation and file archiving to p, s, and t commands
-- p.md: Save research reports, task plans, and execution logs
-- s.md: Archive git diffs and commit messages for history
-- t.md: Create backups and archive reports when moving tasks
-- Improve traceability and audit trail for all command operations
