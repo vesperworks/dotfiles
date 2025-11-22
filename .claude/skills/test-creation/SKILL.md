@@ -1,6 +1,6 @@
 ---
 name: test-creation
-description: Test creation specialist for TDD RED phase with integrated testing capabilities (integrated from vwsub-tester). Use when creating failing tests before implementation, designing comprehensive test suites, or establishing test coverage goals. Specializes in unit test design, integration test patterns, E2E test scenarios, boundary value testing, and test-first development. Supports Jest/Vitest, pytest, and Rust test frameworks with parallel execution support.
+description: Test creation specialist for TDD RED phase with integrated testing capabilities (integrated from vwsub-tester). Use when creating failing tests before implementation, designing comprehensive test suites, or establishing test coverage goals. Specializes in unit test design, integration test patterns, E2E test scenarios, boundary value testing, and test-first development. Supports Jest/Vitest, pytest, and Rust test frameworks with parallel execution support. NOT for implementing production code (use feature-implementation) and NOT for post-implementation QA only (use quality-assurance/vw-reviewer).
 ---
 
 # Test Creation (RED Phase)
@@ -154,6 +154,11 @@ When working alongside Implementation Agent:
 1. **Define clear specifications** - Tests serve as documentation
 2. **Export test interface** - Implementation can validate against tests
 3. **Report completion** - Signal when tests are ready
+
+## Rollback / Recovery (テスト設計ミス時)
+- 失敗すべきテストがGREENのままの場合、期待条件とセットアップを見直し、最小の失敗ケースに修正
+- 誤った前提で量産したテストはコミット単位で `git revert` し、正しい前提で再作成
+- 修正内容・根拠・再実行結果を `./tmp/{timestamp}-test-creation-report.md` に追記して共有
 
 ## Output Deliverables
 

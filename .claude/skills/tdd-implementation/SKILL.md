@@ -1,6 +1,6 @@
 ---
 name: tdd-implementation
-description: Test-Driven Development implementation cycle (Red-Green-Refactor) with integrated debugging capabilities (integrated from error-debugger). Use when implementing new features with comprehensive test coverage, diagnosing errors, or following TDD methodology. Specializes in unit test design, mocking strategies, error diagnosis, root cause analysis, and test-first development workflow with systematic debugging when failures occur. Supports Node.js/TypeScript, Python, and Rust projects with MCP integration for Context7 documentation.
+description: Test-Driven Development implementation cycle (Red-Green-Refactor) with integrated debugging capabilities (integrated from error-debugger). Use when implementing new features with comprehensive test coverage, diagnosing errors, or following TDD methodology. Specializes in unit test design, mocking strategies, error diagnosis, root cause analysis, and test-first development workflow with systematic debugging when failures occur. Supports Node.js/TypeScript, Python, and Rust projects with MCP integration for Context7 documentation. NOT for strategic requirement definition (use strategic-planning) and NOT for final release review only (use quality-assurance/vw-reviewer).
 ---
 
 # TDD Implementation + Debugging
@@ -103,6 +103,11 @@ try {
 - Use `#[cfg(test)]` module
 - `cargo test` for running tests
 - `cargo clippy && cargo fmt`
+
+## Rollback / Recovery (TDD失敗時)
+- Red/Green のどこで破綻したかを特定し、失敗テストを最小再現ケースとして残す
+- 実装が不適切な場合は最後のコミットを `git revert`、未コミットなら `git restore` で戻し、Red から再開
+- デバッグで追加したロギング・フラグは復旧後に掃除し、再発防止メモを `./tmp/{timestamp}-tdd-report.md` に追記
 
 ## Output Deliverables
 

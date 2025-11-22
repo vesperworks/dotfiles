@@ -1,6 +1,6 @@
 ---
 name: codebase-exploration
-description: Deeply analyzes existing codebase features by tracing execution paths. Includes tech research and domain investigation capabilities (integrated from tech-domain-researcher). Use when exploring code structure, finding similar features, understanding architecture before implementation, or researching new technologies and frameworks. Specializes in dependency mapping, pattern recognition, impact analysis, and modern tech stack research with WebSearch and Context7 MCP integration.
+description: Deeply analyzes existing codebase features by tracing execution paths. Includes tech research and domain investigation capabilities (integrated from tech-domain-researcher). Use when exploring code structure, finding similar features, understanding architecture before implementation, or researching new technologies and frameworks. Specializes in dependency mapping, pattern recognition, impact analysis, and modern tech stack research with WebSearch and Context7 MCP integration. NOT for implementing features or fixing failing tests (use feature-implementation/tdd-implementation) and NOT for final QA gates (use quality-assurance/vw-reviewer).
 ---
 
 # Codebase Exploration + Tech Research
@@ -32,6 +32,11 @@ Systematically investigate existing codebases and research modern technologies b
 - Impact scope identification
 - Tech recommendations (if research performed)
 - Next step proposals
+
+## Rollback / Recovery (調査結果が誤っていた場合)
+- 調査ログと結論の根拠ファイルを明示し、誤り箇所を訂正して再保存
+- 誤誘導があったタスクに対して「不要な変更は未適用」かを確認し、適用済みなら `git revert` で戻すよう開発者に明示
+- 代替調査パス（別キーワード・別層の検索）を提案して再計測する
 
 ## Advanced References
 

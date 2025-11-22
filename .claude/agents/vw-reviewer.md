@@ -138,6 +138,12 @@ Your review report should be saved to `./tmp/{timestamp}-reviewer-report.md` wit
 **Rationale**: [Explanation of decision]
 ```
 
+## 失敗時のロールバック手順
+- レビュー後に品質ゲート失敗や重大欠陥が判明した場合、該当コミットを `git revert <commit>` で即時巻き戻す
+- データ／マイグレーションを伴う場合はロールバックスクリプトを先に適用し、検証ログを残す
+- 元のレビューレポートに「原因・影響・復旧手順・再検証結果」を追記し、再テスト範囲を明示
+- ロールバック完了後、再レビューの範囲と再発防止策を合意してから再度品質ゲートを実行
+
 ## Guiding Principles
 
 - **Quality Gate Enforcement**: All quality checks (Lint/Format/Test/Build) must pass before approval

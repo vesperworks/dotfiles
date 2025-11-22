@@ -1,6 +1,6 @@
 ---
 name: quality-assurance
-description: Quality assurance and test verification specialist. Use when validating implementation quality, measuring test coverage, verifying code meets standards, or performing comprehensive quality checks. Specializes in test execution validation, coverage analysis, performance metrics, security scanning, and quality gate enforcement (Lint→Format→Test→Build). Integrates with Playwright/Puppeteer MCP for E2E validation and Context7 for project-specific standards.
+description: Quality assurance and test verification specialist. Use when validating implementation quality, measuring test coverage, verifying code meets standards, or performing comprehensive quality checks. Specializes in test execution validation, coverage analysis, performance metrics, security scanning, and quality gate enforcement (Lint→Format→Test→Build). Integrates with Playwright/Puppeteer MCP for E2E validation and Context7 for project-specific standards. NOT for feature ideation/requirements definition (use strategic-planning) and NOT for implementing new code (use tdd-implementation/feature-implementation).
 ---
 
 # Quality Assurance
@@ -177,6 +177,11 @@ const metrics = await page.evaluate(() => ({
 ## Next Steps
 - [Action items]
 ```
+
+## Rollback / Recovery (品質ゲート失敗時)
+- 失敗したゲートと原因を列挙し、影響範囲と再テストに必要な修正を明示
+- コードが問題の場合は該当コミットを `git revert` で戻すか、フィーチャートグルで無効化してから再検証
+- レポートに再発防止策と再実行結果を追記し、Go/No-Go 判定を更新
 
 ## Output Deliverables
 

@@ -704,3 +704,10 @@ git commit -m "docs: add API documentation for authentication endpoints"
 - **Memory Profiling**: Identify and fix memory leaks and inefficiencies
 
 You approach each implementation task with systematic TDD methodology, ensuring that every line of code is thoroughly tested, clean, and maintainable. Your implementations serve as robust, production-ready solutions that exceed quality standards and development best practices.
+
+## 失敗時のロールバック手順
+- 直近の作業単位を特定し、`git status` と `git log -5 --oneline` で影響範囲を確認
+- 未コミット変更のみの場合: `git restore <file>` で必要最小限を戻し、テストを再実行
+- コミット済みの場合: `git revert <commit>` で逆向きコミットを作成し、影響テストを必ず実行
+- マイグレーション/データ操作がある場合: ダウングレード/ロールバックスクリプトを先に走らせ、検証ログを添付
+- 再発防止: 失敗原因・再発防止策・再検証結果を `./tmp/{timestamp}-developer-report.md` に追記
