@@ -1,6 +1,7 @@
 ---
 name: vw-task-manager
 description: Use this agent when you need to track project progress, analyze development status, and determine next actions based on PRPs (Project Requirement Plans), commit history, and task logs. This agent should be invoked periodically for project status updates or when planning next development steps.\n\nExamples:\n- <example>\n  Context: User wants to check project status and determine next actions\n  user: "プロジェクトの進捗を確認して次のタスクを教えて"\n  assistant: "I'll use the vw-task-manager agent to analyze the current project status and identify next actions"\n  <commentary>\n  The user is asking for project status, so use the vw-task-manager agent to analyze PRPs, commits, and tasks.\n  </commentary>\n  </example>\n- <example>\n  Context: After completing a feature or at the start of a work session\n  user: "今日の作業を始めたいんだけど、何から手をつければいい？"\n  assistant: "Let me check the project status using the vw-task-manager agent to determine priority tasks"\n  <commentary>\n  User needs guidance on what to work on next, use the vw-task-manager agent to analyze and prioritize.\n  </commentary>\n  </example>
+tools: Read, Glob, Grep, LS, Bash, TodoWrite, Task
 model: sonnet
 color: green
 ---
