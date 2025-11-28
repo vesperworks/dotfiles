@@ -1,5 +1,11 @@
 # Execute BASE PRP
 
+⚠️ **DEPRECATION NOTICE**: このコマンドは非推奨です。代わりに `@vw-orchestrator` エージェントを使用してください。
+- **推奨**: `@vw-orchestrator "PRPs/your-prp-file.md を使って実装"`
+- **理由**: vw-orchestratorは6フェーズワークフロー全体を管理し、PRP統合、品質ゲート、E2Eテストまで一貫して実行します
+
+---
+
 Implement a feature using using the PRP file.
 
 ## MUST: Language Requirements
