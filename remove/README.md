@@ -129,6 +129,43 @@
 
 ---
 
+### 9. scripts/role-utils.sh
+
+**移動日時**: 2025-11-30
+
+**理由**:
+- アクティブな使用が一切ない（.klaude/agents/, commands/, skills/からの参照なし）
+- 役割進化型ワークフローの実験的ユーティリティとして作成されたが、実際には統合されず
+- 現在のワークフローはvw-*エージェントがClaude出力で役割管理
+- 成果物は./tmp/に直接保存（スクリプト経由ではない）
+
+**サイズ**: 346行
+
+**エクスポート関数**: switch_role, save_artifact, load_previous_artifact, log_role, generate_task_summary 等
+
+**移動コミット**: 追加クリーンアップ実施時
+
+---
+
+### 10. scripts/worktree-utils.sh
+
+**移動日時**: 2025-11-30
+
+**理由**:
+- アクティブな使用が一切ない（唯一の参照は既に移動済みのparallel-agent-utils.sh）
+- ヘッダーコメントで「worktree関連の機能はすべて削除されました」と明記
+- worktreeベースワークフローの遺物（現在は役割進化型ワークフローに移行）
+- 品質チェックはvw-reviewerエージェントが直接実行（run_quality_checks()未使用）
+- プロンプトは.klaude/skills/のProgressive Disclosureで管理
+
+**サイズ**: 460行
+
+**エクスポート関数**: detect_project_type, run_quality_checks, get_test_command, create_pull_request 等
+
+**移動コミット**: 追加クリーンアップ実施時
+
+---
+
 ## 削除候補リスト（将来的な完全削除の参考）
 
 ### 推奨削除時期: 3-6ヶ月後（2025-02〜2025-05頃）
@@ -152,6 +189,8 @@
 - `reports/explore-results-bugfix-*.md` - 歴史的価値は低い（保管中、2025-05-01見直し）
 - `scripts/parallel-agent-utils.sh` - 未使用、worktreeレガシー（保管中、3-6ヶ月後削除検討）
 - `hooks/textlint-hook.sh` - 未登録、プロジェクト固有（保管中、3-6ヶ月後削除検討）
+- `scripts/role-utils.sh` - 未使用、役割進化型ワークフローの実験的ユーティリティ（保管中、3-6ヶ月後削除検討）
+- `scripts/worktree-utils.sh` - 未使用、worktreeワークフローのレガシー（保管中、3-6ヶ月後削除検討）
 
 ## Git履歴の保持
 
