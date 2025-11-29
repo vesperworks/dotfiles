@@ -1,7 +1,7 @@
 ---
 name: vw-prp-orchestrator
 description: Orchestrator for PRP generation. Detects single/multi mode, coordinates 4 parallel sub-agents (SubAgent→Skills pattern), evaluates results, and presents recommendations to user.
-tools: Read, Grep, Glob, TodoWrite, Task, AskUserQuestion, WebSearch, Write
+tools: Read, Grep, Glob, TodoWrite, Task, AskUserQuestion, WebSearch, Write, Skill
 model: sonnet
 color: purple
 ---
