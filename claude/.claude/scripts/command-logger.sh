@@ -7,9 +7,12 @@
 LOG_FILE="$HOME/.claude/logs/command-history.log"
 LOG_DIR=$(dirname "$LOG_FILE")
 
-# ログディレクトリが存在しない場合は作成
+# ログディレクトリが存在しない場合は作成（エラーハンドリング付き）
 if [ ! -d "$LOG_DIR" ]; then
-    mkdir -p "$LOG_DIR"
+    if ! mkdir -p "$LOG_DIR" 2>/dev/null; then
+        # ログディレクトリを作成できない場合は静かに失敗（コマンドをブロックしない）
+        exit 0
+    fi
 fi
 
 # タイムスタンプ
@@ -48,12 +51,12 @@ if [ -n "$COMMAND" ]; then
     
     # ログエントリをフォーマット
     LOG_ENTRY="[$TIMESTAMP] [Session: $SESSION_ID] [Dir: $WORKING_DIR] Command: $COMMAND"
-    
-    # ログファイルに書き込み
-    echo "$LOG_ENTRY" >> "$LOG_FILE"
-    
+
+    # ログファイルに書き込み（エラーハンドリング付き：失敗してもエラーにしない）
+    echo "$LOG_ENTRY" >> "$LOG_FILE" 2>/dev/null || true
+
     # デバッグ用：標準エラー出力にも表示（本番環境では削除可能）
-    echo "[command-logger] $LOG_ENTRY" >&2
+    echo "[command-logger] $LOG_ENTRY" >&2 2>/dev/null || true
 fi
 
 # 常に成功を返す（Bashコマンドの実行を妨げない）

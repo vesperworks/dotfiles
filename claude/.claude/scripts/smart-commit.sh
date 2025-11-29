@@ -1,15 +1,25 @@
 #!/bin/bash
+set -euo pipefail
 
 # Smart Commit Script
 # Usage: smart-commit.sh [context]
 
 smart_commit() {
+  # Gitリポジトリ検証
+  if ! git rev-parse --is-inside-work-tree &>/dev/null; then
+    echo "❌ Error: Not in a git repository"
+    return 1
+  fi
+
   local context="$1"
   local timestamp=$(date +%Y%m%d-%H%M%S)
   local msg_file="./tmp/commit-msg-$timestamp.txt"
-  
-  # tmpディレクトリ作成
-  mkdir -p ./tmp
+
+  # tmpディレクトリ作成（エラーハンドリング付き）
+  mkdir -p ./tmp || {
+    echo "❌ Error: Failed to create ./tmp directory"
+    return 1
+  }
   
   # 変更内容を取得・分析
   local status=$(git status --porcelain)
@@ -35,10 +45,18 @@ smart_commit() {
   
   # 引数があれば詳細として追加
   [[ -n "$context" ]] && echo -e "\n$context" >> "$msg_file"
-  
-  # コミット実行
-  git add -A && git commit -F "$msg_file"
-  
+
+  # コミット実行（エラーハンドリング付き）
+  if ! git add -A; then
+    echo "❌ Error: git add failed"
+    return 1
+  fi
+
+  if ! git commit -F "$msg_file"; then
+    echo "❌ Error: git commit failed"
+    return 1
+  fi
+
   echo "✅ Committed with message saved to: $msg_file"
 }
 

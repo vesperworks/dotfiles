@@ -5,6 +5,7 @@
 ## 移動日時
 
 **2025-11-29** - プロジェクト整理計画の実施
+**2025-11-30** - クリティカル修正とクリーンアップ実施
 
 ## 移動理由
 
@@ -28,10 +29,11 @@
 **理由**: CLAUDE.mdで「worktree廃止」と明記されており、これらは古いworktree時代の管理スクリプトのため不要。
 
 **移動コミット**: プロジェクト整理実施時
+**削除日時**: 2025-11-30（git rm実行済み）
 
 ---
 
-### 2. prompts/prompts-legacy/
+### 2. prompts/prompts-legacy/ [削除済み]
 
 **移動ファイル**: `.claude/prompts/` ディレクトリ全体（830行）
 - `explorer.md`
@@ -47,10 +49,11 @@
 - Progressive Disclosure 3層構造（Frontmatter/Body/References）を採用
 
 **移動コミット**: プロジェクト整理実施時
+**削除日時**: 2025-11-30（git rm実行済み）
 
 ---
 
-### 3. refactored_process.md
+### 3. refactored_process.md [削除済み]
 
 **理由**: multi-feature.mdのリファクタリング報告書。過去の改善記録で、現在は参照されていない。
 
@@ -65,6 +68,7 @@
 - 内容は `done.md` にアーカイブ済み（2025-11-29）
 
 **移動コミット**: プロジェクト整理実施時
+**削除日時**: 2025-11-30（git rm実行済み）
 
 ---
 
@@ -96,6 +100,35 @@
 
 ---
 
+### 7. scripts/parallel-agent-utils.sh
+
+**移動日時**: 2025-11-30
+
+**理由**:
+- 未定義関数への呼び出しが複数存在（worktree-utils.shへの依存）
+- アクティブな使用が一切ない（.klaude/agents/, commands/, skills/からの参照なし）
+- レガシーworktreeアーティファクト：旧「並列TDDエージェント」ワークフローの遺物
+- 現在は `vw-developer`（TDD実装）と `vw-qa-tester`（テスト）を使用
+
+**サイズ**: 641行
+
+**移動コミット**: クリティカル修正とクリーンアップ実施時
+
+---
+
+### 8. hooks/textlint-hook.sh
+
+**移動日時**: 2025-11-30
+
+**理由**:
+- settings.json hooksに未登録（アクティブに使用されていない）
+- Textlintはプロジェクト固有（グローバル `.claude` ではなく個別プロジェクトで設定すべき）
+- レガシードキュメントでのみ2件参照
+
+**移動コミット**: クリティカル修正とクリーンアップ実施時
+
+---
+
 ## 削除候補リスト（将来的な完全削除の参考）
 
 ### 推奨削除時期: 3-6ヶ月後（2025-02〜2025-05頃）
@@ -109,14 +142,16 @@
 ### 削除優先度
 
 #### 高優先度（ほぼ確実に削除可能）
-- `scripts/legacy-hooks/` - worktree完全廃止により100%不要
-- `prompts/prompts-legacy/` - Skills移行完了により100%不要
-- `todo.md` - PRP移行完了により100%不要
+- ~~`scripts/legacy-hooks/` - worktree完全廃止により100%不要~~ **[2025-11-30削除済み]**
+- ~~`prompts/prompts-legacy/` - Skills移行完了により100%不要~~ **[2025-11-30削除済み]**
+- ~~`todo.md` - PRP移行完了により100%不要~~ **[2025-11-30削除済み]**
 
 #### 中優先度（確認後削除）
-- `refactored_process.md` - 参照されていない過去の記録
-- `reports/cleanup-phase-2025-06-26/` - 歴史的価値は低い
-- `reports/explore-results-bugfix-*.md` - 歴史的価値は低い
+- ~~`refactored_process.md` - 参照されていない過去の記録~~ **[2025-11-30削除済み]**
+- `reports/cleanup-phase-2025-06-26/` - 歴史的価値は低い（保管中、2025-05-01見直し）
+- `reports/explore-results-bugfix-*.md` - 歴史的価値は低い（保管中、2025-05-01見直し）
+- `scripts/parallel-agent-utils.sh` - 未使用、worktreeレガシー（保管中、3-6ヶ月後削除検討）
+- `hooks/textlint-hook.sh` - 未登録、プロジェクト固有（保管中、3-6ヶ月後削除検討）
 
 ## Git履歴の保持
 
@@ -141,5 +176,8 @@ git log --follow remove/prompts/prompts-legacy/explorer.md
 ## 最終更新
 
 - **作成日**: 2025-11-29
+- **最終更新**: 2025-11-30
 - **作成者**: プロジェクト整理計画の実施
-- **関連コミット**: プロジェクト整理実施コミット
+- **関連コミット**:
+  - 2025-11-29: プロジェクト整理実施コミット
+  - 2025-11-30: クリティカル修正とクリーンアップ実施コミット
