@@ -332,7 +332,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     echo "This script provides utilities for the role-based workflow."
     echo "It should be sourced in other scripts:"
     echo ""
-    echo "  source .claude/scripts/role-utils.sh"
+    echo "  source .klaude/scripts/role-utils.sh"
     echo ""
     echo "Available functions:"
     echo "  - switch_role <role> [description]"

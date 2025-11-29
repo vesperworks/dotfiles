@@ -80,7 +80,7 @@ run_test_agent() {
     log_info "[Test Agent] Starting test creation for: $feature_name"
     
     # テスト専門プロンプトの読み込み
-    local test_prompt=$(load_prompt ".claude/prompts/coder-test.md" "$DEFAULT_CODER_TEST_PROMPT")
+    local test_prompt=$(load_prompt ".klaude/prompts/coder-test.md" "$DEFAULT_CODER_TEST_PROMPT")
     
     # テスト作成の実行ログ
     local test_log="$worktree_path/test-agent.log"
@@ -113,7 +113,7 @@ run_impl_agent() {
     log_info "[Impl Agent] Starting implementation for: $feature_name"
     
     # 実装専門プロンプトの読み込み
-    local impl_prompt=$(load_prompt ".claude/prompts/coder-impl.md" "$DEFAULT_CODER_IMPL_PROMPT")
+    local impl_prompt=$(load_prompt ".klaude/prompts/coder-impl.md" "$DEFAULT_CODER_IMPL_PROMPT")
     
     # 実装の実行ログ
     local impl_log="$worktree_path/impl-agent.log"

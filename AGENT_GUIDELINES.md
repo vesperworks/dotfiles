@@ -1,7 +1,7 @@
 # Claude Code エージェントファイル作成・修正ガイドライン
 
 ## 概要
-このドキュメントは、Claude Codeのエージェントファイル（`.claude/agents/`ディレクトリ内のファイル）を作成・修正するための包括的なガイドラインです。
+このドキュメントは、Claude Codeのエージェントファイル（`.klaude/agents/`ディレクトリ内のファイル）を作成・修正するための包括的なガイドラインです。
 
 ## 必須要素
 
@@ -217,6 +217,6 @@ Remember: [重要な注意事項やリマインダー]
 - エージェントファイル構造の分析に基づくガイドライン策定
 
 ## 関連ファイル
-- `.claude/agents/`: エージェント定義ファイル格納ディレクトリ
+- `.klaude/agents/`: エージェント定義ファイル格納ディレクトリ
 - `CLAUDE.md`: プロジェクト全体の設定と規約
-- `.claude/settings.json`: Claude Code設定ファイル
+- `.klaude/settings.json`: Claude Code設定ファイル
