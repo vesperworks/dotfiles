@@ -98,7 +98,12 @@
       "ListMcpResourcesTool",
       "ReadMcpResourceTool",
       "Bash(date:*)",
-      "Bash(~/.claude/scripts/smart-commit.sh:*)"
+      "Bash(~/.claude/scripts/smart-commit.sh:*)",
+      "SlashCommand(/sc)",
+      "SlashCommand(/search)",
+      "SlashCommand(/play)",
+      "SlashCommand(/contexteng-gen-prp)",
+      "SlashCommand(/contexteng-exe-prp)"
     ],
     "deny": [
       "Bash(rm -rf:*)",
