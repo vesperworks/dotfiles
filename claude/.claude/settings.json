@@ -135,6 +135,7 @@
       "Bash(find:*)",
       "Bash(grep:*)"
     ],
+    "defaultMode": "default",
     "includeCoAuthoredBy": false
   },
   "hooks": {
@@ -174,7 +175,7 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "~/.claude/scripts/statusline-with-tokens.sh"
+    "command": "npx -y @owloops/claude-powerline@latest --theme=nord --style=minimal"
   },
   "enabledPlugins": {
     "commit-commands@claude-code-plugins": true,
