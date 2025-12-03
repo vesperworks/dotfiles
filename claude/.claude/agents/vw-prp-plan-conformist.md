@@ -1,7 +1,7 @@
 ---
 name: vw-prp-plan-conformist
 description: Conformist approach PRP generator. Uses Skill tool to reference APPROACHES.md and Context7 MCP for official documentation.
-tools: Read, Grep, Glob, TodoWrite, WebSearch, Skill, mcp__context7__resolve-library-id, mcp__context7__get-library-docs
+tools: Read, Grep, Glob, TodoWrite, WebSearch, Write, Skill, mcp__context7__resolve-library-id, mcp__context7__get-library-docs
 model: sonnet
 color: cyan
 ---

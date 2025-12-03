@@ -1,7 +1,7 @@
 ---
 name: vw-prp-plan-minimal
 description: Minimalist approach PRP generator. Uses Skill tool to reference APPROACHES.md for detailed YAGNI and KISS philosophy.
-tools: Read, Grep, Glob, TodoWrite, WebSearch, Skill
+tools: Read, Grep, Glob, TodoWrite, WebSearch, Write, Skill
 model: haiku
 color: green
 ---

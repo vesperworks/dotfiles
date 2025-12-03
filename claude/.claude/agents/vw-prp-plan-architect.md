@@ -1,7 +1,7 @@
 ---
 name: vw-prp-plan-architect
 description: Architect approach PRP generator. Uses Skill tool to reference APPROACHES.md for detailed SOLID and DRY philosophy.
-tools: Read, Grep, Glob, TodoWrite, WebSearch, Skill
+tools: Read, Grep, Glob, TodoWrite, WebSearch, Write, Skill
 model: sonnet
 color: blue
 ---
