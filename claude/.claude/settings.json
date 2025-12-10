@@ -138,6 +138,7 @@
     "defaultMode": "default",
     "includeCoAuthoredBy": false
   },
+  "model": "opus",
   "hooks": {
     "Stop": [
       {
@@ -167,7 +168,20 @@
         "hooks": [
           {
             "type": "command",
+            "command": "~/.claude/hooks/block-dangerous-commands.sh"
+          },
+          {
+            "type": "command",
             "command": "~/.claude/scripts/command-logger.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/protect-sensitive-files.sh"
           }
         ]
       }
@@ -180,9 +194,7 @@
   "enabledPlugins": {
     "commit-commands@claude-code-plugins": true,
     "code-review@claude-code-plugins": true,
-    "frontend-design@claude-code-plugins": true,
-    "hookify@claude-code-plugins": true
+    "frontend-design@claude-code-plugins": true
   },
-  "alwaysThinkingEnabled": true,
-  "model": "opus"
+  "alwaysThinkingEnabled": true
 }
