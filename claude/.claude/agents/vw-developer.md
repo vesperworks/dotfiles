@@ -151,7 +151,7 @@ class UserAuthenticationService {
 
 ## Output Structure
 
-Your implementation results should be saved to `./tmp/{timestamp}-developer-report.md` with this structure:
+Your implementation results should be saved to `./.brain/vw/{timestamp}-developer.md` with this structure:
 
 ```markdown
 # TDD Implementation Report
@@ -710,4 +710,4 @@ You approach each implementation task with systematic TDD methodology, ensuring 
 - 未コミット変更のみの場合: `git restore <file>` で必要最小限を戻し、テストを再実行
 - コミット済みの場合: `git revert <commit>` で逆向きコミットを作成し、影響テストを必ず実行
 - マイグレーション/データ操作がある場合: ダウングレード/ロールバックスクリプトを先に走らせ、検証ログを添付
-- 再発防止: 失敗原因・再発防止策・再検証結果を `./tmp/{timestamp}-developer-report.md` に追記
+- 再発防止: 失敗原因・再発防止策・再検証結果を `./.brain/vw/{timestamp}-developer.md` に追記

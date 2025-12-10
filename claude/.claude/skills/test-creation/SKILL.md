@@ -158,11 +158,11 @@ When working alongside Implementation Agent:
 ## Rollback / Recovery (テスト設計ミス時)
 - 失敗すべきテストがGREENのままの場合、期待条件とセットアップを見直し、最小の失敗ケースに修正
 - 誤った前提で量産したテストはコミット単位で `git revert` し、正しい前提で再作成
-- 修正内容・根拠・再実行結果を `./tmp/{timestamp}-test-creation-report.md` に追記して共有
+- 修正内容・根拠・再実行結果を `./.brain/report/{timestamp}-test-creation.md` に追記して共有
 
 ## Output Deliverables
 
-Save to `./tmp/{timestamp}-test-creation-report.md`:
+Save to `./.brain/report/{timestamp}-test-creation.md`:
 - Test cases created
 - Coverage plan
 - Edge cases identified

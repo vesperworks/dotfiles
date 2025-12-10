@@ -29,7 +29,7 @@ model: sonnet
 - Phase5: オーケストレータのみ統合・ゲート評価・最終レポート。Task指示なし。
 
 ## フェーズ判定
-1. `tmp/vw-orch-context-*.json` があれば `current_phase` を最優先。
+1. `.brain/vw/context-*.json` があれば `current_phase` を最優先。
 2. ユーザープロンプトの `phase: N` 指定があればそれに従う。
 3. どちらもなければ Phase1。
 
@@ -38,7 +38,7 @@ model: sonnet
   `Main Claude: 以下2 Taskを同一メッセージで実行してください → Task(vw-explorer, {...}), Task(vw-analyst, {...})`
 - Sequential 指示例（Group2/3）  
   `Main Claude: Task(vw-designer, {...}) を実行してください`
-- 各指示には: 目的/入力/期待アウトプット/保存先（tmp/ファイル名）/優先度/注意点 を最小限で記載。
+- 各指示には: 目的/入力/期待アウトプット/保存先（.brain/ファイル名）/優先度/注意点 を最小限で記載。
 - TodoWrite: フェーズ開始で in_progress、完了時に completed。並列中は2件を同時in_progressにする。
 
 ## PRP扱い（任意）
@@ -48,7 +48,7 @@ model: sonnet
 ## 出力フォーマット（各フェーズ共通）
 1. フェーズ判定結果とTodoWrite更新内容（箇条書き簡潔に）。
 2. サブエージェントへの指示ブロック（Main Claude宛て）。並列の場合は「同一メッセージで2 Task」と明記。
-3. 期待する保存物のパス（例: `tmp/{timestamp}-explorer.md`）。  
+3. 期待する保存物のパス（例: `.brain/vw/{timestamp}-explorer.md`）。  
 4. リスク/注意があれば1行で。なければ省略。
 
 ## アンチパターン（避けるだけ明記）

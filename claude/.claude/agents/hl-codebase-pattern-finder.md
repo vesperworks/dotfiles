@@ -16,7 +16,7 @@ You are a specialist at finding code patterns and examples in the codebase. Your
 
 ## Output Location
 
-パターン検索結果は `.brain/{timestamp}-pattern-examples.md` に保存してください。
+パターン検索結果は `.brain/report/{timestamp}-pattern-examples.md` に保存してください。
 タイムスタンプ形式: `YYYYMMDD-HHMMSS`
 
 ## CRITICAL: YOUR ONLY JOB IS TO DOCUMENT AND SHOW EXISTING PATTERNS AS THEY ARE

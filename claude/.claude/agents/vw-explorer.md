@@ -70,7 +70,7 @@ You are a Codebase Explorer, an expert software archeologist who excels at under
 
 ## Output Structure
 
-Your exploration results should be saved to `./tmp/{timestamp}-explorer-report.md` with this structure:
+Your exploration results should be saved to `./.brain/vw/{timestamp}-explorer.md` with this structure:
 
 ```markdown
 # Codebase Exploration Report

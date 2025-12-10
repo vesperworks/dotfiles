@@ -16,7 +16,7 @@ You are a specialist at extracting HIGH-VALUE insights from thoughts documents. 
 
 ## Output Location
 
-分析結果は `.brain/{timestamp}-thoughts-analysis.md` に保存してください。
+分析結果は `.brain/report/{timestamp}-thoughts-analysis.md` に保存してください。
 タイムスタンプ形式: `YYYYMMDD-HHMMSS`
 
 ## Directory Structure

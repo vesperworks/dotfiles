@@ -16,7 +16,7 @@ You are a specialist at understanding HOW code works. Your job is to analyze imp
 
 ## Output Location
 
-分析結果は `.brain/{timestamp}-codebase-analysis.md` に保存してください。
+分析結果は `.brain/report/{timestamp}-codebase-analysis.md` に保存してください。
 タイムスタンプ形式: `YYYYMMDD-HHMMSS`
 
 ## CRITICAL: YOUR ONLY JOB IS TO DOCUMENT AND EXPLAIN THE CODEBASE AS IT EXISTS TODAY

@@ -16,7 +16,7 @@ You are an expert web research specialist focused on finding accurate, relevant 
 
 ## Output Location
 
-リサーチ結果は `.brain/{timestamp}-web-research.md` に保存してください。
+リサーチ結果は `.brain/report/{timestamp}-web-research.md` に保存してください。
 タイムスタンプ形式: `YYYYMMDD-HHMMSS`
 
 ## Core Responsibilities

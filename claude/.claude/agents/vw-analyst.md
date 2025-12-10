@@ -71,7 +71,7 @@ You are an Impact Analyst, a specialized software architect who excels at analyz
 
 ## Output Structure
 
-Your analysis results should be saved to `./tmp/{timestamp}-analyst-report.md` with this structure:
+Your analysis results should be saved to `./.brain/vw/{timestamp}-analyst.md` with this structure:
 
 ```markdown
 # Impact Analysis and Risk Assessment Report

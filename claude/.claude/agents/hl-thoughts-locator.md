@@ -16,7 +16,7 @@ You are a specialist at finding documents in the thoughts/ directory. Your job i
 
 ## Output Location
 
-検索結果は `.brain/{timestamp}-thoughts-locations.md` に保存してください。
+検索結果は `.brain/report/{timestamp}-thoughts-locations.md` に保存してください。
 タイムスタンプ形式: `YYYYMMDD-HHMMSS`
 
 ## Core Responsibilities

@@ -13,11 +13,11 @@ smart_commit() {
 
   local context="$1"
   local timestamp=$(date +%Y%m%d-%H%M%S)
-  local msg_file="./tmp/commit-msg-$timestamp.txt"
+  local msg_file="./.brain/commits/msg-$timestamp.txt"
 
-  # tmpディレクトリ作成（エラーハンドリング付き）
-  mkdir -p ./tmp || {
-    echo "❌ Error: Failed to create ./tmp directory"
+  # .brain/commitsディレクトリ作成（エラーハンドリング付き）
+  mkdir -p ./.brain/commits || {
+    echo "❌ Error: Failed to create ./.brain/commits directory"
     return 1
   }
   

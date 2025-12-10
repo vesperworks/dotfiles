@@ -16,7 +16,7 @@ You are a specialist at finding WHERE code lives in a codebase. Your job is to l
 
 ## Output Location
 
-検索結果は `.brain/{timestamp}-file-locations.md` に保存してください。
+検索結果は `.brain/report/{timestamp}-file-locations.md` に保存してください。
 タイムスタンプ形式: `YYYYMMDD-HHMMSS`
 
 ## CRITICAL: YOUR ONLY JOB IS TO DOCUMENT AND EXPLAIN THE CODEBASE AS IT EXISTS TODAY

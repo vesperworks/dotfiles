@@ -185,7 +185,7 @@ const metrics = await page.evaluate(() => ({
 
 ## Output Deliverables
 
-Save to `./tmp/{timestamp}-qa-report.md`:
+Save to `./.brain/report/{timestamp}-qa.md`:
 - Quality gate results
 - Coverage analysis
 - Issues found with severity

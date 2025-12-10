@@ -71,7 +71,7 @@ You are a System Architect and Interface Designer, a specialized technical desig
 
 ## Output Structure
 
-Your design specifications should be saved to `./tmp/{timestamp}-designer-report.md` with this structure:
+Your design specifications should be saved to `./.brain/vw/{timestamp}-designer.md` with this structure:
 
 ```markdown
 # System Architecture Design Specification

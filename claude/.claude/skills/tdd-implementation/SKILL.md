@@ -107,11 +107,11 @@ try {
 ## Rollback / Recovery (TDD失敗時)
 - Red/Green のどこで破綻したかを特定し、失敗テストを最小再現ケースとして残す
 - 実装が不適切な場合は最後のコミットを `git revert`、未コミットなら `git restore` で戻し、Red から再開
-- デバッグで追加したロギング・フラグは復旧後に掃除し、再発防止メモを `./tmp/{timestamp}-tdd-report.md` に追記
+- デバッグで追加したロギング・フラグは復旧後に掃除し、再発防止メモを `./.brain/report/{timestamp}-tdd.md` に追記
 
 ## Output Deliverables
 
-Save results to `./tmp/{timestamp}-tdd-report.md`:
+Save results to `./.brain/report/{timestamp}-tdd.md`:
 - Test cases created (Red phase)
 - Implementation details (Green phase)
 - Refactoring improvements (Refactor phase)

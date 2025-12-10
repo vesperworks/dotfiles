@@ -20,13 +20,13 @@ You are a **2-Phase Orchestrator** for PRP generation using **SubAgent→Skills 
 - Detect single/multi mode
 - Get user confirmation for multi-mode
 - Setup TodoWrite progress tracking
-- Create context file in `tmp/`
+- Create context file in `.brain/prp/`
 - **Return instructions to Main Claude** to execute 4 sub-agents in parallel
 - **DO NOT call Task tool yourself** - let Main Claude handle parallel execution
 
 ### Phase 2: Evaluation Mode (Second Invocation)
-- Load context from `tmp/`
-- Read generated PRPs from `tmp/`
+- Load context from `.brain/prp/`
+- Read generated PRPs from `.brain/prp/`
 - Apply 5-axis evaluation criteria
 - Present comparison table
 - Get user selection
@@ -37,7 +37,7 @@ You are a **2-Phase Orchestrator** for PRP generation using **SubAgent→Skills 
 
 **How to detect which phase to execute:**
 
-1. **Check for context file**: `tmp/prp-context-{feature-name}.json`
+1. **Check for context file**: `.brain/prp/context-{feature-name}.json`
    - **If EXISTS** → Phase 2 (Evaluation Mode)
    - **If NOT EXISTS** → Phase 1 (Setup Mode)
 
@@ -88,7 +88,7 @@ AskUserQuestion:
 
 ### Step 1.2: Create Context File
 
-Create `tmp/prp-context-{feature-name}.json` with:
+Create `.brain/prp/context-{feature-name}.json` with:
 
 ```json
 {
@@ -101,9 +101,9 @@ Create `tmp/prp-context-{feature-name}.json` with:
 }
 ```
 
-Ensure `tmp/` directory exists:
+Ensure `.brain/prp/` directory exists:
 ```bash
-mkdir -p tmp
+mkdir -p .brain/prp
 ```
 
 ### Step 1.3: Setup TodoWrite
@@ -155,7 +155,7 @@ Return the following message in Japanese:
 4つのアプローチ（Minimalist/Architect/Pragmatist/Conformist）でPRPを並列生成します。
 
 **セットアップ完了:**
-- ✅ コンテキストファイル作成: `tmp/prp-context-{feature-name}.json`
+- ✅ コンテキストファイル作成: `.brain/prp/context-{feature-name}.json`
 - ✅ 進捗トラッキング初期化: 5タスク登録
 - ✅ プロジェクトコンテキスト準備完了
 
@@ -175,7 +175,7 @@ Return the following message in Japanese:
 <parameter name="prompt">
 Generate a Minimalist approach PRP for: {feature-name}
 
-**Save output to**: `tmp/prp-{feature-name}-minimal.md`
+**Save output to**: `.brain/prp/{feature-name}-minimal.md`
 
 **Project Context (CLAUDE.md summary)**:
 {context-summary}
@@ -190,7 +190,7 @@ Generate a Minimalist approach PRP for: {feature-name}
 4. Apply YAGNI + KISS principles strictly
 5. Maximum 5-7 implementation tasks
 6. Focus on MVP - minimum viable product
-7. **Save the generated PRP to `tmp/prp-{feature-name}-minimal.md`**
+7. **Save the generated PRP to `.brain/prp/{feature-name}-minimal.md`**
 
 Return confirmation when saved.
 </parameter>
@@ -207,7 +207,7 @@ Return confirmation when saved.
 <parameter name="prompt">
 Generate an Architect approach PRP for: {feature-name}
 
-**Save output to**: `tmp/prp-{feature-name}-architect.md`
+**Save output to**: `.brain/prp/{feature-name}-architect.md`
 
 **Project Context (CLAUDE.md summary)**:
 {context-summary}
@@ -222,7 +222,7 @@ Generate an Architect approach PRP for: {feature-name}
 4. Apply SOLID + DRY principles
 5. Design for extensibility and maintainability
 6. Focus on clean architecture
-7. **Save the generated PRP to `tmp/prp-{feature-name}-architect.md`**
+7. **Save the generated PRP to `.brain/prp/{feature-name}-architect.md`**
 
 Return confirmation when saved.
 </parameter>
@@ -239,7 +239,7 @@ Return confirmation when saved.
 <parameter name="prompt">
 Generate a Pragmatist approach PRP for: {feature-name}
 
-**Save output to**: `tmp/prp-{feature-name}-pragmatist.md`
+**Save output to**: `.brain/prp/{feature-name}-pragmatist.md`
 
 **Project Context (CLAUDE.md summary)**:
 {context-summary}
@@ -254,7 +254,7 @@ Generate a Pragmatist approach PRP for: {feature-name}
 4. Balance speed and quality
 5. Include phased implementation plan (MVP → Enhancements → Polish)
 6. Focus on practical delivery
-7. **Save the generated PRP to `tmp/prp-{feature-name}-pragmatist.md`**
+7. **Save the generated PRP to `.brain/prp/{feature-name}-pragmatist.md`**
 
 Return confirmation when saved.
 </parameter>
@@ -271,7 +271,7 @@ Return confirmation when saved.
 <parameter name="prompt">
 Generate a Conformist approach PRP for: {feature-name}
 
-**Save output to**: `tmp/prp-{feature-name}-conformist.md`
+**Save output to**: `.brain/prp/{feature-name}-conformist.md`
 
 **Project Context (CLAUDE.md summary)**:
 {context-summary}
@@ -286,7 +286,7 @@ Generate a Conformist approach PRP for: {feature-name}
 4. Use Context7 MCP to fetch official documentation
 5. Include explicit URL references for all design decisions
 6. Focus on official compliance
-7. **Save the generated PRP to `tmp/prp-{feature-name}-conformist.md`**
+7. **Save the generated PRP to `.brain/prp/{feature-name}-conformist.md`**
 
 Return confirmation when saved.
 </parameter>
@@ -322,7 +322,7 @@ Return confirmation when saved.
 
 ### Step 2.1: Load Context
 
-1. Read `tmp/prp-context-{feature-name}.json`
+1. Read `.brain/prp/context-{feature-name}.json`
 2. Validate that phase is "setup_complete"
 3. Extract feature name and approaches
 
@@ -331,14 +331,14 @@ Return confirmation when saved.
 Use Glob to find all generated PRPs:
 
 ```bash
-Glob: tmp/prp-{feature-name}-*.md
+Glob: .brain/prp/{feature-name}-*.md
 ```
 
 Expected files:
-- `tmp/prp-{feature-name}-minimal.md`
-- `tmp/prp-{feature-name}-architect.md`
-- `tmp/prp-{feature-name}-pragmatist.md`
-- `tmp/prp-{feature-name}-conformist.md`
+- `.brain/prp/{feature-name}-minimal.md`
+- `.brain/prp/{feature-name}-architect.md`
+- `.brain/prp/{feature-name}-pragmatist.md`
+- `.brain/prp/{feature-name}-conformist.md`
 
 ### Step 2.3: Validate Completeness
 
@@ -352,10 +352,10 @@ Check if all 4 PRPs exist:
 Read each PRP file content:
 
 ```
-Read: tmp/prp-{feature-name}-minimal.md
-Read: tmp/prp-{feature-name}-architect.md
-Read: tmp/prp-{feature-name}-pragmatist.md
-Read: tmp/prp-{feature-name}-conformist.md
+Read: .brain/prp/{feature-name}-minimal.md
+Read: .brain/prp/{feature-name}-architect.md
+Read: .brain/prp/{feature-name}-pragmatist.md
+Read: .brain/prp/{feature-name}-conformist.md
 ```
 
 ### Step 2.5: Apply 5-Axis Evaluation
@@ -445,7 +445,7 @@ AskUserQuestion:
    mkdir -p PRPs
    ```
 
-2. Read selected PRP from `tmp/`
+2. Read selected PRP from `.brain/prp/`
 
 3. Prepend metadata header:
    ```markdown
@@ -510,9 +510,9 @@ TodoWrite:
 Optionally move tmp files to archive:
 
 ```bash
-mkdir -p tmp/archive
-mv tmp/prp-{feature-name}-*.md tmp/archive/
-mv tmp/prp-context-{feature-name}.json tmp/archive/
+mkdir -p .brain/prp/archive
+mv .brain/prp/{feature-name}-*.md .brain/prp/archive/
+mv .brain/prp/context-{feature-name}.json .brain/prp/archive/
 ```
 
 Or keep them for resumability.
@@ -530,7 +530,7 @@ Or keep them for resumability.
 2. 必要に応じて手動で調整
 3. 実装開始: `@vw-orchestrator "PRPs/{feature-name}.md を使って実装"`
 
-**アーカイブ**: 他の3つの案は `tmp/archive/` に保存されています（必要に応じて参照可能）
+**アーカイブ**: 他の3つの案は `.brain/prp/archive/` に保存されています（必要に応じて参照可能）
 ```
 
 ## Error Handling
@@ -555,11 +555,11 @@ Then execute single-mode logic.
 ⚠️ エラー: コンテキストファイルの作成に失敗しました。
 
 **原因の可能性**:
-- `tmp/` ディレクトリの書き込み権限がない
+- `.brain/prp/` ディレクトリの書き込み権限がない
 - ディスク容量不足
 
 **対策**:
-1. `mkdir -p tmp` を実行してディレクトリを作成
+1. `mkdir -p .brain/prp` を実行してディレクトリを作成
 2. ディスク容量を確認
 3. 再試行してください
 ```
@@ -573,7 +573,7 @@ Then execute single-mode logic.
 ```markdown
 ⚠️ エラー: コンテキストファイルが見つかりません。
 
-**Expected**: `tmp/prp-context-{feature-name}.json`
+**Expected**: `.brain/prp/context-{feature-name}.json`
 **Status**: ファイルが存在しません
 
 **対策**:
@@ -633,17 +633,17 @@ Then proceed with partial evaluation.
 
 1. **Always check phase first**: Context file existence determines phase
 2. **Clear communication**: Explain current phase to user
-3. **Preserve context**: Keep tmp/ files until final save
+3. **Preserve context**: Keep .brain/prp/ files until final save
 4. **Graceful degradation**: If 1-2 PRPs fail, continue with available ones
 5. **User choice**: Never assume which approach user prefers
 6. **Metadata tracking**: Include generation info in final PRP
-7. **Cleanup optional**: Let user decide whether to archive tmp/ files
+7. **Cleanup optional**: Let user decide whether to archive .brain/prp/ files
 
 ## Resumability
 
 If user wants to regenerate a specific approach:
 
-1. Check if `tmp/prp-context-{feature}.json` exists
+1. Check if `.brain/prp/context-{feature}.json` exists
 2. Instruct Main Claude to re-run specific sub-agent:
    ```
    @vw-prp-plan-{approach} "{feature-name}"
@@ -657,15 +657,15 @@ If user wants to regenerate a specific approach:
 User → /contexteng-gen-prp "feature 複数案で"
   ↓
 Phase 1: vw-prp-orchestrator (Setup)
-  ├─ Create tmp/prp-context-{feature}.json
+  ├─ Create .brain/prp/context-{feature}.json
   ├─ Setup TodoWrite (5 tasks)
   └─ Return instructions to Main Claude
 
 Main Claude (receives instructions)
-  ├─ Task(vw-prp-plan-minimal) → tmp/prp-{feature}-minimal.md
-  ├─ Task(vw-prp-plan-architect) → tmp/prp-{feature}-architect.md
-  ├─ Task(vw-prp-plan-pragmatist) → tmp/prp-{feature}-pragmatist.md
-  └─ Task(vw-prp-plan-conformist) → tmp/prp-{feature}-conformist.md
+  ├─ Task(vw-prp-plan-minimal) → .brain/prp/{feature}-minimal.md
+  ├─ Task(vw-prp-plan-architect) → .brain/prp/{feature}-architect.md
+  ├─ Task(vw-prp-plan-pragmatist) → .brain/prp/{feature}-pragmatist.md
+  └─ Task(vw-prp-plan-conformist) → .brain/prp/{feature}-conformist.md
        │
        ▼
      【ユーザーに可視化される！】
@@ -674,8 +674,8 @@ Main Claude (receives instructions)
   Call vw-prp-orchestrator again with "evaluate"
 
 Phase 2: vw-prp-orchestrator (Evaluation)
-  ├─ Read tmp/prp-context-{feature}.json
-  ├─ Glob tmp/prp-{feature}-*.md (4 files)
+  ├─ Read .brain/prp/context-{feature}.json
+  ├─ Glob .brain/prp/{feature}-*.md (4 files)
   ├─ Evaluate with 5-axis scoring
   ├─ Present comparison table
   ├─ AskUserQuestion: which approach?

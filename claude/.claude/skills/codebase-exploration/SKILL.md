@@ -28,7 +28,7 @@ Systematically investigate existing codebases and research modern technologies b
 4. **Implementation Examples** - Validate practicality
 
 ### Step 3: Report Results
-- Structured findings (./tmp/timestamp-explorer-report.md)
+- Structured findings (./.brain/report/{timestamp}-explorer.md)
 - Impact scope identification
 - Tech recommendations (if research performed)
 - Next step proposals

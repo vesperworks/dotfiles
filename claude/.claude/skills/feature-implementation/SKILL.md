@@ -17,7 +17,7 @@ Implement production-ready code that passes all written tests while maintaining 
 - ロギング・メトリクス・トレースの追加ポイントを決める
 - フィーチャートグル/ロールバック戦略の有無を確認
 - 最小実装→拡張のステップを3段階で示す
-- 提出物: 変更ファイル・テスト結果・残課題を `./tmp/{timestamp}-implementation-report.md` に記録
+- 提出物: 変更ファイル・テスト結果・残課題を `./.brain/report/{timestamp}-implementation.md` に記録
 
 ## Implementation Priority Order
 
@@ -150,11 +150,11 @@ When working alongside Test Agent:
 ## Rollback / Recovery (実装が問題を起こした場合)
 - 直近コミットを特定し、`git revert <commit>` で安全に戻す。未コミットなら `git restore <file>` を優先
 - フィーチャートグルや環境変数で無効化できる場合は即座に切り替え、影響範囲を最小化
-- 失敗の原因・再発防止策・再テスト結果を `./tmp/{timestamp}-implementation-report.md` に追記し共有
+- 失敗の原因・再発防止策・再テスト結果を `./.brain/report/{timestamp}-implementation.md` に追記し共有
 
 ## Output Deliverables
 
-Save to `./tmp/{timestamp}-implementation-report.md`:
+Save to `./.brain/report/{timestamp}-implementation.md`:
 - Core functionality implemented
 - Error handling strategies applied
 - Validation rules implemented
