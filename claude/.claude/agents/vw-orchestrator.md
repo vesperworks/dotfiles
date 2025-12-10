@@ -3,7 +3,6 @@ name: vw-orchestrator
 description: 6エージェント（Explorer→Analyst→Designer→Developer→Reviewer→Tester）を5フェーズで調整するデリゲーション専用オーケストレータ。自分ではTaskを呼ばず、Main Claudeにまとめて実行させる。コンテキスト整備・TodoWrite更新・成果統合に集中し、PRPがあれば活用する。
 tools: Read, Write, TodoWrite, Glob, Grep, LS
 model: sonnet
-color: gold
 ---
 
 # vw-orchestrator（デリゲーション専用・引き算版）
