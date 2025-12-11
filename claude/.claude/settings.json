@@ -1,4 +1,8 @@
 {
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
   "permissions": {
     "allow": [
       "Read(**)",
@@ -100,7 +104,7 @@
       "Bash(date:*)",
       "Bash(~/.claude/scripts/smart-commit.sh:*)",
       "SlashCommand(/sc)",
-      "SlashCommand(/search)",
+      "SlashCommand(/vw:websearch)",
       "SlashCommand(/play)",
       "SlashCommand(/contexteng-gen-prp)",
       "SlashCommand(/contexteng-exe-prp)"
@@ -169,6 +173,10 @@
           {
             "type": "command",
             "command": "~/.claude/hooks/block-dangerous-commands.sh"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/block-author-attribution.sh"
           },
           {
             "type": "command",

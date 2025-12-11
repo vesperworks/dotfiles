@@ -180,6 +180,35 @@ git log --oneline -N  # N = 作成したコミット数
 <body>
 ```
 
+### ⚠️ 絶対禁止事項
+
+**以下の内容をコミットメッセージに含めてはならない**:
+
+- `Co-Authored-By:` 行（いかなる形式も禁止）
+- `Author:` 行
+- `Generated with Claude Code` 等のAI生成表記
+- `🤖` 絵文字やAI関連のフッター
+
+**正しい例**:
+```
+feat(auth): add login validation
+
+Implement email format checking and password strength validation
+```
+
+**禁止例**（これらは絶対に書かない）:
+```
+feat(auth): add login validation
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+```
+feat(auth): add login validation
+
+🤖 Generated with Claude Code
+```
+
 ### Type
 - **feat**: 新機能
 - **fix**: バグ修正
