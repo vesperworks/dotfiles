@@ -125,10 +125,9 @@ LAST_MESSAGE=$(extract_last_message "$TRANSCRIPT_PATH")
 WORK_SUMMARY=$(extract_work_summary "$TRANSCRIPT_PATH")
 
 # Build notification message
+# Use ANSI-C quoting ($'...') for proper newline handling in terminal-notifier
 if [ -n "$LAST_MESSAGE" ]; then
-    NOTIFICATION_MESSAGE="$WORK_SUMMARY
-
-💬 $LAST_MESSAGE"
+    NOTIFICATION_MESSAGE="${WORK_SUMMARY}"$'\n\n'"💬 ${LAST_MESSAGE}"
 else
     NOTIFICATION_MESSAGE="$WORK_SUMMARY"
 fi
