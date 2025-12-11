@@ -1,6 +1,41 @@
 # Neovim Development Logs
 
-## 📅 2025年11月（現在の月）
+## 📅 2025年12月（現在の月）
+
+### 2025-12-11 - 進行中タスク表示プラグイン改善：見出し部分の色分け（完了）
+
+**背景**: 見出し部分（`## 見出し >`）とタスク部分で色を分けて、見出しレベルを視覚的に識別したい
+**解決**:
+- `nvim_buf_add_highlight`の範囲指定機能で、1行を2つのハイライトに分割
+- 見出し部分: Treesitterの`@markup.heading.N`色（Nは見出しレベル）
+- タスク部分: `TaskInProgress`色（オレンジ）
+
+**使用方法**:
+- `<leader>t` → 進行中タスクのフローティングウィンドウをトグル
+- ウィンドウ内で `1-9` キー → 該当タスクへ直接ジャンプ
+- `j/k` → カーソル移動、`Enter` → カーソル行のタスクへジャンプ
+- `q` or `Esc` → ウィンドウを閉じる
+
+**表示形式**:
+```
+ 1. (15m) ## 買い物 > リスト作成  (L:42)
+          ^^^^^^^^^^^ ^^^^^^^^^^^^^^^^^^^
+          H2色        オレンジ色
+```
+
+**技術的レガシー**:
+- `nvim_buf_add_highlight(buf, ns_id, hl_group, line, col_start, col_end)`: 範囲指定ハイライト
+- `@markup.heading.1`〜`@markup.heading.6`: Treesitterの見出しハイライトグループ
+- `highlight_info`テーブルで各行の見出し開始/終了位置を記録
+- 見出しがない場合は全体を`TaskInProgress`色で適用
+
+**関連ファイル**:
+- `lua/user-plugins/pending-tasks.lua` - メイン実装
+- `thoughts/shared/research/2025-12-11-pending-tasks-floating-window.md` - 調査結果
+
+---
+
+## 📅 2025年11月
 
 ### 2025-11-19 - Esc検索ハイライトクリア機能追加（完了）
 

@@ -73,6 +73,12 @@ vim.opt.jumpoptions:append("stack")
 require('user-plugins.markdown-helper').setup_keymaps()
 require('user-plugins.obsidian-zoom-v2')
 
+-- 進行中タスク表示プラグイン
+local ok_pending, pending_tasks = pcall(require, 'user-plugins.pending-tasks')
+if ok_pending then
+  pending_tasks.setup()
+end
+
 -- タスクタイマーシステムを初期化
 local ok, task_timer = pcall(require, 'user-plugins.task-timer')
 if ok then
