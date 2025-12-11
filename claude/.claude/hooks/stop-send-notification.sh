@@ -56,8 +56,8 @@ extract_last_message() {
 
     # Clean up and truncate
     if [ -n "$last_msg" ]; then
-        # Remove newlines and extra spaces
-        last_msg=$(echo "$last_msg" | tr '\n' ' ' | sed 's/  */ /g' | head -c 150)
+        # Remove both actual newlines and escaped \n from JSON, then normalize spaces
+        last_msg=$(echo "$last_msg" | tr '\n' ' ' | sed 's/\\n/ /g' | sed 's/  */ /g' | head -c 150)
 
         # Add ellipsis if truncated
         if [ ${#last_msg} -ge 150 ]; then
