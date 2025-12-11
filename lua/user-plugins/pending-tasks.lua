@@ -242,6 +242,41 @@ function M.setup_window_keymaps(buf)
       M.jump_to_task(i)
     end, opts)
   end
+
+  -- j/k でカーソル移動時に本文もプレビュー
+  vim.keymap.set("n", "j", function()
+    local cursor = vim.api.nvim_win_get_cursor(M.state.win)
+    local next_line = math.min(cursor[1] + 1, #M.state.tasks)
+    vim.api.nvim_win_set_cursor(M.state.win, { next_line, 0 })
+    M.preview_task(next_line)
+  end, opts)
+
+  vim.keymap.set("n", "k", function()
+    local cursor = vim.api.nvim_win_get_cursor(M.state.win)
+    local prev_line = math.max(cursor[1] - 1, 1)
+    vim.api.nvim_win_set_cursor(M.state.win, { prev_line, 0 })
+    M.preview_task(prev_line)
+  end, opts)
+end
+
+-- タスクをプレビュー（ウィンドウを閉じずに本文側を移動）
+function M.preview_task(task_index)
+  local task = M.state.tasks[task_index]
+  if not task then return end
+
+  -- 元のバッファを表示しているウィンドウを探してカーソル移動
+  if M.state.source_buf and vim.api.nvim_buf_is_valid(M.state.source_buf) then
+    for _, win in ipairs(vim.api.nvim_list_wins()) do
+      if vim.api.nvim_win_get_buf(win) == M.state.source_buf then
+        vim.api.nvim_win_set_cursor(win, { task.lnum, 0 })
+        -- 画面中央に表示
+        vim.api.nvim_win_call(win, function()
+          vim.cmd("normal! zz")
+        end)
+        break
+      end
+    end
+  end
 end
 
 -- 指定したタスクへジャンプ
