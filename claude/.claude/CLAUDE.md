@@ -46,26 +46,25 @@ NEVER: XSS (Cross-Site Scripting)
 
 #### パターンA: PRP統合ワークフロー（仕様が不明確な場合）
 1. `/contexteng-gen-prp "feature-name"` - 対話的に仕様を決定
-2. `@vw-orchestrator "PRPs/feature-name.md を使って実装"` - 6フェーズ開発
+2. `/contexteng-exe-prp` - TDD実装→検証ループ
 3. `/sc` - スマートコミット
 
 #### パターンB: 直接実装ワークフロー（仕様が明確な場合）
 1. `@vw-task-manager` - プロジェクト状況確認
-2. `@vw-orchestrator "機能説明"` - 6フェーズ開発
+2. 直接実装（Main Claude）→ `@vw-dev-reviewer` + `@vw-dev-tester` で検証
 3. `/sc` - スマートコミット
 
 ## vw-* エージェント起動ルール
 
 ユーザーが以下の要求をした場合、適切なエージェントを**必ず**使用してください。
 
-### vw-orchestrator（開発ワークフロー統括）
-以下のいずれかの場合、**必ず** `vw-orchestrator`（subagent_type='vw-orchestrator'）を使用：
-- 複雑な機能の実装（例: 「認証システム実装」「決済システム構築」「マイクロサービス化」）
-- 6フェーズ開発ワークフロー（例: 「6フェーズで開発」「体系的に開発」）
-- PRP統合ワークフロー（例: 「PRPを使って実装」「PRP/feature.mdで実装」）
+### vw-dev-orchestra（PRP実行オーケストレーター）
+以下のいずれかの場合、**必ず** `vw-dev-orchestra`（subagent_type='vw-dev-orchestra'）を使用：
+- PRPを使った実装（例: 「PRPを使って実装」「PRP/feature.mdで実装」）
+- TDD実装→検証ループ（例: 「TDDで開発」「テスト駆動で実装」）
 - 複数コンポーネント開発（例: 「全体の実装」「システム全体」）
 
-個別フェーズエージェント（explorer, analyst等）を直接呼ばず、vw-orchestratorに委譲すること。
+Main Claudeが直接TDD実装を行い、vw-dev-reviewer + vw-dev-tester で検証。
 
 ### vw-prp-orchestrator（PRP生成統括）
 以下のいずれかの場合、**必ず** `vw-prp-orchestrator`（subagent_type='vw-prp-orchestrator'）を使用：
@@ -75,13 +74,19 @@ NEVER: XSS (Cross-Site Scripting)
 
 /contexteng-gen-prp コマンドはこのエージェントを内部で呼び出します。
 
-### vw-qa-tester（QAテスト・E2E検証）
-以下のいずれかの場合、**必ず** `vw-qa-tester`（subagent_type='vw-qa-tester'）を使用：
-- テスト・動作検証（例: 「テストして」「動作確認」「品質確認」）
+### vw-dev-tester（E2Eテスト）
+以下のいずれかの場合、**必ず** `vw-dev-tester`（subagent_type='vw-dev-tester'）を使用：
 - ブラウザテスト（例: 「ブラウザでテスト」「E2Eテスト」「Playwrightでテスト」）
 - 実装完了後の検証（例: 「実装が完了したので検証」「本番前の最終確認」）
 
-実装完了後は自動的にこのエージェントでテストを実施すること。
+Playwright MCPを使用したE2Eテストを実行。
+
+### vw-dev-reviewer（静的解析・品質ゲート）
+以下のいずれかの場合、**必ず** `vw-dev-reviewer`（subagent_type='vw-dev-reviewer'）を使用：
+- コードレビュー（例: 「レビューして」「品質確認」「Lintチェック」）
+- 品質ゲート実行（例: 「Lint/Format/Test/Build」「品質チェック」）
+
+Lint→Format→Test→Build の品質ゲートを順序実行。
 
 ### vw-task-manager（プロジェクト進捗管理）
 以下のいずれかの場合、**必ず** `vw-task-manager`（subagent_type='vw-task-manager'）を使用：

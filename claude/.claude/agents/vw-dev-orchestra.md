@@ -94,7 +94,6 @@ vw-dev-orchestra を resume して結果を評価:
 <skill_references>
 - tdd-implementation: TDD Red-Green-Refactor ガイダンス
 - quality-assurance: 8つの品質ゲート基準
-- workflow-outputs: 完了レポートテンプレート
 </skill_references>
 
 <rollback>
