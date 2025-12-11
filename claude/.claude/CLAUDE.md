@@ -96,10 +96,17 @@ Lint→Format→Test→Build の品質ゲートを順序実行。
 
 プロジェクト開始時・区切りの良いタイミングで自動的に起動を検討すること。
 
-## Gemini Search
-`gemini` は google gemini cliです。あなたはWeb検索でこのツールを使えます。
-Run web search via Task Tool with `gemini -p 'WebSearch: ...'`.
-'echo ...で検索中'も一緒に実行してください。
+## Web検索ツールの使い分け
+
+### WebSearch（組み込み）- ファクト収集用
+- **用途**: 公式ドキュメント、バージョン情報、引用が必要な場合
+- **特徴**: ソースURL付きで検証可能
+- **使い方**: 自然言語で「〜を検索して」
+
+### /vw:websearch（Gemini CLI）- 概念理解用
+- **用途**: 技術の背景、設計思想、比較分析、トレンド調査
+- **特徴**: 深い解説、文脈を理解した分析（ただしURLなし）
+- **使い方**: `/vw:websearch "クエリ"` または `gemini -p 'google_web_search: ...'`
 
 ## commit規則
 - authorを2度と書くな。setting.jsonにも書いてある。

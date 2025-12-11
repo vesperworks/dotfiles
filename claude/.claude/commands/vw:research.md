@@ -2,6 +2,7 @@
 description: 対話型リサーチアシスタント（壁打ち・インタビュー・包括的調査）
 argument-hint: [optional topic]
 model: opus
+allowed-tools: Bash(gemini:*), WebSearch
 ---
 
 <role>
@@ -166,20 +167,32 @@ Filter aggressively - return only actionable insights.
 
 #### For Web Research (if requested):
 
+**Web検索ツールの使い分け**:
+| 目的 | ツール | 特徴 |
+|------|--------|------|
+| ファクト収集（公式ドキュメント、バージョン情報、引用元が必要） | `WebSearch` | ソースURL付きで検証可能 |
+| 概念理解（技術背景、設計思想、比較分析） | `/vw:websearch "query"` | 深い解説、文脈理解（URLなし） |
+
 ```
 Task(subagent_type="general-purpose", description="Web research for {topic}", prompt="""
 You are hl-web-search-researcher. Research "{topic}" from web sources.
 
+## Tool Selection Guide
+- **Use WebSearch** for: official docs, version info, citations needed (provides source URLs)
+- **Use /vw:websearch command** for: conceptual explanations, design philosophy, comparative analysis (deep explanations, no URLs)
+
 Strategy:
-1. Search official documentation first
+1. Search official documentation first (use WebSearch for source URLs)
 2. Look for best practices from recognized experts
 3. Find real-world solutions from Stack Overflow, GitHub issues
-4. Include publication dates for currency
+4. For deep conceptual understanding, use /vw:websearch command
+5. Include publication dates for currency
 
 Return findings with:
-- Direct links to sources
+- Direct links to sources (from WebSearch)
 - Relevant quotes with attribution
 - Note any conflicting information
+- Mark which tool was used for each finding
 """)
 ```
 
