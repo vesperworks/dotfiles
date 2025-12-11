@@ -45,14 +45,14 @@ NEVER: XSS (Cross-Site Scripting)
 ### 推奨フロー
 
 #### パターンA: PRP統合ワークフロー（仕様が不明確な場合）
-1. `/contexteng-gen-prp "feature-name"` - 対話的に仕様を決定
-2. `/contexteng-exe-prp` - TDD実装→検証ループ
-3. `/sc` - スマートコミット
+1. `/vw:plan-prp "feature-name"` - 対話的に仕様を決定
+2. `/vw:dev-prp` - TDD実装→検証ループ
+3. `/vw:commit` - スマートコミット
 
 #### パターンB: 直接実装ワークフロー（仕様が明確な場合）
 1. `@vw-task-manager` - プロジェクト状況確認
 2. 直接実装（Main Claude）→ `@vw-dev-reviewer` + `@vw-dev-tester` で検証
-3. `/sc` - スマートコミット
+3. `/vw:commit` - スマートコミット
 
 ## vw-* エージェント起動ルール
 
@@ -72,7 +72,7 @@ Main Claudeが直接TDD実装を行い、vw-dev-reviewer + vw-dev-tester で検�
 - 複数案での設計比較（例: 「複数案で」「4パターンで」「比較検討して」「マルチモード」「じっくり考えて」）
 - 設計アプローチ選択（例: 「どの設計がいい？」「設計案を比較」）
 
-/contexteng-gen-prp コマンドはこのエージェントを内部で呼び出します。
+/vw:plan-prp コマンドはこのエージェントを内部で呼び出します。
 
 ### vw-dev-tester（E2Eテスト）
 以下のいずれかの場合、**必ず** `vw-dev-tester`（subagent_type='vw-dev-tester'）を使用：
