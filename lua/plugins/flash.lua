@@ -253,30 +253,44 @@ return {
       mode = { "n", "x", "o" },
       function()
         local Flash = require("flash")
-        
-        -- 2文字ラベルのフォーマット関数
-        local function format(opts)
+
+        -- 強調（次に押すキー）: ピンク背景 + 白文字
+        vim.api.nvim_set_hl(0, "FlashLabelActive", { fg = "#ffffff", bg = "#ff007c", bold = true })
+        -- 非強調: 白背景 + ピンク文字
+        vim.api.nvim_set_hl(0, "FlashLabelInactive", { fg = "#ff007c", bg = "#ffffff", bold = true })
+
+        -- 1段階目用: 1文字目を強調（白背景で目立たせる）
+        local function formatFirst(opts)
           return {
-            { opts.match.label1, "FlashLabel" },  -- 最初の文字もピンク色に統一
-            { opts.match.label2, "FlashLabel" },
+            { opts.match.label1, "FlashLabelInactive" },  -- 白背景（押すキー）
+            { opts.match.label2, "FlashLabelActive" },    -- ピンク背景
+          }
+        end
+
+        -- 2段階目用: 2文字目を強調（色反転）
+        local function formatSecond(opts)
+          return {
+            { opts.match.label1, "FlashLabelActive" },    -- ピンク背景
+            { opts.match.label2, "FlashLabelInactive" },  -- 白背景（押すキー）
           }
         end
 
         Flash.jump({
           search = { mode = "search" },
-          label = { 
-            after = false, 
-            before = { 0, 0 }, 
-            uppercase = false, 
-            format = format 
+          highlight = { backdrop = true },
+          label = {
+            after = false,
+            before = { 0, 0 },
+            uppercase = false,
+            format = formatFirst
           },
           pattern = [[\<]],
           action = function(match, state)
             state:hide()
             Flash.jump({
               search = { max_length = 0 },
-              highlight = { matches = false },
-              label = { format = format },
+              highlight = { backdrop = true, matches = false },
+              label = { format = formatSecond },
               matcher = function(win)
                 return vim.tbl_filter(function(m)
                   return m.label == match.label and m.win == win
