@@ -40,12 +40,13 @@ description: 'Smart commit: /sc (段階コミット) or /sc "message" (クイッ
 - 同じ機能・目的に関連するファイル
 - 同じコミットタイプ（feat/fix/docs等）に該当するファイル
 
-### Step 2: グループ確認
+### Step 2: グループ確認（AskUserQuestion形式）
 
-ユーザーに提案したグループを表示し、確認を求める：
+分析結果を表示した後、AskUserQuestionで確認を求める：
 
+**まず、提案グループを表示**:
 ```
-変更を以下のグループでコミットしますか？
+## コミットグループ提案
 
 Commit 1: [feat] 新機能追加
   - src/feature.ts
@@ -59,7 +60,85 @@ Commit 3: [chore] 設定変更
   - .klaude/settings.json
 ```
 
-承認されたらStep 3へ、調整が必要なら再グループ化。
+**次に、AskUserQuestionで確認**:
+```yaml
+AskUserQuestion:
+  questions:
+    - question: "このグループ構成でコミットしますか？"
+      header: "確認"
+      multiSelect: false
+      options:
+        - label: "はい、このまま進める"
+          description: "提案されたグループでコミットを実行"
+        - label: "グループを統合したい"
+          description: "複数のコミットを1つにまとめる"
+        - label: "グループを分割したい"
+          description: "1つのコミットを複数に分ける"
+        - label: "順序を変更したい"
+          description: "コミットの実行順序を入れ替える"
+```
+
+**ユーザー選択による分岐**:
+
+- **「はい、このまま進める」** → Step 3へ
+- **「グループを統合したい」** → Step 2a（統合）へ
+- **「グループを分割したい」** → Step 2b（分割）へ
+- **「順序を変更したい」** → Step 2c（順序変更）へ
+
+### Step 2a: グループ統合
+
+```yaml
+AskUserQuestion:
+  questions:
+    - question: "どのコミットを統合しますか？（複数選択可）"
+      header: "統合"
+      multiSelect: true
+      options:
+        - label: "Commit 1: [feat] 新機能追加"
+          description: "src/feature.ts, src/feature.test.ts"
+        - label: "Commit 2: [docs] ドキュメント更新"
+          description: "README.md, CLAUDE.md"
+        - label: "Commit 3: [chore] 設定変更"
+          description: ".klaude/settings.json"
+```
+
+選択されたコミットを1つに統合し、Step 2に戻って再確認。
+
+### Step 2b: グループ分割
+
+```yaml
+AskUserQuestion:
+  questions:
+    - question: "どのコミットを分割しますか？"
+      header: "分割"
+      multiSelect: false
+      options:
+        - label: "Commit 1: [feat] 新機能追加"
+          description: "src/feature.ts, src/feature.test.ts → 2つに分割"
+        - label: "Commit 2: [docs] ドキュメント更新"
+          description: "README.md, CLAUDE.md → 2つに分割"
+```
+
+選択されたコミットのファイルを個別コミットに分割し、Step 2に戻って再確認。
+
+### Step 2c: 順序変更
+
+```yaml
+AskUserQuestion:
+  questions:
+    - question: "最初に実行するコミットを選んでください"
+      header: "順序"
+      multiSelect: false
+      options:
+        - label: "Commit 1: [feat] 新機能追加"
+          description: "現在: 1番目"
+        - label: "Commit 2: [docs] ドキュメント更新"
+          description: "現在: 2番目"
+        - label: "Commit 3: [chore] 設定変更"
+          description: "現在: 3番目"
+```
+
+選択された順序で並び替え、Step 2に戻って再確認。
 
 ### Step 3: TodoWrite でタスク化
 
