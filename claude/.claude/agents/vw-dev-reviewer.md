@@ -38,9 +38,31 @@ color: cyan
 
 | プロジェクト | Lint | Format | Test | Build |
 |-------------|------|--------|------|-------|
-| Node.js/TS | `nr lint` | `nr format` | `nr test` | `nr build` |
+| Node.js/TS (Biome) | `nr biome:check` | `nr biome:check --write` | `nr test` | `nr build` |
+| Node.js/TS (ESLint) | `nr lint` | `nr format` | `nr test` | `nr build` |
 | Python | `uv run ruff check` | `uv run ruff format` | `uv run pytest` | - |
 | Rust | `cargo clippy` | `cargo fmt` | `cargo test` | `cargo build` |
+
+### Biome検出ロジック（Node.js/TSプロジェクト）
+
+```bash
+# Biome検出: package.json依存 OR biome.json存在
+if grep -q '"@biomejs/biome"' package.json 2>/dev/null || [ -f "biome.json" ]; then
+  # Biome使用
+  LINT_CMD="nr biome:check"
+  FORMAT_CMD="nr biome:check --write"
+else
+  # ESLint/Prettier使用（従来）
+  LINT_CMD="nr lint"
+  FORMAT_CMD="nr format"
+fi
+```
+
+**検出条件**（いずれかを満たせばBiome使用）:
+1. `package.json`に`@biomejs/biome`依存がある
+2. プロジェクトルートに`biome.json`が存在する
+
+**優先順位**: Biome > ESLint/Prettier
 
 ## Phase 2: 品質ゲート実行
 

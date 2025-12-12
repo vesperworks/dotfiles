@@ -13,9 +13,27 @@ Comprehensive quality verification ensuring implementations meet all quality sta
 
 All implementations MUST pass:
 
+### Biome Detection (Node.js/TypeScript)
+
+```bash
+# Biome検出: package.json依存 OR biome.json存在
+if grep -q '"@biomejs/biome"' package.json 2>/dev/null || [ -f "biome.json" ]; then
+  USE_BIOME=true
+else
+  USE_BIOME=false
+fi
+```
+
+**検出条件**（いずれかを満たせばBiome使用）:
+1. `package.json`に`@biomejs/biome`依存がある
+2. プロジェクトルートに`biome.json`が存在する
+
 ### 1. Lint Check
 ```bash
-# Node.js/TypeScript
+# Node.js/TypeScript (Biome)
+nr biome:check
+
+# Node.js/TypeScript (ESLint - fallback)
 nr lint
 
 # Python
@@ -27,7 +45,10 @@ cargo clippy
 
 ### 2. Format Check
 ```bash
-# Node.js/TypeScript
+# Node.js/TypeScript (Biome)
+nr biome:check --write
+
+# Node.js/TypeScript (Prettier - fallback)
 nr format
 
 # Python

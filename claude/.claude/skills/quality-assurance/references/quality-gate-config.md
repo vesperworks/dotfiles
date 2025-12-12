@@ -4,16 +4,33 @@
 
 Mandatory quality checks that all implementations must pass before completion.
 
-## Gate 1: Lint
-
-### Node.js/TypeScript (ESLint + Biome)
+## Biome Detection (Node.js/TypeScript)
 
 ```bash
-# ESLint
-nr lint
+# Biome検出: package.json依存 OR biome.json存在
+if grep -q '"@biomejs/biome"' package.json 2>/dev/null || [ -f "biome.json" ]; then
+  USE_BIOME=true
+else
+  USE_BIOME=false
+fi
+```
 
-# Or Biome
-nr biome check
+**検出条件**（いずれかを満たせばBiome使用）:
+1. `package.json`に`@biomejs/biome`依存がある
+2. プロジェクトルートに`biome.json`が存在する
+
+**優先順位**: Biome > ESLint/Prettier
+
+## Gate 1: Lint
+
+### Node.js/TypeScript
+
+```bash
+# Biome (推奨)
+nr biome:check
+
+# ESLint (fallback)
+nr lint
 ```
 
 **Common Issues:**
@@ -48,11 +65,11 @@ cargo clippy -- -D warnings
 ### Node.js/TypeScript
 
 ```bash
-# Prettier
-nr format
+# Biome (推奨)
+nr biome:check --write
 
-# Or Biome
-nr biome format --write
+# Prettier (fallback)
+nr format
 ```
 
 ### Python

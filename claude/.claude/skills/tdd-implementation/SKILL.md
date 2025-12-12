@@ -90,9 +90,13 @@ try {
 ## Project-Specific Patterns
 
 ### Node.js/TypeScript
+
+**Biome検出**: `@biomejs/biome`依存 または `biome.json`存在でBiome使用
+
 - Use Jest/Vitest for testing
 - `nr test` for running tests
-- `nr lint && nr format` before commit
+- Biome: `nr biome:check --write` before commit
+- ESLint/Prettier (fallback): `nr lint && nr format` before commit
 
 ### Python
 - Use pytest for testing
