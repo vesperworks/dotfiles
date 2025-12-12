@@ -24,7 +24,47 @@ description: 最後のコミットで変更された内容をPlaywright MCPで�
 </solution_approach>
 
 <instructions>
-## Step 1: 最新コミット情報の取得
+## Step 1: 開発サーバーのセットアップ
+
+テスト実行前に、開発サーバーを準備します。
+
+### 1.1: 既存プロセスの掃除
+
+ポート3000-3010で稼働中のプロセスを確認・終了します：
+
+```bash
+# ポート3000-3010で稀働中のプロセスを確認
+for port in $(seq 3000 3010); do
+  pid=$(lsof -ti :$port 2>/dev/null)
+  if [ -n "$pid" ]; then
+    echo "🧹 ポート $port のプロセス (PID: $pid) を終了します"
+    kill $pid 2>/dev/null || true
+  fi
+done
+```
+
+### 1.2: 開発サーバーの起動
+
+バックグラウンドで開発サーバーを起動します：
+
+```bash
+# バックグラウンドで開発サーバーを起動
+nr dev &
+
+# サーバー起動を待機（最大30秒）
+echo "⏳ 開発サーバーの起動を待機中..."
+for i in $(seq 1 30); do
+  if curl -s http://localhost:3000 > /dev/null 2>&1; then
+    echo "✅ 開発サーバーが起動しました (http://localhost:3000)"
+    break
+  fi
+  sleep 1
+done
+```
+
+**注意**: `package.json` に `dev` スクリプトがない場合は、ユーザーに確認してください。
+
+## Step 2: 最新コミット情報の取得
 
 以下を実行してください：
 
@@ -37,7 +77,7 @@ git diff HEAD~1 HEAD --name-only
 - コミットがない場合: "リポジトリにコミットがありません"と表示して終了
 - Gitリポジトリでない場合: ".gitディレクトリが見つかりません"と表示して終了
 
-## Step 2: ユーザー操作テストシナリオの生成
+## Step 3: ユーザー操作テストシナリオの生成
 
 コミットメッセージと変更ファイルから、以下を考えてください：
 
@@ -81,7 +121,7 @@ git diff HEAD~1 HEAD --name-only
 - **refactor: update navigation menu**
   → メニューボタンクリック → ナビゲーション表示 → リンククリック
 
-## Step 3: コミット内容の要約表示
+## Step 4: コミット内容の要約表示
 
 ユーザーに以下を表示してください：
 
@@ -101,7 +141,7 @@ Commit: ${hash}: ${message}
 @qa-playwright-tester を呼び出してテストを実行します...
 ```
 
-## Step 4: qa-playwright-tester エージェント呼び出し
+## Step 5: qa-playwright-tester エージェント呼び出し
 
 以下の形式で @qa-playwright-tester を呼び出してください：
 
