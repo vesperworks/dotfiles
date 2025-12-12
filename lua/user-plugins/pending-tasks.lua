@@ -357,7 +357,7 @@ function M.setup(opts)
   })
 
   -- キーマップ設定
-  vim.keymap.set("n", "<leader>t", M.toggle, {
+  vim.keymap.set("n", "<leader>j", M.toggle, {
     noremap = true,
     silent = true,
     desc = "Toggle pending tasks window (- [-])",
