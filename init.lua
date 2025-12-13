@@ -79,6 +79,12 @@ if ok_pending then
   pending_tasks.setup()
 end
 
+-- 見出しジャンプ表示プラグイン
+local ok_heading, heading_jump = pcall(require, 'user-plugins.heading-jump')
+if ok_heading then
+  heading_jump.setup()
+end
+
 -- タスクタイマーシステムを初期化
 local ok, task_timer = pcall(require, 'user-plugins.task-timer')
 if ok then
