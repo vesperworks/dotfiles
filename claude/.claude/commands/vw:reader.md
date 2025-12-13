@@ -1,6 +1,6 @@
 ---
-description: ドキュメント並走リーダー（ネタバレなし・読書位置追跡・QA番号管理）
-argument-hint: <file_path_or_url>
+description: ドキュメント並走リーダー（ネタバレなし・読書位置追跡・@参照対応）
+argument-hint: <file_path_or_url_or_@reference>
 model: sonnet
 allowed-tools: Read, WebFetch
 ---
@@ -58,6 +58,12 @@ document:
 reading_progress:
   estimated_line: 0  # 推測読了行
   confidence: ""     # 推測の確信度 (low/medium/high)
+cursor_context:      # @参照による行コンテキスト
+  enabled: false     # @参照が検出されたらtrue
+  file: ""           # ファイルパス
+  start_line: 0      # 開始行
+  end_line: 0        # 終了行
+  content: ""        # 該当コード内容
 qa_log:
   - id: 1
     question: ""
@@ -110,12 +116,70 @@ Output and STOP:
 または、このチャットにファイルを添付してください。
 ```
 
+## Phase 1.5: Code Reference Detection
+
+### If user input contains @file#L pattern:
+
+Detect pattern: `@([^\s#]+)#L(\d+)(?:-(\d+))?(\s+.+)?`
+- `@path/to/file.ts#L42` → 42行目のみ（指示なし）
+- `@path/to/file.ts#L42-60` → 42-60行目（指示なし）
+- `@path/to/file.ts#L42 翻訳して` → 42行目 + 指示あり
+
+1. Parse the reference
+2. Read the file using Read tool
+3. Extract specified line range (with ±5 lines context)
+4. Update cursor_context (enabled=true)
+5. Check if instruction follows the reference
+
+### Case A: @参照のみ（指示なし）
+
+自動的にその行/範囲が何かを説明する:
+
+```
+📍 {path} L{start}-{end}
+
+---
+{extracted_code_with_line_numbers}
+---
+
+→ {この行/範囲が何をしているかの簡潔な説明}
+📄 L{start}-{end} ✅ 95%
+```
+
+### Case B: @参照 + 指示あり
+
+指示に従って回答する:
+
+```
+📍 {path} L{start}-{end}
+
+---
+{extracted_code_with_line_numbers}
+---
+
+Q: {instruction}
+→ {指示に対する回答}
+📄 L{start}-{end} ✅ 95%
+```
+
+### Reference Scope Rules:
+- @参照は「現在見ている範囲」として扱う
+- 範囲外のコードについて聞かれたら:
+  「その部分は現在の参照範囲外です。`Cmd+Option+K`で新しい範囲を送ってください」
+- 同じファイル内の前後5行程度は文脈として参照可
+
 ## Phase 2: Reading Companion Loop
 
 For each user question:
 
 ### Step 2.1: Estimate Reading Position
 
+**If cursor_context.enabled (コード参照モード):**
+- Use cursor_context.start_line - cursor_context.end_line as position
+- Output: 「{file}の{start}-{end}行目を見ていますね。」
+- Skip keyword analysis (position is explicit)
+
+**Else (従来のドキュメントモード):**
 1. Analyze question content for keywords, concepts, terms
 2. Search document for matching sections (ONLY search, don't reveal)
 3. Estimate which line user is currently reading
@@ -127,6 +191,16 @@ For each user question:
 ### Step 2.2: Check Scope
 
 **CRITICAL**: Before answering, verify:
+
+**If cursor_context.enabled (コード参照モード):**
+- Is the question about the referenced code range?
+- If question is about code outside the range:
+```
+その部分は現在の参照範囲（{start}-{end}行）外です。
+VSCodeで対象を選択し `Cmd+Option+K` で新しい参照を送ってください。
+```
+
+**Else (従来のドキュメントモード):**
 - Is the answer within estimated reading range?
 - Would the answer reveal content user hasn't read?
 
