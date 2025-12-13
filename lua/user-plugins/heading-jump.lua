@@ -19,6 +19,8 @@ M.state = {
   headings = {},    -- { lnum, level, text } のリスト
   source_buf = nil, -- 元のバッファID
   preview_extmark = nil, -- プレビュー用extmark ID
+  input_text = "",  -- fuzzy検索用入力文字列
+  input_group = nil, -- InsertCharPre用autocmdグループ
 }
 
 -- extmark用namespace
@@ -58,6 +60,13 @@ end
 
 -- ウィンドウを閉じる
 function M.close_window()
+  -- fuzzy入力グループをクリーンアップ
+  if M.state.input_group then
+    pcall(vim.api.nvim_del_augroup_by_id, M.state.input_group)
+    M.state.input_group = nil
+  end
+  M.state.input_text = ""
+
   -- プレビューハイライトをクリア
   if M.state.source_buf and vim.api.nvim_buf_is_valid(M.state.source_buf) then
     vim.api.nvim_buf_clear_namespace(M.state.source_buf, M.ns_id, 0, -1)
@@ -144,6 +153,99 @@ function M.render_window()
   M.setup_window_keymaps(buf)
 end
 
+-- fuzzyマッチで見出しを検索し、最初のマッチ行を返す
+function M.find_fuzzy_match(input)
+  if input == "" then return nil end
+
+  -- 見出しテキストのリストを作成
+  local texts = {}
+  for i, h in ipairs(M.state.headings) do
+    texts[i] = h.text
+  end
+
+  -- matchfuzzyでマッチする見出しを検索
+  local matches = vim.fn.matchfuzzy(texts, input)
+  if #matches == 0 then return nil end
+
+  -- 最初のマッチの元のインデックスを探す
+  for i, h in ipairs(M.state.headings) do
+    if h.text == matches[1] then
+      return i
+    end
+  end
+  return nil
+end
+
+-- fuzzy入力ハンドラをセットアップ
+function M.setup_fuzzy_input(buf)
+  M.state.input_text = ""
+  M.state.input_group = vim.api.nvim_create_augroup("HeadingJumpInput", { clear = true })
+
+  -- Insert modeに切り替え
+  vim.cmd("startinsert")
+
+  -- InsertCharPreで文字入力をキャッチ
+  vim.api.nvim_create_autocmd("InsertCharPre", {
+    buffer = buf,
+    group = M.state.input_group,
+    callback = function()
+      local char = vim.v.char
+
+      -- 改行は処理しない
+      if char == "\n" or char == "\r" then
+        return
+      end
+
+      -- 入力をキャンセル（文字を表示させない）
+      vim.v.char = ""
+
+      -- 非同期で処理
+      vim.schedule(function()
+        -- 入力文字列に追加
+        M.state.input_text = M.state.input_text .. char
+
+        -- fuzzyマッチを実行
+        local match_idx = M.find_fuzzy_match(M.state.input_text)
+        if match_idx then
+          -- マッチした行にカーソル移動＋プレビュー
+          if M.state.win and vim.api.nvim_win_is_valid(M.state.win) then
+            vim.api.nvim_win_set_cursor(M.state.win, { match_idx, 0 })
+            M.preview_heading(match_idx)
+          end
+        end
+      end)
+    end,
+  })
+
+  -- Enterキーで確定ジャンプ
+  vim.keymap.set("i", "<CR>", function()
+    vim.api.nvim_del_augroup_by_id(M.state.input_group)
+    vim.cmd("stopinsert")
+    local cursor = vim.api.nvim_win_get_cursor(M.state.win)
+    M.jump_to_heading(cursor[1])
+  end, { buffer = buf, silent = true })
+
+  -- Escキーで閉じる
+  vim.keymap.set("i", "<Esc>", function()
+    vim.api.nvim_del_augroup_by_id(M.state.input_group)
+    vim.cmd("stopinsert")
+    M.close_window()
+  end, { buffer = buf, silent = true })
+
+  -- BackSpaceで1文字削除
+  vim.keymap.set("i", "<BS>", function()
+    if #M.state.input_text > 0 then
+      M.state.input_text = M.state.input_text:sub(1, -2)
+      -- 再検索
+      local match_idx = M.find_fuzzy_match(M.state.input_text)
+      if match_idx and M.state.win and vim.api.nvim_win_is_valid(M.state.win) then
+        vim.api.nvim_win_set_cursor(M.state.win, { match_idx, 0 })
+        M.preview_heading(match_idx)
+      end
+    end
+  end, { buffer = buf, silent = true })
+end
+
 -- ウィンドウ内のキーマップ設定
 function M.setup_window_keymaps(buf)
   local opts = { buffer = buf, noremap = true, silent = true }
@@ -174,6 +276,11 @@ function M.setup_window_keymaps(buf)
     local prev_line = math.max(cursor[1] - 1, 1)
     vim.api.nvim_win_set_cursor(M.state.win, { prev_line, 0 })
     M.preview_heading(prev_line)
+  end, opts)
+
+  -- i でfuzzy入力モードを開始
+  vim.keymap.set("n", "i", function()
+    M.setup_fuzzy_input(buf)
   end, opts)
 end
 

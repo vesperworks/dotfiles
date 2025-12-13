@@ -8,8 +8,12 @@
 **解決**: `heading-jump.lua`を新規実装。`pending-tasks.lua`と同じUIパターンで統一感を維持
 
 **動作仕様**:
-- `<leader>h` → 見出しリストをフローティングウィンドウに表示
+- `<leader>h` → 見出しリストをフローティングウィンドウに表示（Normal mode）
 - `j/k` → カーソル移動 + 本文側を該当行に移動＆中央表示 + **反転カラーでハイライト**
+- `i` → fuzzy検索モードに入る（Insert mode）
+  - **文字入力** → fuzzyマッチで該当見出しを選択＋プレビュー
+  - `BS` → 入力文字を1文字削除して再検索
+  - `Enter` → 確定ジャンプ、`Esc` → Normal modeに戻る
 - `Enter` → 確定してジャンプ＆ウィンドウ閉じ
 - `1-9` → 番号で直接ジャンプ
 - `q`/`Esc` → ウィンドウを閉じる
@@ -23,6 +27,8 @@
 - `preview_heading()`でソースバッファと連動したリアルタイムプレビュー
 - `nvim_buf_set_extmark` + `line_hl_group`で行全体を反転カラーハイライト
 - `nvim_create_namespace`でextmark管理、ウィンドウ終了時に自動クリア
+- `InsertCharPre` + `vim.fn.matchfuzzy`でリアルタイムfuzzy検索
+- Insert mode入力で文字をキャッチし、画面に表示せず検索に使用
 
 **関連ファイル**:
 - `lua/user-plugins/heading-jump.lua` - 新規作成
