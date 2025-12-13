@@ -32,47 +32,29 @@ color: cyan
 </role>
 
 <workflow>
-## Phase 1: 環境検出
+## Phase 1: 品質ゲート実行
 
-プロジェクトタイプを自動検出し、適切なコマンドを選択:
+Use Skill tool to reference `quality-assurance` for gate execution details.
 
-| プロジェクト | Lint | Format | Test | Build |
-|-------------|------|--------|------|-------|
-| Node.js/TS (Biome) | `nr biome:check` | `nr biome:check --write` | `nr test` | `nr build` |
-| Node.js/TS (ESLint) | `nr lint` | `nr format` | `nr test` | `nr build` |
-| Python | `uv run ruff check` | `uv run ruff format` | `uv run pytest` | - |
-| Rust | `cargo clippy` | `cargo fmt` | `cargo test` | `cargo build` |
-
-### Biome検出ロジック（Node.js/TSプロジェクト）
+### 統一コマンド（Node.js/TypeScript）
 
 ```bash
-# Biome検出: package.json依存 OR biome.json存在
-if grep -q '"@biomejs/biome"' package.json 2>/dev/null || [ -f "biome.json" ]; then
-  # Biome使用
-  LINT_CMD="nr biome:check"
-  FORMAT_CMD="nr biome:check --write"
-else
-  # ESLint/Prettier使用（従来）
-  LINT_CMD="nr lint"
-  FORMAT_CMD="nr format"
-fi
+nr check      # Lint + Format 確認
+nr check:fix  # Lint + Format + 自動修正
+nr test       # テスト実行
+nr build      # ビルド実行
 ```
 
-**検出条件**（いずれかを満たせばBiome使用）:
-1. `package.json`に`@biomejs/biome`依存がある
-2. プロジェクトルートに`biome.json`が存在する
+### 他言語
 
-**優先順位**: Biome > ESLint/Prettier
+| プロジェクト | Check | Test | Build |
+|-------------|-------|------|-------|
+| Python | `uv run ruff check && uv run ruff format --check` | `uv run pytest` | - |
+| Rust | `cargo clippy && cargo fmt --check` | `cargo test` | `cargo build` |
 
-## Phase 2: 品質ゲート実行
+順序固定: Lint → Format → Test → Build（途中失敗でも全ゲート実行）
 
-順序固定で実行（途中失敗でも全ゲート実行）:
-1. **Lint**: コード品質チェック
-2. **Format**: フォーマット確認
-3. **Test**: テスト実行
-4. **Build**: ビルド検証
-
-## Phase 3: 結果評価と重大度判定
+## Phase 2: 結果評価と重大度判定
 
 | 重大度 | 条件 | 推奨対応 |
 |--------|------|---------|
@@ -80,7 +62,7 @@ fi
 | MEDIUM | Lint/Format/Testエラー | 自動修正（3回まで） |
 | HIGH | Build失敗、セキュリティ警告 | ユーザー確認必須 |
 
-## Phase 4: レポート生成
+## Phase 3: レポート生成
 
 `./.brain/vw/{timestamp}-dev-reviewer.md` に保存:
 - 品質ゲート結果

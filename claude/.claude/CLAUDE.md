@@ -20,9 +20,21 @@
 
 
 ## 推奨コマンド
-- rg
-- ni
-- nr 
+- ni（パッケージインストール）
+- nr（スクリプト実行）
+
+### 品質コマンド（統一ルール）
+
+Node.js/TypeScriptプロジェクトでは以下のコマンドを使用:
+
+```bash
+nr check      # Lint + Format 確認
+nr check:fix  # Lint + Format + 自動修正
+nr test       # テスト実行
+nr build      # ビルド実行
+```
+
+**注**: 各プロジェクトの `package.json` で Biome/ESLint を適切に設定してください。
 
 NEVER: Path Traversal
 NEVER: Command Injection

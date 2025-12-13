@@ -89,24 +89,23 @@ try {
 
 ## Project-Specific Patterns
 
-### Node.js/TypeScript
+品質ゲートの詳細は `quality-assurance` skill を参照。
 
-**Biome検出**: `@biomejs/biome`依存 または `biome.json`存在でBiome使用
+### Node.js/TypeScript
 
 - Use Jest/Vitest for testing
 - `nr test` for running tests
-- Biome: `nr biome:check --write` before commit
-- ESLint/Prettier (fallback): `nr lint && nr format` before commit
+- `nr check:fix` before commit
 
 ### Python
 - Use pytest for testing
 - `uv run pytest` for running tests
-- `uv run ruff check && uv run ruff format`
+- `uv run ruff check --fix && uv run ruff format`
 
 ### Rust
 - Use `#[cfg(test)]` module
 - `cargo test` for running tests
-- `cargo clippy && cargo fmt`
+- `cargo clippy --fix && cargo fmt`
 
 ## Rollback / Recovery (TDD失敗時)
 - Red/Green のどこで破綻したかを特定し、失敗テストを最小再現ケースとして残す

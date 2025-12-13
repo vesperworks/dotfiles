@@ -11,76 +11,17 @@ Comprehensive quality verification ensuring implementations meet all quality sta
 
 ## Quality Gate Enforcement (Mandatory)
 
-All implementations MUST pass:
+All implementations MUST pass the quality gates in order: **Lint → Format → Test → Build**
 
-### Biome Detection (Node.js/TypeScript)
+### 統一コマンド
 
-```bash
-# Biome検出: package.json依存 OR biome.json存在
-if grep -q '"@biomejs/biome"' package.json 2>/dev/null || [ -f "biome.json" ]; then
-  USE_BIOME=true
-else
-  USE_BIOME=false
-fi
-```
+| プロジェクト | Check | Fix | Test | Build |
+|-------------|-------|-----|------|-------|
+| Node.js/TS | `nr check` | `nr check:fix` | `nr test` | `nr build` |
+| Python | `uv run ruff check` | `uv run ruff check --fix` | `uv run pytest` | - |
+| Rust | `cargo clippy` | `cargo clippy --fix` | `cargo test` | `cargo build` |
 
-**検出条件**（いずれかを満たせばBiome使用）:
-1. `package.json`に`@biomejs/biome`依存がある
-2. プロジェクトルートに`biome.json`が存在する
-
-### 1. Lint Check
-```bash
-# Node.js/TypeScript (Biome)
-nr biome:check
-
-# Node.js/TypeScript (ESLint - fallback)
-nr lint
-
-# Python
-uv run ruff check
-
-# Rust
-cargo clippy
-```
-
-### 2. Format Check
-```bash
-# Node.js/TypeScript (Biome)
-nr biome:check --write
-
-# Node.js/TypeScript (Prettier - fallback)
-nr format
-
-# Python
-uv run ruff format --check
-
-# Rust
-cargo fmt --check
-```
-
-### 3. Test Execution
-```bash
-# Node.js/TypeScript
-nr test
-
-# Python
-uv run pytest
-
-# Rust
-cargo test
-```
-
-### 4. Build Verification
-```bash
-# Node.js/TypeScript
-nr build
-
-# Python
-# Usually no build step
-
-# Rust
-cargo build --release
-```
+**詳細な設定・トラブルシューティング**: [quality-gate-config.md](./references/quality-gate-config.md) 参照
 
 ## Quality Metrics Collection
 
