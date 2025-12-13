@@ -1,3 +1,8 @@
+---
+description: PRP実行（TDD実装→検証ループ）
+argument-hint: [PRP_PATH]
+---
+
 # Execute PRP with vw-dev-orchestra
 
 PRPを読み込み、vw-dev-orchestraでTDD実装・検証ループを実行します。
