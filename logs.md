@@ -2,6 +2,27 @@
 
 ## 📅 2025年12月（現在の月）
 
+### 2025-12-14 - smear-cursor.nvim導入（完了）
+
+**背景**: Neovide風のスミアカーソルエフェクトをAlacritty環境でも使いたい
+**解決**: `smear-cursor.nvim`プラグインを導入。lazy.nvimで簡単インストール
+
+**使用方法**:
+- nvim再起動で自動有効化
+- `:SmearCursorToggle` → 一時的にON/OFF切り替え
+
+**技術的レガシー**:
+- Neovim 0.10.2以上が必要（現環境: 0.11.1）
+- ターミナル制限なし（Alacritty 0.15.1で動作確認）
+- Cascadia Code等のlegacy computing symbols対応フォントで最適表示
+
+**関連ファイル**:
+- `lua/plugins/smear-cursor.lua` - 新規作成
+
+**調査レポート**: `thoughts/shared/research/2025-12-14-nvim-alacritty-animation.md`
+
+---
+
 ### 2025-12-12 - 見出しジャンプ機能追加（完了）
 
 **背景**: `<leader>H`でMarkdown見出し（H1〜H6）をリストアップし、j/kでプレビューしながら移動、Enterで確定する機能が欲しい
