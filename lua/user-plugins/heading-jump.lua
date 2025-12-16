@@ -58,6 +58,22 @@ function M.collect_headings()
   return headings
 end
 
+-- 現在のカーソル行から親見出しのインデックスを取得
+function M.find_parent_heading_index(current_lnum)
+  local headings = M.state.headings
+  if #headings == 0 then return 1 end
+
+  local parent_idx = 1 -- デフォルトは最初の見出し
+  for i, h in ipairs(headings) do
+    if h.lnum <= current_lnum then
+      parent_idx = i
+    else
+      break
+    end
+  end
+  return parent_idx
+end
+
 -- ウィンドウを閉じる
 function M.close_window()
   -- fuzzy入力グループをクリーンアップ
@@ -85,6 +101,9 @@ end
 
 -- フローティングウィンドウを描画
 function M.render_window()
+  -- 現在のカーソル位置を保存（close_window前に取得）
+  local current_lnum = vim.api.nvim_win_get_cursor(0)[1]
+
   M.close_window()
 
   local headings = M.collect_headings()
@@ -151,6 +170,11 @@ function M.render_window()
   vim.api.nvim_win_set_option(win, "winhl", "Normal:NormalFloat,CursorLine:Visual")
 
   M.setup_window_keymaps(buf)
+
+  -- 親見出しをデフォルトカーソル位置に設定
+  local default_idx = M.find_parent_heading_index(current_lnum)
+  vim.api.nvim_win_set_cursor(win, { default_idx, 0 })
+  M.preview_heading(default_idx)
 end
 
 -- fuzzyマッチで見出しを検索し、最初のマッチ行を返す
