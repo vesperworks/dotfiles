@@ -72,18 +72,16 @@ function M.collect_pending_tasks()
         if active_timers[task_id] then
           task.elapsed = os.time() - active_timers[task_id].start_time
           task.elapsed_text = timer_display.format_elapsed_time(active_timers[task_id].start_time)
+          -- タイマー稼働中のみ追加
+          table.insert(tasks, task)
         end
       end
-
-      table.insert(tasks, task)
     end
   end
 
-  -- ソート（経過時間が長い順、タイマーなしは最後）
+  -- ソート（経過時間が短い順）
   table.sort(tasks, function(a, b)
-    local a_elapsed = a.elapsed or -1
-    local b_elapsed = b.elapsed or -1
-    return a_elapsed > b_elapsed
+    return a.elapsed < b.elapsed
   end)
 
   -- 最大件数で切り詰め
