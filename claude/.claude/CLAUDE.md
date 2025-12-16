@@ -19,12 +19,6 @@
 - KISS（Keep It Simple Stupid）：シンプルに保つ
 - SOLID：オブジェクト指向設計の5原則を守る
 
-## セキュリティ禁止事項
-
-NEVER: Path Traversal
-NEVER: Command Injection
-NEVER: XSS (Cross-Site Scripting)
-
 ## 基本原則
 
 - Explore -> Plan -> Confirm -> Code -> Commit
@@ -39,35 +33,15 @@ NEVER: XSS (Cross-Site Scripting)
 - **設計思想の理解**: 使用する技術の設計思想を理解し、その作法に従って実装を提案する
 - **既存コードとの整合性**: プロジェクト内の既存のコーディング規約やパターンに従う
 
-## 言語別ルール
+## 詳細ルール
 
-プロジェクトの言語に応じて適切なルールを参照:
+プロジェクトの言語・品質要件に応じて適切なルールを参照:
 
-- [TypeScript/Node.js](./rules/lang-typescript.md)
-- [Python](./rules/lang-python.md)
-- [Lua/NeoVim](./rules/lang-lua.md)
-
-## コードレビュー基準
-
-詳細: [rules/quality-standards.md](./rules/quality-standards.md)
-
-### 可読性・保守性
-- **変数名**: 目的が明確にわかること
-- **関数の責任**: 1つの関数は1つの責任のみ
-- **ネスト制限**: 3レベル以下
-- **コメント**: 「なぜ」を説明する
-
-### セキュリティ
-- **入力検証**: ユーザー入力は必ずサニタイズ・バリデーション
-- **SQLインジェクション対策**: パラメータ化クエリ使用
-- **機密情報管理**: 環境変数で管理、ログに出力禁止
-- **禁止事項**: eval()使用禁止、パスワードハードコーディング禁止
-
-### レビュー優先度
-- **CRITICAL**: セキュリティ、データ損失リスク
-- **HIGH**: パフォーマンス、保守性
-- **MEDIUM**: 可読性、一貫性
-- **LOW**: スタイル、コメント
+@./rules/security-rules.md
+@./rules/quality-standards.md
+@./rules/lang-typescript.md
+@./rules/lang-python.md
+@./rules/lang-lua.md
 
 ## commit規則
 
