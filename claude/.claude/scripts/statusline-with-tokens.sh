@@ -22,19 +22,17 @@ fi
 # Display model name
 printf ' \e[90m%s\e[0m' "$model"
 
-# Calculate and display token usage
+# Calculate and display current context window usage
 if [ -f "$transcript_path" ]; then
-  # Extract CUMULATIVE token usage across all messages
+  # Extract the last message's input_tokens (= current context size)
   tokens=$(cat "$transcript_path" | jq -s '
-    map(select(.message.usage != null) | .message.usage) |
+    [.[] | select(.message.usage != null) | .message.usage] |
     if length > 0 then
-      map({input: (.input_tokens // 0), output: (.output_tokens // 0)}) |
+      last |
       {
-        input: (map(.input) | add // 0),
-        output: (map(.output) | add // 0)
-      } |
-      .total = (.input + .output) |
-      .usage_pct = ((.total / 200000) * 100)
+        total: .input_tokens,
+        usage_pct: ((.input_tokens / 200000) * 100)
+      }
     else
       {total: 0, usage_pct: 0}
     end
