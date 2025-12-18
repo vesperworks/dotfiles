@@ -13,17 +13,37 @@ extract_issue_number() {
   echo "$url" | grep -oE '[0-9]+$'
 }
 
-# Get repository name (sandbox-safe)
-# Priority: 1. argument, 2. gh repo view
+# Get repository name from git remote origin
+# Priority: 1. argument, 2. git remote get-url origin
+# Supports both SSH (git@github.com:owner/repo.git) and HTTPS formats
 get_repo() {
   if [[ -n "${1:-}" ]]; then
     echo "$1"
     return
   fi
-  gh repo view --json nameWithOwner -q '.nameWithOwner' 2>/dev/null || {
-    echo "Error: Could not determine repository. Specify --repo owner/repo" >&2
+
+  local remote_url
+  remote_url=$(git remote get-url origin 2>/dev/null) || {
+    echo "Error: Could not get git remote origin. Specify --repo owner/repo" >&2
     exit 1
   }
+
+  # Parse owner/repo from remote URL
+  # SSH format: git@github.com:owner/repo.git
+  # HTTPS format: https://github.com/owner/repo.git
+  local repo
+  if [[ "$remote_url" =~ ^git@github\.com:(.+)\.git$ ]]; then
+    repo="${BASH_REMATCH[1]}"
+  elif [[ "$remote_url" =~ ^https://github\.com/(.+)\.git$ ]]; then
+    repo="${BASH_REMATCH[1]}"
+  elif [[ "$remote_url" =~ ^https://github\.com/(.+)$ ]]; then
+    repo="${BASH_REMATCH[1]}"
+  else
+    echo "Error: Unsupported remote URL format: $remote_url" >&2
+    exit 1
+  fi
+
+  echo "$repo"
 }
 
 # Create milestone (REST API)

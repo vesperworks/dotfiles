@@ -343,8 +343,8 @@ Issue作成時は以下の順序でスクリプトを実行します:
 ### 統合ワークフロー例
 
 ```bash
-# Step 1: リポジトリ確認
-REPO=$(gh repo view --json nameWithOwner -q '.nameWithOwner')
+# Step 1: リポジトリ確認（git remote origin から取得）
+REPO=$(git remote get-url origin | sed -E 's#^(git@github\.com:|https://github\.com/)##; s#\.git$##')
 
 # Step 2: ラベル準備
 ~/.claude/skills/pm-agent/scripts/pm-setup-labels.sh "$REPO"

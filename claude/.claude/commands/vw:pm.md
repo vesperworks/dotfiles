@@ -175,7 +175,9 @@ If user approves:
 
 #### 1. リポジトリ確認
 ```bash
-REPO=$(gh repo view --json nameWithOwner -q '.nameWithOwner')
+# git remote origin から owner/repo を取得
+REPO=$(git remote get-url origin | sed -E 's#^(git@github\.com:|https://github\.com/)##; s#\.git$##')
+echo "Target repository: $REPO"
 ```
 
 #### 2. ラベル準備（必須）
