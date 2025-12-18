@@ -171,27 +171,82 @@ AskUserQuestion:
 
 If user approves:
 
-1. Create Issues bottom-up (Task → Story → Feature → Epic):
+**CRITICAL**: 複数Issue作成時は必ずスクリプトを使用すること。
+
+#### 1. リポジトリ確認
 ```bash
-# Task作成
-gh issue create --title "⚙️ [Task名]" --body "[body]" --label "type:task"
-
-# Story作成（Task参照を含む）
-gh issue create --title "📋 [Story名]" --body "## Related Tasks\n- #123\n- #124" --label "type:story"
-
-# Feature作成（Story参照を含む）
-gh issue create --title "🎯 [Feature名]" --body "## Related Stories\n- #125" --label "type:feature"
-
-# Epic作成（Feature参照を含む）
-gh issue create --title "🏁 [Epic名]" --body "## Related Features\n- #126" --label "type:epic"
+REPO=$(gh repo view --json nameWithOwner -q '.nameWithOwner')
 ```
 
-2. Add to Project:
+#### 2. ラベル準備（必須）
+```bash
+~/.claude/skills/pm-agent/scripts/pm-setup-labels.sh "$REPO"
+```
+
+#### 3. Milestone作成（日付がある場合）
+```bash
+MILESTONE=$(gh api "repos/$REPO/milestones" \
+  -X POST \
+  -f title="マイルストーン名" \
+  -f due_on="2025-01-31T00:00:00Z" \
+  --jq '.number')
+```
+
+#### 4. issues.json 生成
+提案したタスク構造をJSON形式に変換:
+```json
+[
+  {"title": "⚙️ タスク名", "body": "## 概要\n...", "labels": ["type:task"]},
+  {"title": "📋 ストーリー名", "body": "## Related Tasks\n- #1", "labels": ["type:story"]}
+]
+```
+
+**注意**:
+- 階層関係は body 内の "Related" セクションで表現
+- Bottom-up順（Task → Story → Feature → Epic）で配列に格納
+- Issue番号は作成後にスクリプトが自動追跡
+
+#### 5. Issue一括作成（必須: スクリプト使用）
+```bash
+~/.claude/skills/pm-agent/scripts/pm-bulk-issues.sh /tmp/claude/issues.json \
+  --repo "$REPO" \
+  --milestone "$MILESTONE" \
+  --dry-run  # まずドライランで確認
+
+# 確認後、本実行
+~/.claude/skills/pm-agent/scripts/pm-bulk-issues.sh /tmp/claude/issues.json \
+  --repo "$REPO" \
+  --milestone "$MILESTONE"
+```
+
+#### 6. 階層関係の設定（必須: sub-issue）
+
+作成されたIssue番号を元に、親子関係を設定:
+
+```bash
+# hierarchy.json 生成（ボトムアップで親子関係を定義）
+# 例: Story #10 の子として Task #7, #8, #9
+#     Feature #11 の子として Story #10
+cat > /tmp/claude/hierarchy.json << 'EOF'
+[
+  {"parent": 10, "children": [7, 8, 9]},
+  {"parent": 11, "children": [10]},
+  {"parent": 12, "children": [11]}
+]
+EOF
+
+# Sub-issue関係を設定
+~/.claude/skills/pm-agent/scripts/pm-link-hierarchy.sh /tmp/claude/hierarchy.json --repo "$REPO"
+```
+
+**注意**: GitHub Projects で「Parent issue」「Sub-issue progress」フィールドを有効化すると進捗が可視化される。
+
+#### 7. Projects連携（オプション）
 ```bash
 gh project item-add PROJECT_NUMBER --owner OWNER --url ISSUE_URL
 ```
 
-3. Set custom field values (GraphQL for Type/Priority/Effort)
+カスタムフィールド設定は GraphQL API を使用（GRAPHQL.md 参照）
 
 ### Step 3A.6: Report Results
 
@@ -347,9 +402,14 @@ AskUserQuestion:
 <constraints>
 - **必須**: すべての操作で `AskUserQuestion` ツールを使用してユーザー確認を取る
 - **必須**: 認証確認（gh auth status）を実行前に行う
+- **必須**: 複数Issue作成時は `pm-bulk-issues.sh` スクリプトを使用する
+- **必須**: Issue作成前に `pm-setup-labels.sh` でラベルを準備する
+- **必須**: 階層構造は `pm-link-hierarchy.sh` でsub-issue関係を設定する
+- **必須**: Milestone作成時は期限（due_on）を必ず設定する
 - **禁止**: ユーザー確認なしでの Issue 作成
 - **禁止**: 3時間を超える Task の作成（分割を提案）
-- **推奨**: バッチ処理は20件/回（レート制限対策）
+- **禁止**: 複数Issueをインライン（直接 `gh issue create` ループ）で作成
+- **禁止**: 期限なしのMilestone作成
 </constraints>
 
 <error_handling>
@@ -366,4 +426,8 @@ AskUserQuestion:
 - ~/.claude/skills/pm-agent/PARSER.md: パースロジック
 - ~/.claude/skills/pm-agent/SETUP.md: セットアップ手順
 - ~/.claude/skills/pm-agent/GRAPHQL.md: GraphQL API
+- ~/.claude/skills/pm-agent/scripts/pm-utils.sh: 共通ユーティリティ
+- ~/.claude/skills/pm-agent/scripts/pm-setup-labels.sh: ラベル一括作成（必須）
+- ~/.claude/skills/pm-agent/scripts/pm-bulk-issues.sh: Issue一括作成（必須）
+- ~/.claude/skills/pm-agent/scripts/pm-link-hierarchy.sh: 階層関係設定（必須）
 </skill_references>

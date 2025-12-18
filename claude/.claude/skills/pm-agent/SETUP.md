@@ -310,3 +310,92 @@ gh api graphql -f query='
   }
 '
 ```
+
+## スクリプト連携
+
+### 概要
+
+pm-agentスキルには、Issue一括作成を堅牢に行うためのヘルパースクリプトが含まれています。
+これらのスクリプトは、vw:pmコマンドから自動的に呼び出されます。
+
+### スクリプト配置
+
+```
+~/.claude/skills/pm-agent/scripts/
+├── pm-utils.sh           # 共通ユーティリティ（source用）
+├── pm-setup-labels.sh    # ラベル一括作成
+├── pm-bulk-issues.sh     # Issue一括作成（チェックポイント付き）
+└── pm-link-hierarchy.sh  # Sub-issue関係設定
+```
+
+### 実行順序
+
+Issue作成時は以下の順序でスクリプトを実行します:
+
+```
+1. pm-setup-labels.sh     # ラベル準備（必須）
+       ↓
+2. pm-bulk-issues.sh      # Issue一括作成
+       ↓
+3. pm-link-hierarchy.sh   # 階層関係設定
+```
+
+### 統合ワークフロー例
+
+```bash
+# Step 1: リポジトリ確認
+REPO=$(gh repo view --json nameWithOwner -q '.nameWithOwner')
+
+# Step 2: ラベル準備
+~/.claude/skills/pm-agent/scripts/pm-setup-labels.sh "$REPO"
+
+# Step 3: Milestone作成（期限必須）
+MILESTONE=$(gh api "repos/$REPO/milestones" \
+  -X POST \
+  -f title="Sprint 1" \
+  -f due_on="2025-01-31T00:00:00Z" \
+  --jq '.number')
+
+# Step 4: Issue一括作成（ドライラン→本実行）
+~/.claude/skills/pm-agent/scripts/pm-bulk-issues.sh /tmp/claude/issues.json \
+  --repo "$REPO" \
+  --milestone "$MILESTONE" \
+  --dry-run
+
+~/.claude/skills/pm-agent/scripts/pm-bulk-issues.sh /tmp/claude/issues.json \
+  --repo "$REPO" \
+  --milestone "$MILESTONE"
+
+# Step 5: 階層関係設定
+~/.claude/skills/pm-agent/scripts/pm-link-hierarchy.sh /tmp/claude/hierarchy.json \
+  --repo "$REPO"
+```
+
+### チェックポイント機能
+
+`pm-bulk-issues.sh` はチェックポイント機能を持ち、途中失敗時に再開可能です:
+
+```bash
+# デフォルトのチェックポイントファイル
+/tmp/claude/pm-checkpoint.json
+
+# カスタムチェックポイント
+pm-bulk-issues.sh issues.json --checkpoint /tmp/claude/my-checkpoint.json
+```
+
+チェックポイントファイル形式:
+```json
+{
+  "created": [
+    {"number": "1", "title": "タスク1"},
+    {"number": "2", "title": "タスク2"}
+  ]
+}
+```
+
+### Sub-issue階層について
+
+GitHub REST APIの Sub-issues エンドポイントを使用して階層関係を設定します。
+これにより、GitHub Projects で「Parent issue」「Sub-issue progress」フィールドが利用可能になります。
+
+参照: https://docs.github.com/en/rest/issues/sub-issues
