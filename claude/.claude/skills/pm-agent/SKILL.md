@@ -169,6 +169,7 @@ GitHub Projects PM（プロジェクトマネジメント）スキル。
 | `pm-setup-labels.sh` | ラベル一括作成 | ✅ |
 | `pm-bulk-issues.sh` | Issue一括作成（チェックポイント付き） | ✅ |
 | `pm-link-hierarchy.sh` | Sub-issue関係設定 | ✅ |
+| `pm-project-fields.sh` | Projects カスタムフィールド更新 | - |
 
 ### 使用方法
 
@@ -213,9 +214,25 @@ GitHub Projects PM（プロジェクトマネジメント）スキル。
 ~/.claude/skills/pm-agent/scripts/pm-link-hierarchy.sh hierarchy.json --repo owner/repo
 ```
 
+#### 4. Projects カスタムフィールド更新
+
+利用可能なフィールドを確認:
+```bash
+~/.claude/skills/pm-agent/scripts/pm-project-fields.sh \
+  --project 1 --owner @me --list-fields
+```
+
+Issue をプロジェクトに追加してフィールドを設定:
+```bash
+~/.claude/skills/pm-agent/scripts/pm-project-fields.sh 123 \
+  --project 1 --owner @me \
+  --status "In Progress" --priority "High" --estimate 3
+```
+
 ### 特徴
 
 - **冪等性**: チェックポイント機能で何度実行しても安全
 - **エラーリカバリー**: 途中失敗時にチェックポイントから再開可能
 - **ドライラン**: `--dry-run` で事前確認
 - **Sandbox対応**: `--repo` オプションで明示的にリポジトリ指定
+- **GraphQL対応**: Projects V2 のカスタムフィールド更新をサポート
