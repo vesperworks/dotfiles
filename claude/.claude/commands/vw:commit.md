@@ -57,7 +57,7 @@ Commit 2: [docs] ドキュメント更新
   - CLAUDE.md
 
 Commit 3: [chore] 設定変更
-  - .klaude/settings.json
+  - ~/.claude/settings.json
 ```
 
 **次に、AskUserQuestionで確認**:
@@ -99,7 +99,7 @@ AskUserQuestion:
         - label: "Commit 2: [docs] ドキュメント更新"
           description: "README.md, CLAUDE.md"
         - label: "Commit 3: [chore] 設定変更"
-          description: ".klaude/settings.json"
+          description: "~/.claude/settings.json"
 ```
 
 選択されたコミットを1つに統合し、Step 2に戻って再確認。

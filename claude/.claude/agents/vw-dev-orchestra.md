@@ -102,7 +102,7 @@ vw-dev-orchestra を resume して結果を評価:
 - **全体失敗**: `git reset --hard HEAD~` で直前コミットに戻る
 - **緊急時**: バックアップから復元
   ```bash
-  rm -rf .klaude/agents
-  mv .klaude/agents.backup-YYYYMMDD .klaude/agents
+  rm -rf ~/.claude/agents
+  mv ~/.claude/agents.backup-YYYYMMDD ~/.claude/agents
   ```
 </rollback>
