@@ -15,10 +15,10 @@ Claude Codeのカスタマイズ（SKILL/Agent/Command）を作成する際に�
 
 | 作成対象 | ファイル配置 | テンプレート |
 |----------|-------------|-------------|
-| **SKILL** | `.klaude/skills/{name}/SKILL.md` | [skill-template.md](./references/skill-template.md) |
-| **hl-\*エージェント** | `.klaude/agents/hl-{name}.md` | [agent-lightweight-template.md](./references/agent-lightweight-template.md) |
-| **vw-\*エージェント** | `.klaude/agents/vw-{name}.md` | [agent-orchestration-template.md](./references/agent-orchestration-template.md) |
-| **Slash Command** | `.klaude/commands/{name}.md` | [slash-command-template.md](./references/slash-command-template.md) |
+| **SKILL** | `~/.claude/skills/{name}/SKILL.md` | [skill-template.md](./references/skill-template.md) |
+| **hl-\*エージェント** | `~/.claude/agents/hl-{name}.md` | [agent-lightweight-template.md](./references/agent-lightweight-template.md) |
+| **vw-\*エージェント** | `~/.claude/agents/vw-{name}.md` | [agent-orchestration-template.md](./references/agent-orchestration-template.md) |
+| **Slash Command** | `~/.claude/commands/{name}.md` | [slash-command-template.md](./references/slash-command-template.md) |
 
 ## 使い分けガイド
 
@@ -78,7 +78,7 @@ Claude Codeのカスタマイズ（SKILL/Agent/Command）を作成する際に�
 ### SKILL（Progressive Disclosure）
 
 ```
-.klaude/skills/{skill-name}/
+~/.claude/skills/{skill-name}/
 ├── SKILL.md                    # エントリーポイント（常時ロード）
 └── references/                 # 詳細ガイド（必要時ロード）
     └── {topic}.md              # kebab-case命名
@@ -87,13 +87,13 @@ Claude Codeのカスタマイズ（SKILL/Agent/Command）を作成する際に�
 ### Agent
 
 ```
-.klaude/agents/{agent-name}.md  # 単一ファイル
+~/.claude/agents/{agent-name}.md  # 単一ファイル
 ```
 
 ### Slash Command
 
 ```
-.klaude/commands/{command-name}.md  # 単一ファイル
+~/.claude/commands/{command-name}.md  # 単一ファイル
 ```
 
 ## 命名規則
@@ -180,9 +180,9 @@ argument-hint: [message] [priority]
 
 ## Rollback / Recovery
 
-- **SKILL破損時**: `git restore .klaude/skills/{name}/`
-- **Agent破損時**: `git restore .klaude/agents/{name}.md`
-- **Command破損時**: `git restore .klaude/commands/{name}.md`
+- **SKILL破損時**: `git restore ~/.claude/skills/{name}/`
+- **Agent破損時**: `git restore ~/.claude/agents/{name}.md`
+- **Command破損時**: `git restore ~/.claude/commands/{name}.md`
 
 ## Advanced References
 

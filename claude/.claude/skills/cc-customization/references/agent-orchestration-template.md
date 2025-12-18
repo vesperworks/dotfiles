@@ -7,7 +7,7 @@ XMLタグを使用してLLMの構造認識精度を向上させます。
 ## ファイル配置
 
 ```
-.klaude/agents/vw-{domain}-{role}.md
+~/.claude/agents/vw-{domain}-{role}.md
 ```
 
 ## テンプレート
@@ -215,8 +215,8 @@ description: |
 - **全体失敗**: `git reset --hard HEAD~` で直前コミットに戻る
 - **緊急時**: バックアップから復元
   \`\`\`bash
-  rm -rf .klaude/agents
-  mv .klaude/agents.backup-YYYYMMDD .klaude/agents
+  rm -rf ~/.claude/agents
+  mv ~/.claude/agents.backup-YYYYMMDD ~/.claude/agents
   \`\`\`
 </rollback>
 ```
@@ -230,6 +230,6 @@ description: |
 ## 参照
 
 - **公式仕様**: https://code.claude.com/docs/en/sub-agents.md
-- **既存実装例**: `.klaude/agents/vw-dev-orchestra.md`
+- **既存実装例**: `~/.claude/agents/vw-dev-orchestra.md`
 - **XMLタグガイド**: `thoughts/shared/ccPromptEngineering/use-xml-tags.md`
 - **プロジェクト設計**: `thoughts/shared/research/2025-12-18-skill-agent-template-design.md`

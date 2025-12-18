@@ -5,7 +5,7 @@
 ## ディレクトリ構成
 
 ```
-.klaude/skills/{skill-name}/
+~/.claude/skills/{skill-name}/
 ├── SKILL.md                    # このテンプレートをコピー
 └── references/                 # 詳細ガイド（必要に応じて追加）
     └── {topic}.md              # kebab-case命名

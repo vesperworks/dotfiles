@@ -5,10 +5,10 @@
 ## ファイル配置
 
 ```
-.klaude/commands/{command-name}.md
+~/.claude/commands/{command-name}.md
 ```
 
-**例**: `.klaude/commands/vw:review.md` → `/vw:review`
+**例**: `~/.claude/commands/vw:review.md` → `/vw:review`
 
 ## テンプレート（シンプル版）
 
@@ -345,4 +345,4 @@ Execute: `gemini -p 'google_web_search: $ARGUMENTS'`
 ## 参照
 
 - **公式仕様**: https://code.claude.com/docs/en/slash-commands.md
-- **既存実装例**: `.klaude/commands/vw:commit.md`, `.klaude/commands/vw:research.md`
+- **既存実装例**: `~/.claude/commands/vw:commit.md`, `~/.claude/commands/vw:research.md`
