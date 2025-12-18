@@ -19,6 +19,7 @@ Usage: $0 <hierarchy.json> [options]
 Options:
   --repo <owner/repo>    Repository (default: auto-detect)
   --dry-run              Preview without setting relationships
+  --verbose              Show detailed error messages
   -h, --help             Show this help
 
 Input JSON format:
@@ -49,12 +50,14 @@ EOF
 HIERARCHY_FILE=""
 REPO=""
 DRY_RUN=false
+VERBOSE=false
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
   case $1 in
     --repo) REPO="$2"; shift 2 ;;
     --dry-run) DRY_RUN=true; shift ;;
+    --verbose|-v) VERBOSE=true; shift ;;
     -h|--help) usage ;;
     -*) echo "Unknown option: $1"; usage ;;
     *) HIERARCHY_FILE="$1"; shift ;;
@@ -86,11 +89,15 @@ while IFS= read -r relation; do
     fi
 
     # Set sub-issue relationship
-    if add_sub_issue "$REPO" "$parent" "$child" >/dev/null 2>&1; then
+    error_output=""
+    if error_output=$(add_sub_issue "$REPO" "$parent" "$child" 2>&1); then
       print_success "#$parent ← #$child (sub-issue)"
       ((success_count++))
     else
       print_warn "Failed: #$parent ← #$child"
+      if [[ "$VERBOSE" == true ]]; then
+        echo "   └─ Error: $error_output" >&2
+      fi
       ((fail_count++))
     fi
   done
@@ -115,5 +122,11 @@ if [[ "$DRY_RUN" != true ]] && ((success_count > 0)); then
 fi
 
 # Exit with error if any failures
-[[ $fail_count -gt 0 ]] && exit 1
+if [[ $fail_count -gt 0 ]]; then
+  if [[ "$VERBOSE" != true ]]; then
+    echo ""
+    print_info "Hint: Use --verbose to see detailed error messages"
+  fi
+  exit 1
+fi
 exit 0

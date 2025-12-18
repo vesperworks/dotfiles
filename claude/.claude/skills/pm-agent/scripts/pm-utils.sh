@@ -68,17 +68,26 @@ get_issue_id() {
 
 # Add sub-issue relationship (REST API)
 # Reference: https://docs.github.com/en/rest/issues/sub-issues
+# Note: sub_issue_id must be sent as integer, not string
 add_sub_issue() {
   local repo="$1" parent_number="$2" child_number="$3"
 
-  # Get child issue ID (numeric)
+  # Get child issue ID (numeric integer, not node_id)
   local child_id
   child_id=$(get_issue_id "$repo" "$child_number")
 
+  # Validate child_id is a number
+  if ! [[ "$child_id" =~ ^[0-9]+$ ]]; then
+    echo "Error: Invalid issue ID for #$child_number: $child_id" >&2
+    return 1
+  fi
+
   # POST to sub_issues endpoint
+  # Use -F (not -f) to send sub_issue_id as integer
   gh api "repos/$repo/issues/$parent_number/sub_issues" \
     -X POST \
-    -f sub_issue_id="$child_id"
+    -H "Accept: application/vnd.github+json" \
+    -F sub_issue_id="$child_id"
 }
 
 # Assign milestone to issue (REST API)
