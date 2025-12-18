@@ -123,3 +123,10 @@ vim.keymap.set("v", "<leader>m", ":move $<CR>gv=gv", { desc = "Move selection to
 vim.keymap.set('n', '<C-s>', ':w<CR>', { desc = "ファイル保存", silent = true })
 vim.keymap.set('i', '<leader>s', '<Esc>:w<CR>a', { desc = "ファイル保存（挿入モード）", silent = true })
 vim.keymap.set('v', '<leader>s', '<Esc>:w<CR>gv', { desc = "ファイル保存（ビジュアルモード）", silent = true })
+
+-- Emacs風キーバインド（インサート/コマンドラインモード）
+vim.keymap.set('i', '<C-a>', '<Home>', { desc = "行頭へ移動" })
+vim.keymap.set('i', '<C-e>', '<End>', { desc = "行末へ移動" })
+vim.keymap.set('c', '<C-a>', '<Home>', { desc = "行頭へ移動" })
+vim.keymap.set('c', '<C-e>', '<End>', { desc = "行末へ移動" })
+vim.keymap.set('i', '<C-k>', '<C-o>D', { desc = "行末まで削除" })

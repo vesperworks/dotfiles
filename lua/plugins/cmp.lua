@@ -13,10 +13,10 @@ return {
 
     cmp.setup({
       mapping = cmp.mapping.preset.insert({
-        ["<C-a>"] = cmp.mapping.complete(),
+        ["<C-Space>"] = cmp.mapping.complete(),
         ["<C-n>"] = cmp.mapping.select_next_item(),
         ["<C-p>"] = cmp.mapping.select_prev_item(),
-        ["<C-e>"] = cmp.mapping.abort(),
+        ["<C-c>"] = cmp.mapping.abort(),
       }),
       sources = cmp.config.sources({
         { name = "obsidian" },
