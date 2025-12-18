@@ -1,11 +1,18 @@
 # PRP Templates
 
+## Naming Convention
+
+**ファイル名**: `PRPs/PRP-XXX-{feature-name}.md`
+- XXX: ゼロパディング3桁の連番（既存の最大番号 + 1）
+- feature-name: ケバブケース（小文字、ハイフン区切り）
+- 例: `PRPs/PRP-009-user-authentication.md`
+
 ## Base PRP Template v2
 
 各サブエージェントはこのテンプレートに沿ってPRPを生成する。
 
 ```markdown
-# PRP: {Feature Name}
+# PRP-XXX: {Feature Name}
 
 ## Goal
 {この機能の目的を1-2文で簡潔に記述}
