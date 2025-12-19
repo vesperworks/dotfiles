@@ -1,0 +1,3 @@
+# TPMで管理されるプラグイン（tpm以外）
+plugins/*
+!plugins/tpm/
