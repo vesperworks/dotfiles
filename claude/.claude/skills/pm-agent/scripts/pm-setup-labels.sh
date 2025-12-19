@@ -64,12 +64,14 @@ priority_labels=(
   "priority:low:0E8A16:低優先度"
 )
 
+# Create labels from array passed as arguments
+# Usage: create_labels "name:color:desc" "name:color:desc" ...
+# Returns: "created_count skipped_count"
 create_labels() {
-  local -n labels_ref=$1
   local created=0
   local skipped=0
 
-  for item in "${labels_ref[@]}"; do
+  for item in "$@"; do
     IFS=':' read -r name color desc <<< "$item"
     if gh label create "$name" --color "$color" --description "$desc" --repo "$REPO" 2>/dev/null; then
       print_success "Created: $name"
@@ -108,14 +110,14 @@ if [[ "$FORCE_LABELS" == true ]]; then
   echo ""
 
   echo "Creating type:* labels..."
-  read created skipped <<< "$(create_labels type_labels)"
+  read created skipped <<< "$(create_labels "${type_labels[@]}")"
   ((total_created += created))
   ((total_skipped += skipped))
 
   if [[ "$WITH_PRIORITY" == true ]]; then
     echo ""
     echo "Creating priority:* labels..."
-    read created skipped <<< "$(create_labels priority_labels)"
+    read created skipped <<< "$(create_labels "${priority_labels[@]}")"
     ((total_created += created))
     ((total_skipped += skipped))
   fi
@@ -156,7 +158,7 @@ else
   echo ""
 
   echo "Creating type:* labels..."
-  read created skipped <<< "$(create_labels type_labels)"
+  read created skipped <<< "$(create_labels "${type_labels[@]}")"
   ((total_created += created))
   ((total_skipped += skipped))
 
@@ -164,7 +166,7 @@ else
     echo ""
     echo "⚠️ --with-priority is deprecated. Use Projects V2 Fields instead."
     echo "Creating priority:* labels..."
-    read created skipped <<< "$(create_labels priority_labels)"
+    read created skipped <<< "$(create_labels "${priority_labels[@]}")"
     ((total_created += created))
     ((total_skipped += skipped))
   fi

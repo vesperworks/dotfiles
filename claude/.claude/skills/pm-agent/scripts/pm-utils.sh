@@ -157,9 +157,9 @@ is_already_created() {
   fi
 }
 
-# Print colored message
-print_success() { echo "✅ $*"; }
-print_skip() { echo "⏭️ $*"; }
-print_warn() { echo "⚠️ $*"; }
-print_info() { echo "📝 $*"; }
-print_wait() { echo "⏳ $*"; }
+# Print colored message (to stderr, so they don't interfere with command substitution)
+print_success() { echo "✅ $*" >&2; }
+print_skip() { echo "⏭️ $*" >&2; }
+print_warn() { echo "⚠️ $*" >&2; }
+print_info() { echo "📝 $*" >&2; }
+print_wait() { echo "⏳ $*" >&2; }
