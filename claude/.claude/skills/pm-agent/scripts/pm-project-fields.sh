@@ -15,6 +15,7 @@ source "$SCRIPT_DIR/pm-utils.sh"
 usage() {
   cat << EOF
 Usage: $0 <issue_number> [options]
+       $0 --bulk <json_file> [options]
 
 Options:
   --repo <owner/repo>      Repository (default: auto-detect from git remote)
@@ -27,6 +28,7 @@ Options:
   --iteration <name>       Set Iteration field
   --start-date <YYYY-MM-DD>   Set Start date
   --target-date <YYYY-MM-DD>  Set Target date
+  --bulk <json_file>       Bulk update from JSON file
   --list-fields            List available fields and options, then exit
   --dry-run                Show what would be done without executing
   -h, --help               Show this help
@@ -41,6 +43,15 @@ Examples:
   # Set multiple fields
   $0 123 --project 1 --owner @me \\
     --status "Todo" --priority "Medium" --estimate 3 --start-date 2025-01-15
+
+  # Bulk update from JSON file
+  $0 --bulk issues-fields.json --project 1 --owner @me
+
+Bulk JSON format:
+[
+  {"issue": 123, "status": "Todo", "priority": "High", "estimate": 3},
+  {"issue": 124, "status": "In Progress", "priority": "Medium"}
+]
 EOF
   exit 1
 }
@@ -57,6 +68,7 @@ ESTIMATE_VALUE=""
 ITERATION_VALUE=""
 START_DATE=""
 TARGET_DATE=""
+BULK_FILE=""
 LIST_FIELDS=false
 DRY_RUN=false
 
@@ -73,6 +85,7 @@ while [[ $# -gt 0 ]]; do
     --iteration) ITERATION_VALUE="$2"; shift 2 ;;
     --start-date) START_DATE="$2"; shift 2 ;;
     --target-date) TARGET_DATE="$2"; shift 2 ;;
+    --bulk) BULK_FILE="$2"; shift 2 ;;
     --list-fields) LIST_FIELDS=true; shift ;;
     --dry-run) DRY_RUN=true; shift ;;
     -h|--help) usage ;;
@@ -337,7 +350,177 @@ if [[ "$LIST_FIELDS" == true ]]; then
   exit 0
 fi
 
-# Validate issue number for update operations
+# Process a single issue with field updates
+# Arguments: issue_number status priority size estimate iteration start_date target_date
+process_issue() {
+  local issue_num="$1"
+  local p_status="$2"
+  local p_priority="$3"
+  local p_size="$4"
+  local p_estimate="$5"
+  local p_iteration="$6"
+  local p_start="$7"
+  local p_target="$8"
+
+  local issue_node_id item_id field_id option_id iteration_id local_update_count=0
+
+  # Get issue node ID
+  issue_node_id=$(get_issue_node_id "$REPO" "$issue_num") || {
+    print_warn "Failed to get node ID for #$issue_num"
+    return 1
+  }
+
+  # Add issue to project
+  item_id=$(add_issue_to_project "$PROJECT_ID" "$issue_node_id") || {
+    print_warn "Failed to add #$issue_num to project"
+    return 1
+  }
+
+  if [[ -z "$item_id" || "$item_id" == "null" ]]; then
+    print_warn "Failed to add #$issue_num to project"
+    return 1
+  fi
+
+  echo "  #$issue_num → Project (Item: ${item_id:0:20}...)"
+
+  # Update Status
+  if [[ -n "$p_status" ]]; then
+    field_id=$(find_field_id "$FIELDS_JSON" "Status")
+    option_id=$(find_option_id "$FIELDS_JSON" "Status" "$p_status")
+    if [[ -n "$field_id" && -n "$option_id" ]]; then
+      update_single_select_field "$PROJECT_ID" "$item_id" "$field_id" "$option_id" >/dev/null && {
+        echo "    ↳ Status = $p_status"
+        ((local_update_count++))
+      }
+    fi
+  fi
+
+  # Update Priority
+  if [[ -n "$p_priority" ]]; then
+    field_id=$(find_field_id "$FIELDS_JSON" "Priority")
+    option_id=$(find_option_id "$FIELDS_JSON" "Priority" "$p_priority")
+    if [[ -n "$field_id" && -n "$option_id" ]]; then
+      update_single_select_field "$PROJECT_ID" "$item_id" "$field_id" "$option_id" >/dev/null && {
+        echo "    ↳ Priority = $p_priority"
+        ((local_update_count++))
+      }
+    fi
+  fi
+
+  # Update Size
+  if [[ -n "$p_size" ]]; then
+    field_id=$(find_field_id "$FIELDS_JSON" "Size")
+    option_id=$(find_option_id "$FIELDS_JSON" "Size" "$p_size")
+    if [[ -n "$field_id" && -n "$option_id" ]]; then
+      update_single_select_field "$PROJECT_ID" "$item_id" "$field_id" "$option_id" >/dev/null && {
+        echo "    ↳ Size = $p_size"
+        ((local_update_count++))
+      }
+    fi
+  fi
+
+  # Update Estimate
+  if [[ -n "$p_estimate" ]]; then
+    field_id=$(find_field_id "$FIELDS_JSON" "Estimate")
+    if [[ -n "$field_id" ]]; then
+      update_number_field "$PROJECT_ID" "$item_id" "$field_id" "$p_estimate" >/dev/null && {
+        echo "    ↳ Estimate = $p_estimate"
+        ((local_update_count++))
+      }
+    fi
+  fi
+
+  # Update Iteration
+  if [[ -n "$p_iteration" ]]; then
+    field_id=$(find_field_id "$FIELDS_JSON" "Iteration")
+    iteration_id=$(find_iteration_id "$FIELDS_JSON" "Iteration" "$p_iteration")
+    if [[ -n "$field_id" && -n "$iteration_id" ]]; then
+      update_iteration_field "$PROJECT_ID" "$item_id" "$field_id" "$iteration_id" >/dev/null && {
+        echo "    ↳ Iteration = $p_iteration"
+        ((local_update_count++))
+      }
+    fi
+  fi
+
+  # Update Start date
+  if [[ -n "$p_start" ]]; then
+    field_id=$(find_field_id "$FIELDS_JSON" "Start date")
+    if [[ -n "$field_id" ]]; then
+      update_date_field "$PROJECT_ID" "$item_id" "$field_id" "$p_start" >/dev/null && {
+        echo "    ↳ Start date = $p_start"
+        ((local_update_count++))
+      }
+    fi
+  fi
+
+  # Update Target date
+  if [[ -n "$p_target" ]]; then
+    field_id=$(find_field_id "$FIELDS_JSON" "Target date")
+    if [[ -n "$field_id" ]]; then
+      update_date_field "$PROJECT_ID" "$item_id" "$field_id" "$p_target" >/dev/null && {
+        echo "    ↳ Target date = $p_target"
+        ((local_update_count++))
+      }
+    fi
+  fi
+
+  return 0
+}
+
+# Bulk mode
+if [[ -n "$BULK_FILE" ]]; then
+  [[ ! -f "$BULK_FILE" ]] && { echo "Error: Bulk file not found: $BULK_FILE"; exit 1; }
+
+  echo ""
+  echo "═══════════════════════════════════════════════"
+  echo "📋 Bulk Update Mode"
+  echo "───────────────────────────────────────────────"
+  echo "  Repository: $REPO"
+  echo "  Project: #$PROJECT_NUMBER"
+  echo "  Input: $BULK_FILE"
+  [[ "$DRY_RUN" == true ]] && echo "  Mode: DRY RUN"
+  echo "═══════════════════════════════════════════════"
+  echo ""
+
+  total_count=$(jq 'length' "$BULK_FILE")
+  success_count=0
+  fail_count=0
+
+  if [[ "$DRY_RUN" == true ]]; then
+    echo "Would process $total_count issues:"
+    jq -r '.[] | "  #\(.issue): status=\(.status // "-"), priority=\(.priority // "-"), estimate=\(.estimate // "-")"' "$BULK_FILE"
+    exit 0
+  fi
+
+  while IFS= read -r entry; do
+    issue_num=$(echo "$entry" | jq -r '.issue')
+    status=$(echo "$entry" | jq -r '.status // ""')
+    priority=$(echo "$entry" | jq -r '.priority // ""')
+    size=$(echo "$entry" | jq -r '.size // ""')
+    estimate=$(echo "$entry" | jq -r '.estimate // ""')
+    iteration=$(echo "$entry" | jq -r '.iteration // ""')
+    start_date=$(echo "$entry" | jq -r '.start_date // .startDate // ""')
+    target_date=$(echo "$entry" | jq -r '.target_date // .targetDate // ""')
+
+    if process_issue "$issue_num" "$status" "$priority" "$size" "$estimate" "$iteration" "$start_date" "$target_date"; then
+      ((success_count++))
+    else
+      ((fail_count++))
+    fi
+  done < <(jq -c '.[]' "$BULK_FILE")
+
+  echo ""
+  echo "═══════════════════════════════════════════════"
+  echo "📊 Bulk Update Summary"
+  echo "───────────────────────────────────────────────"
+  echo "  Total: $total_count"
+  echo "  Success: $success_count"
+  echo "  Failed: $fail_count"
+  echo "═══════════════════════════════════════════════"
+  exit 0
+fi
+
+# Single issue mode - Validate issue number
 [[ -z "$ISSUE_NUMBER" ]] && { echo "Error: issue_number is required"; usage; }
 
 echo "  Repository: $REPO"

@@ -46,6 +46,43 @@ get_repo() {
   echo "$repo"
 }
 
+# Get repository owner from owner/repo format
+get_repo_owner() {
+  local repo="$1"
+  echo "${repo%%/*}"
+}
+
+# Check if repository owner is an organization
+# Returns 0 (true) for organization, 1 (false) for user
+is_org_repo() {
+  local repo="$1"
+  local owner
+  owner=$(get_repo_owner "$repo")
+
+  local owner_type
+  owner_type=$(gh api "users/$owner" --jq '.type' 2>/dev/null)
+
+  [[ "$owner_type" == "Organization" ]]
+}
+
+# Get organization's issue types (if available)
+# Returns list of issue type names, empty if not available
+get_org_issue_types() {
+  local org="$1"
+  gh api "orgs/$org/issue-types" --jq '.[].name' 2>/dev/null || true
+}
+
+# Set issue type for an issue (organization repos only)
+# Reference: https://docs.github.com/en/rest/issues
+set_issue_type() {
+  local repo="$1" issue_number="$2" issue_type="$3"
+
+  gh api "repos/$repo/issues/$issue_number" \
+    -X PATCH \
+    -f type="$issue_type" \
+    --silent
+}
+
 # Create milestone (REST API)
 # Note: due_on is required by pm-agent policy for deadline management
 create_milestone() {

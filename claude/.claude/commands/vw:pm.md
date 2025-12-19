@@ -72,13 +72,37 @@ AskUserQuestion:
 2. If command → Execute corresponding flow
 3. If text → Treat as meeting notes → Parse and structure
 
-## Phase 2: Authentication Check
+## Phase 2: Authentication & Repository Check
 
 Before any GitHub operation:
 
 ```bash
 gh auth status
 ```
+
+### Repository Type Detection
+
+After authentication, detect repository type:
+
+```bash
+# Get repository
+REPO=$(git remote get-url origin | sed -E 's#^(git@github\.com:|https://github\.com/)##; s#\.git$##')
+
+# Detect if owner is organization or user
+OWNER="${REPO%%/*}"
+OWNER_TYPE=$(gh api "users/$OWNER" --jq '.type' 2>/dev/null)
+
+if [[ "$OWNER_TYPE" == "Organization" ]]; then
+  echo "📋 組織リポジトリ: Issue Typesを使用"
+else
+  echo "👤 個人リポジトリ: type:*ラベルを使用"
+fi
+```
+
+| Repository Type | type分類 | priority |
+|-----------------|----------|----------|
+| 組織 | Issue Types（GitHub組み込み） | Projects V2 Fieldで管理 |
+| 個人 | type:*ラベル | Projects V2 Fieldで管理 |
 
 If authentication fails:
 ```
@@ -112,6 +136,15 @@ Reference skill documents as needed:
 
 3. Check granularity (3-hour rule):
    - Task > 3時間 → 分割提案
+
+4. **Type classification by repository type**:
+
+   | Repository | Type分類の方法 |
+   |------------|----------------|
+   | **組織** | Issue Types（task, bug, feature等）をREST APIで設定 |
+   | **個人** | type:*ラベル（type:task, type:bug等）をIssue作成時に付与 |
+
+   **注意**: priorityは両方ともProjects V2 Fieldで管理（ラベル不使用）
 
 ### Step 3A.3: Build Structure
 
@@ -198,12 +231,21 @@ MILESTONE=$(gh api "repos/$REPO/milestones" \
 提案したタスク構造をJSON形式に変換:
 ```json
 [
-  {"title": "⚙️ タスク名", "body": "## 概要\n...", "labels": ["type:task"]},
-  {"title": "📋 ストーリー名", "body": "## Related Tasks\n- #1", "labels": ["type:story"]}
+  {"title": "⚙️ タスク名", "body": "## 概要\n...", "type": "task"},
+  {"title": "📋 ストーリー名", "body": "## Related Tasks\n- #1", "type": "story"},
+  {"title": "🎯 機能名", "body": "## 概要\n...", "type": "feature", "labels": ["other-label"]}
 ]
 ```
 
+**Type handling** (context-aware):
+| Repository | `type`フィールドの処理 |
+|------------|------------------------|
+| **組織** | Issue作成後、REST APIでIssue Typeを設定 |
+| **個人** | `type:{value}`形式でラベルとして付与 |
+
 **注意**:
+- `type`フィールドはスクリプトが自動判定して適切に処理
+- `labels`配列にはtype以外のラベルを指定
 - 階層関係は body 内の "Related" セクションで表現
 - Bottom-up順（Task → Story → Feature → Epic）で配列に格納
 - Issue番号は作成後にスクリプトが自動追跡
@@ -243,7 +285,29 @@ EOF
 
 **注意**: GitHub Projects で「Parent issue」「Sub-issue progress」フィールドを有効化すると進捗が可視化される。
 
-#### 7. Projects連携（オプション）
+#### 7. Projects V2フィールド一括設定（オプション）
+
+作成したIssueをProjectsに追加し、Priority等のフィールドを一括設定:
+
+```bash
+# fields.json 生成
+cat > /tmp/claude/fields.json << 'EOF'
+[
+  {"issue": 7, "status": "Todo", "priority": "High", "estimate": 2},
+  {"issue": 8, "status": "Todo", "priority": "Medium", "estimate": 3},
+  {"issue": 9, "status": "Todo", "priority": "Low"}
+]
+EOF
+
+# 一括設定
+~/.claude/skills/pm-agent/scripts/pm-project-fields.sh \
+  --bulk /tmp/claude/fields.json \
+  --project 1 --owner @me
+```
+
+**注意**: Priorityはラベルではなく、Projects V2のカスタムフィールドで管理する。
+
+#### 8. Projects連携（個別追加、オプション）
 ```bash
 gh project item-add PROJECT_NUMBER --owner OWNER --url ISSUE_URL
 ```
@@ -280,14 +344,16 @@ gh project list --owner @me
 
 ### Step 3B.3: Present Setup Plan
 
+セットアップ計画はリポジトリタイプによって異なる:
+
+#### 個人リポジトリの場合:
 ```markdown
-## セットアップ計画
+## セットアップ計画（個人リポジトリ）
 
 📍 対象: @me のProjects #1
 
-### 作成するカスタムフィールド:
-- Type: Epic / Feature / Story / Task / Bug
-- Priority: High / Medium / Low
+### 作成するカスタムフィールド（Projects V2）:
+- Priority: High / Medium / Low（ラベルではなくFieldで管理）
 - Effort: 時間（数値）
 - Sprint: 2週間イテレーション
 
@@ -298,21 +364,44 @@ gh project list --owner @me
 
 ### 作成するラベル:
 - type:epic, type:feature, type:story, type:task, type:bug
-- priority:high, priority:medium, priority:low
 
-実行しますか？ [Yes / キャンセル]
+⚠️ priority:*ラベルは作成しません（Projects V2 Fieldで管理）
+```
+
+#### 組織リポジトリの場合:
+```markdown
+## セットアップ計画（組織リポジトリ）
+
+📍 対象: organization のProjects #1
+
+### Issue Types（組織設定で管理）:
+→ Settings > Planning > Issue types で確認/設定
+デフォルト: task, bug, feature
+
+### 作成するカスタムフィールド（Projects V2）:
+- Priority: High / Medium / Low
+- Effort: 時間（数値）
+- Sprint: 2週間イテレーション
+
+### 作成するビュー:
+- Kanban - Dev（開発者向け）
+- Roadmap - Exec（経営層向け）
+- Table - PM（PM向け）
+
+⚠️ type:*ラベルは作成しません（Issue Typesで管理）
+⚠️ priority:*ラベルは作成しません（Projects V2 Fieldで管理）
 ```
 
 **必ず AskUserQuestion で確認**:
 ```yaml
 AskUserQuestion:
   questions:
-    - question: "以下のリソースを作成しますか？\n- Type/Priority/Effortフィールド\n- Kanban/Roadmap/Tableビュー\n- type:*/priority:*ラベル"
+    - question: "セットアップを実行しますか？"
       header: "セットアップ"
       multiSelect: false
       options:
         - label: "はい、実行する"
-          description: "すべてのリソースを作成"
+          description: "リポジトリタイプに応じたリソースを作成"
         - label: "キャンセル"
           description: "セットアップを中止"
 ```
@@ -328,13 +417,13 @@ Reference: `~/.claude/skills/pm-agent/GRAPHQL.md`
 
 ### Step 3B.5: Report Results
 
+#### 個人リポジトリの場合:
 ```markdown
 ✅ セットアップ完了！
 
 ## 作成されたリソース
 
-### カスタムフィールド:
-- ✅ Type
+### カスタムフィールド（Projects V2）:
 - ✅ Priority
 - ✅ Effort
 - ✅ Sprint
@@ -346,9 +435,31 @@ Reference: `~/.claude/skills/pm-agent/GRAPHQL.md`
 
 ### ラベル:
 - ✅ type:* (5種類)
-- ✅ priority:* (3種類)
 
 📊 Projects: https://github.com/users/xxx/projects/1
+```
+
+#### 組織リポジトリの場合:
+```markdown
+✅ セットアップ完了！
+
+## 作成されたリソース
+
+### Issue Types:
+→ 組織設定で管理（Settings > Planning > Issue types）
+利用可能: task, bug, feature (+ カスタム)
+
+### カスタムフィールド（Projects V2）:
+- ✅ Priority
+- ✅ Effort
+- ✅ Sprint
+
+### ビュー:
+- ✅ Kanban - Dev
+- ✅ Roadmap - Exec
+- ✅ Table - PM
+
+📊 Projects: https://github.com/orgs/xxx/projects/1
 ```
 
 ## Phase 3C: Issue Analysis (Phase 2 Feature)
@@ -404,14 +515,18 @@ AskUserQuestion:
 <constraints>
 - **必須**: すべての操作で `AskUserQuestion` ツールを使用してユーザー確認を取る
 - **必須**: 認証確認（gh auth status）を実行前に行う
+- **必須**: リポジトリタイプ（組織/個人）を判定してから処理を分岐する
 - **必須**: 複数Issue作成時は `pm-bulk-issues.sh` スクリプトを使用する
-- **必須**: Issue作成前に `pm-setup-labels.sh` でラベルを準備する
+- **必須**: 個人リポジトリでのIssue作成前に `pm-setup-labels.sh` でラベルを準備する
 - **必須**: 階層構造は `pm-link-hierarchy.sh` でsub-issue関係を設定する
 - **必須**: Milestone作成時は期限（due_on）を必ず設定する
+- **必須**: priorityはProjects V2 Fieldで管理（`pm-project-fields.sh --bulk`使用）
 - **禁止**: ユーザー確認なしでの Issue 作成
 - **禁止**: 3時間を超える Task の作成（分割を提案）
 - **禁止**: 複数Issueをインライン（直接 `gh issue create` ループ）で作成
 - **禁止**: 期限なしのMilestone作成
+- **禁止**: priority:*ラベルの作成（Projects V2 Fieldで管理するため）
+- **禁止**: 組織リポジトリでのtype:*ラベル作成（Issue Typesで管理するため）
 </constraints>
 
 <error_handling>
@@ -428,8 +543,9 @@ AskUserQuestion:
 - ~/.claude/skills/pm-agent/PARSER.md: パースロジック
 - ~/.claude/skills/pm-agent/SETUP.md: セットアップ手順
 - ~/.claude/skills/pm-agent/GRAPHQL.md: GraphQL API
-- ~/.claude/skills/pm-agent/scripts/pm-utils.sh: 共通ユーティリティ
-- ~/.claude/skills/pm-agent/scripts/pm-setup-labels.sh: ラベル一括作成（必須）
-- ~/.claude/skills/pm-agent/scripts/pm-bulk-issues.sh: Issue一括作成（必須）
+- ~/.claude/skills/pm-agent/scripts/pm-utils.sh: 共通ユーティリティ（is_org_repo()含む）
+- ~/.claude/skills/pm-agent/scripts/pm-setup-labels.sh: コンテキスト適応型ラベル作成
+- ~/.claude/skills/pm-agent/scripts/pm-bulk-issues.sh: Issue一括作成（Issue Type自動対応）
 - ~/.claude/skills/pm-agent/scripts/pm-link-hierarchy.sh: 階層関係設定（必須）
+- ~/.claude/skills/pm-agent/scripts/pm-project-fields.sh: Projects V2フィールド設定（--bulk対応）
 </skill_references>

@@ -29,8 +29,13 @@ Options:
 
 Input JSON format:
 [
-  {"title": "Task name", "body": "Description", "labels": ["type:task"]}
+  {"title": "Task name", "body": "Description", "type": "task", "labels": ["other-label"]}
 ]
+
+Type handling (context-aware):
+  - Organization repos: "type" field sets Issue Type via API
+  - Personal repos: "type" field becomes "type:<value>" label
+  - Labels in "labels" array are always applied
 EOF
   exit 1
 }
@@ -69,7 +74,22 @@ REPO="${REPO:-$(get_repo)}"
 # Ensure checkpoint directory exists
 mkdir -p "$(dirname "$CHECKPOINT_FILE")"
 
-echo "Creating issues for $REPO..."
+echo "═══════════════════════════════════════════════"
+echo "📋 pm-bulk-issues.sh"
+echo "───────────────────────────────────────────────"
+echo "  Repository: $REPO"
+
+# Detect repository type
+IS_ORG=false
+if is_org_repo "$REPO"; then
+  IS_ORG=true
+  echo "  Type: 📋 Organization (Issue Types via API)"
+else
+  echo "  Type: 👤 Personal (type:* labels)"
+fi
+echo "═══════════════════════════════════════════════"
+echo ""
+
 [[ "$DRY_RUN" == true ]] && echo "🔍 DRY RUN MODE - no issues will be created"
 echo ""
 
@@ -80,6 +100,7 @@ count=0
 while IFS= read -r issue; do
   title=$(echo "$issue" | jq -r '.title')
   body=$(echo "$issue" | jq -r '.body // ""')
+  issue_type=$(echo "$issue" | jq -r '.type // ""')
   labels=$(echo "$issue" | jq -r '.labels // [] | join(",")')
 
   # Check checkpoint (idempotency)
@@ -99,7 +120,18 @@ while IFS= read -r issue; do
   # Build gh issue create arguments
   args=(--repo "$REPO" --title "$title")
   [[ -n "$body" ]] && args+=(--body "$body")
-  [[ -n "$labels" ]] && args+=(--label "$labels")
+
+  # Handle type field based on repository type
+  final_labels="$labels"
+  if [[ -n "$issue_type" ]] && [[ "$IS_ORG" == false ]]; then
+    # Personal repo: add type as label
+    if [[ -n "$final_labels" ]]; then
+      final_labels="type:$issue_type,$final_labels"
+    else
+      final_labels="type:$issue_type"
+    fi
+  fi
+  [[ -n "$final_labels" ]] && args+=(--label "$final_labels")
 
   # Create issue
   if url=$(gh issue create "${args[@]}"); then
@@ -110,6 +142,15 @@ while IFS= read -r issue; do
 
     # Save checkpoint
     save_checkpoint "$CHECKPOINT_FILE" "$number" "$title"
+
+    # Set Issue Type for organization repos (via REST API)
+    if [[ -n "$issue_type" ]] && [[ "$IS_ORG" == true ]]; then
+      if set_issue_type "$REPO" "$number" "$issue_type" 2>/dev/null; then
+        echo "   ↳ Issue Type: $issue_type"
+      else
+        print_warn "Failed to set Issue Type '$issue_type' for #$number"
+      fi
+    fi
 
     # Assign milestone if specified
     if [[ -n "$MILESTONE" ]]; then

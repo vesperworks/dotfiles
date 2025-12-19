@@ -106,7 +106,16 @@ GitHub Projects PM（プロジェクトマネジメント）スキル。
 | **Priority** | Single Select | High / Medium / Low | red / yellow / green |
 | **Effort** | Number | - | - |
 
-### Labels (Auto-created)
+### Labels & Issue Types (Context-Aware)
+
+pm-agentはリポジトリタイプに応じてtype分類方法を自動切り替えします。
+
+| Repository Type | type分類 | priority |
+|-----------------|----------|----------|
+| **組織** | Issue Types（GitHub組み込み） | Projects V2 Field |
+| **個人** | type:*ラベル（下記） | Projects V2 Field |
+
+**個人リポジトリで作成されるラベル:**
 
 | ラベル | カラーコード | 説明 |
 |--------|-------------|------|
@@ -115,9 +124,14 @@ GitHub Projects PM（プロジェクトマネジメント）スキル。
 | `type:story` | `00875A` | ユーザーストーリー |
 | `type:task` | `97A0AF` | 実装タスク |
 | `type:bug` | `D73A4A` | バグ修正 |
-| `priority:high` | `B60205` | 最優先 |
-| `priority:medium` | `FBCA04` | 通常 |
-| `priority:low` | `0E8A16` | 低優先度 |
+
+**注意**: `priority:*`ラベルは作成されません（Projects V2 Fieldで管理）
+
+**組織リポジトリのIssue Types:**
+
+組織設定（Settings > Planning > Issue types）で管理:
+- デフォルト: task, bug, feature
+- カスタム: 最大25個追加可能
 
 ### Granularity Rules
 
@@ -165,11 +179,11 @@ GitHub Projects PM（プロジェクトマネジメント）スキル。
 
 | スクリプト | 用途 | 必須 |
 |-----------|------|------|
-| `pm-utils.sh` | 共通ユーティリティ（source用） | - |
-| `pm-setup-labels.sh` | ラベル一括作成 | ✅ |
-| `pm-bulk-issues.sh` | Issue一括作成（チェックポイント付き） | ✅ |
+| `pm-utils.sh` | 共通ユーティリティ（is_org_repo()含む） | - |
+| `pm-setup-labels.sh` | コンテキスト適応型ラベル作成 | ✅ |
+| `pm-bulk-issues.sh` | Issue一括作成（Issue Type自動対応） | ✅ |
 | `pm-link-hierarchy.sh` | Sub-issue関係設定 | ✅ |
-| `pm-project-fields.sh` | Projects カスタムフィールド更新 | - |
+| `pm-project-fields.sh` | Projects V2フィールド設定（--bulk対応） | - |
 
 ### 使用方法
 
@@ -181,13 +195,18 @@ GitHub Projects PM（プロジェクトマネジメント）スキル。
 
 #### 2. Issue一括作成
 
-入力JSON形式:
+入力JSON形式（typeフィールドを使用）:
 ```json
 [
-  {"title": "⚙️ タスク名", "body": "説明", "labels": ["type:task"]},
-  {"title": "📋 ストーリー名", "body": "## Related\n- #1", "labels": ["type:story"]}
+  {"title": "⚙️ タスク名", "body": "説明", "type": "task"},
+  {"title": "📋 ストーリー名", "body": "## Related\n- #1", "type": "story"},
+  {"title": "🎯 機能名", "body": "...", "type": "feature", "labels": ["other-label"]}
 ]
 ```
+
+**Type handling（自動判定）:**
+- 組織リポジトリ: Issue作成後、REST APIでIssue Typeを設定
+- 個人リポジトリ: `type:{value}`形式でラベルとして付与
 
 実行:
 ```bash
@@ -214,7 +233,7 @@ GitHub Projects PM（プロジェクトマネジメント）スキル。
 ~/.claude/skills/pm-agent/scripts/pm-link-hierarchy.sh hierarchy.json --repo owner/repo
 ```
 
-#### 4. Projects カスタムフィールド更新
+#### 4. Projects V2フィールド設定
 
 利用可能なフィールドを確認:
 ```bash
@@ -222,12 +241,31 @@ GitHub Projects PM（プロジェクトマネジメント）スキル。
   --project 1 --owner @me --list-fields
 ```
 
-Issue をプロジェクトに追加してフィールドを設定:
+**単一Issue設定:**
 ```bash
 ~/.claude/skills/pm-agent/scripts/pm-project-fields.sh 123 \
   --project 1 --owner @me \
   --status "In Progress" --priority "High" --estimate 3
 ```
+
+**一括設定（--bulk オプション）:**
+
+入力JSON形式:
+```json
+[
+  {"issue": 123, "status": "Todo", "priority": "High", "estimate": 3},
+  {"issue": 124, "status": "In Progress", "priority": "Medium"}
+]
+```
+
+実行:
+```bash
+~/.claude/skills/pm-agent/scripts/pm-project-fields.sh \
+  --bulk /tmp/claude/fields.json \
+  --project 1 --owner @me
+```
+
+**注意**: priorityはラベルではなくProjects V2 Fieldで管理します。
 
 ### 特徴
 
