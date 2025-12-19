@@ -15,6 +15,9 @@ vim.opt.number = false
 vim.opt.relativenumber = false
 vim.opt.signcolumn = "no"
 
+-- システムクリップボードと同期
+vim.opt.clipboard = "unnamedplus"
+
 -- VSCode利用時はモードごとにカーソル形状を出し分ける
 local cursor_shapes = table.concat({
   "n-v-c:block",   -- Normal/Visual/Command-line
