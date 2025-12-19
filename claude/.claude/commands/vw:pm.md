@@ -2,7 +2,7 @@
 description: GitHub Projects PM Agent - 議事録からタスク作成、Projects管理
 argument-hint: [meeting_notes_or_command]
 model: sonnet
-allowed-tools: Bash(gh:*), Bash(git status:*)
+allowed-tools: Bash(gh:*), Bash(git remote:*), Bash(git status:*), Bash(~/.claude/skills/pm-agent/scripts/*:*), Bash(cat:*)
 ---
 
 <role>
@@ -24,15 +24,15 @@ You help users:
 <ticket_structure>
 ## 4層チケット構造
 
-| 層 | Type | 粒度 | アイコン |
+| 層 | 説明 | 粒度 | アイコン |
 |----|------|------|----------|
-| Epic | マイルストーン | 🏁 |
-| Feature | 1-3スプリント | 🎯 |
-| Story | 1スプリント以内 | 📋 |
-| Task | 3時間以内 | ⚙️ |
-| Bug | 3時間以内 | 🐛 |
+| Epic | マイルストーン | プロジェクト全体 | 🏁 |
+| Feature | 機能要件 | 1-3スプリント | 🎯 |
+| Story | ユーザーストーリー | 1スプリント以内 | 📋 |
+| Task | 実装タスク | 3時間以内 | ⚙️ |
+| Bug | バグ修正 | 3時間以内 | 🐛 |
 
-粒度基準: 実装タスク（Task/Bug）は **3時間以内で完了できる単位**
+**粒度基準**: 実装タスク（Task/Bug）は **3時間以内で完了できる単位**
 </ticket_structure>
 
 <workflow>
@@ -213,10 +213,14 @@ REPO=$(git remote get-url origin | sed -E 's#^(git@github\.com:|https://github\.
 echo "Target repository: $REPO"
 ```
 
-#### 2. ラベル準備（必須）
+#### 2. ラベル準備（コンテキスト適応型）
 ```bash
 ~/.claude/skills/pm-agent/scripts/pm-setup-labels.sh "$REPO"
 ```
+
+スクリプトがリポジトリタイプを自動判定:
+- **個人リポジトリ**: type:*ラベルを作成
+- **組織リポジトリ**: ラベルは作成せず、Issue Types使用を案内
 
 #### 3. Milestone作成（日付がある場合）
 ```bash
@@ -305,14 +309,10 @@ EOF
   --project 1 --owner @me
 ```
 
-**注意**: Priorityはラベルではなく、Projects V2のカスタムフィールドで管理する。
-
-#### 8. Projects連携（個別追加、オプション）
-```bash
-gh project item-add PROJECT_NUMBER --owner OWNER --url ISSUE_URL
-```
-
-カスタムフィールド設定は GraphQL API を使用（GRAPHQL.md 参照）
+**注意**:
+- Priorityはラベルではなく、Projects V2のカスタムフィールドで管理
+- 個別追加が必要な場合は `gh project item-add` を使用
+- 詳細は `GRAPHQL.md` を参照
 
 ### Step 3A.6: Report Results
 
@@ -408,10 +408,19 @@ AskUserQuestion:
 
 ### Step 3B.4: Execute Setup
 
-If approved:
-1. Create labels (gh CLI)
-2. Create custom fields (GraphQL)
-3. Create views (GraphQL)
+If approved, execute based on repository type:
+
+#### 個人リポジトリの場合:
+1. `pm-setup-labels.sh` でtype:*ラベルを作成
+2. Create custom fields (GraphQL): Priority, Effort, Sprint
+3. Create views (GraphQL): Kanban, Roadmap, Table
+
+#### 組織リポジトリの場合:
+1. Issue Types確認を案内（Settings > Planning > Issue types）
+2. Create custom fields (GraphQL): Priority, Effort, Sprint
+3. Create views (GraphQL): Kanban, Roadmap, Table
+
+**共通**: priority:*ラベルは作成しない（Projects V2 Fieldで管理）
 
 Reference: `~/.claude/skills/pm-agent/GRAPHQL.md`
 
@@ -472,6 +481,8 @@ gh issue list --state all --limit 100 --json number,title,labels,state
 
 ### Step 3C.2: Present Analysis
 
+リポジトリタイプに応じた分析を表示:
+
 ```markdown
 ## 現状分析
 
@@ -480,18 +491,27 @@ gh issue list --state all --limit 100 --json number,title,labels,state
 - Open: 30件
 - Closed: 17件
 
-🏷️ ラベル使用状況:
-- ラベルなし: 12件
-- type:* 使用: 20件
-- priority:* 使用: 15件
+🏷️ 分類状況:
+- 分類なし: 12件
+- type分類済み: 20件（ラベル or Issue Types）
 
 ⚠️ 改善提案:
-1. ラベル命名規則の統一
-   - bug → type:bug
-   - enhancement → type:feature
 
-2. 粒度が大きすぎるIssue
-   - #23「認証機能実装」→ 3つに分割推奨
+### 分類の統一
+（個人リポジトリの場合）
+- bug → type:bug ラベルに統一
+- enhancement → type:feature ラベルに統一
+
+（組織リポジトリの場合）
+- ラベルではなくIssue Typesに移行推奨
+- Settings > Planning > Issue types で確認
+
+### Priority管理
+- priority:*ラベルを廃止し、Projects V2 Fieldに移行
+- pm-project-fields.sh --bulk で一括設定可能
+
+### 粒度の改善
+- #23「認証機能実装」→ 3つに分割推奨（3時間ルール）
 ```
 
 **必ず AskUserQuestion で確認**:
@@ -536,6 +556,9 @@ AskUserQuestion:
 | レート制限 | バッチ処理（20件/回）、遅延挿入 |
 | API失敗 | 操作を中断しユーザーに確認 |
 | フィールド重複 | 既存フィールドを使用するか確認 |
+| Issue Type設定失敗 | 組織のIssue Types設定を確認案内 |
+| Sub-issue設定失敗 | `--verbose`オプションでデバッグ |
+| リポジトリタイプ判定失敗 | `gh api users/{owner}` の結果を確認 |
 </error_handling>
 
 <skill_references>
