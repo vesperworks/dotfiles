@@ -146,6 +146,17 @@
         ]
       }
     ],
+    "Notification": [
+      {
+        "matcher": "idle_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/stop-send-notification.sh"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Write|Edit|MultiEdit",
@@ -153,6 +164,15 @@
           {
             "type": "command",
             "command": "~/.claude/hooks/auto-format.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "AskUserQuestion",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/stop-send-notification.sh"
           }
         ]
       }
