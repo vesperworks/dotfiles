@@ -103,6 +103,29 @@ get_issue_id() {
   gh api "repos/$repo/issues/$issue_number" --jq '.id'
 }
 
+# Get parent issue number for a sub-issue
+# Returns parent issue number if exists, empty string otherwise
+# Reference: https://docs.github.com/en/rest/issues/sub-issues
+get_parent_issue() {
+  local repo="$1" issue_number="$2"
+  gh api "repos/$repo/issues/$issue_number" --jq '.parent.number // empty' 2>/dev/null || echo ""
+}
+
+# Remove sub-issue relationship (REST API)
+# Reference: https://docs.github.com/en/rest/issues/sub-issues#remove-sub-issue
+remove_sub_issue() {
+  local repo="$1" parent_number="$2" child_number="$3"
+
+  # Get child issue ID (numeric integer)
+  local child_id
+  child_id=$(get_issue_id "$repo" "$child_number")
+
+  # DELETE from sub_issues endpoint
+  gh api "repos/$repo/issues/$parent_number/sub_issues/$child_id" \
+    -X DELETE \
+    -H "Accept: application/vnd.github+json"
+}
+
 # Add sub-issue relationship (REST API)
 # Reference: https://docs.github.com/en/rest/issues/sub-issues
 # Note: sub_issue_id must be sent as integer, not string
