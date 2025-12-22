@@ -184,6 +184,7 @@ pm-agentはリポジトリタイプに応じてtype分類方法を自動切り�
 | `pm-bulk-issues.sh` | Issue一括作成（Issue Type自動対応） | ✅ |
 | `pm-link-hierarchy.sh` | Sub-issue関係設定 | ✅ |
 | `pm-project-fields.sh` | Projects V2フィールド設定（--bulk対応） | - |
+| `pm-cascade-iteration.sh` | 親→子へのIteration自動継承 | - |
 
 ### 使用方法
 
@@ -266,6 +267,20 @@ pm-agentはリポジトリタイプに応じてtype分類方法を自動切り�
 ```
 
 **注意**: priorityはラベルではなくProjects V2 Fieldで管理します。
+
+#### 5. Iteration継承（親→子）
+
+親IssueのIterationを子Issue全てに自動継承:
+
+```bash
+~/.claude/skills/pm-agent/scripts/pm-cascade-iteration.sh 10 \
+  --project 1 --owner @me --repo owner/repo
+```
+
+**オプション**:
+- `--dry-run`: 実行せずにプレビュー
+
+**注意**: 親IssueにIterationが設定されている必要があります。
 
 ### 特徴
 
