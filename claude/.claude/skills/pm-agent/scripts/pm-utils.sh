@@ -455,21 +455,22 @@ get_issue_iteration() {
   local iteration_info
   # Note: Using 'select(.iterationId)' instead of 'select(.iterationId != null)'
   # to avoid bash history expansion issues with '!' character
-  iteration_info=$(echo "$result" | jq -r --argjson pn "$project_number" '
-    .data.repository.issue.projectItems.nodes[]
+  # Note: Using 'jq -c' for compact output and array indexing to get first match
+  iteration_info=$(echo "$result" | jq -c --argjson pn "$project_number" '
+    [.data.repository.issue.projectItems.nodes[]
     | select(.project.number == $pn)
     | .fieldValues.nodes[]
     | select(.iterationId)
-    | {iterationId: .iterationId, title: .title, fieldId: .field.id, itemId: ""}
-  ' 2>/dev/null | head -1)
+    | {iterationId: .iterationId, title: .title, fieldId: .field.id, itemId: ""}][0] // null
+  ' 2>/dev/null)
 
   # Get the item ID separately
   local item_id
   item_id=$(echo "$result" | jq -r --argjson pn "$project_number" '
-    .data.repository.issue.projectItems.nodes[]
+    [.data.repository.issue.projectItems.nodes[]
     | select(.project.number == $pn)
-    | .id
-  ' 2>/dev/null | head -1)
+    | .id][0] // empty
+  ' 2>/dev/null)
 
   if [[ -n "$iteration_info" && "$iteration_info" != "null" ]]; then
     # Add item_id to the result
