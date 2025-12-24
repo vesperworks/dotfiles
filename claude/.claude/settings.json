@@ -99,7 +99,8 @@
       "Bash(:*date +%Y%m%d-%H%M%S:*)",
       "Bash(basename:*)",
       "Bash(dirname:*)",
-      "Bash(~/.claude/scripts/smart-commit.sh:*)"
+      "Bash(~/.claude/scripts/smart-commit.sh:*)",
+      "Bash(tmux split-window:*)"
     ],
     "deny": [
       "Bash(rm -rf:*)",
