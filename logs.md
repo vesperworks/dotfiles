@@ -2,6 +2,54 @@
 
 ## 📅 2025年12月（現在の月）
 
+### 2025-12-24 - oil.nvim + oil-git-status.nvim 導入（完了）
+
+**背景**: `<leader>e` でファイルエクスプローラーを開きたい。軽量でGit status表示も欲しい。
+
+**導入プラグイン**:
+- `oil.nvim` - バッファ風ファイルエクスプローラー
+- `oil-git-status.nvim` - Git status表示拡張
+
+**キーバインド**:
+| キー | 機能 |
+|------|------|
+| `<leader>e` | Explorer（oil.nvim）を開く |
+| `-` | 親ディレクトリへ |
+| `<CR>` | ファイル/ディレクトリを開く |
+| `q` | 閉じる |
+| `g.` | 隠しファイル表示切替 |
+
+**関連ファイル**:
+- `lua/plugins/oil.lua` - 新規作成
+
+---
+
+### 2025-12-24 - gitsigns + diffview 導入（完了）
+
+**背景**: Claude Codeでの変更を効率的にレビューしたい。コミット前に変更ファイル一覧をツリーで見ながら、選択したファイルのdiffを横ペインで確認する。
+
+**導入プラグイン**:
+- `gitsigns.nvim` - 編集中のリアルタイム変更表示、hunk操作
+- `diffview.nvim` - 変更全体の俯瞰・レビュー
+
+**キーバインド**:
+| キー | 機能 |
+|------|------|
+| `<leader>do` | DiffviewOpen（変更一覧を開く） |
+| `<leader>dc` | DiffviewClose（閉じる） |
+| `<leader>dh` | DiffviewFileHistory（ファイル履歴） |
+| `<leader>dp` | Preview hunk（変更プレビュー） |
+| `<leader>ds` | Stage hunk（ステージ） |
+| `<leader>dr` | Reset hunk（取り消し） |
+| `<leader>db` | Blame line（変更者表示） |
+| `]d` / `[d` | Hunk移動（次/前の変更箇所） |
+
+**関連ファイル**:
+- `lua/plugins/gitsigns.lua` - 新規作成
+- `lua/plugins/diffview.lua` - 新規作成
+
+---
+
 ### 2025-12-18 - Emacs風キーバインド追加（完了）
 
 **背景**: インサートモード・コマンドラインモードでEmacs風の行頭/行末移動とkill-lineを使いたい
