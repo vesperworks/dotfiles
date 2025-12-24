@@ -82,178 +82,11 @@ done
 
 REPO="${REPO:-$(get_repo)}"
 
-# ============================================================
-# GraphQL Functions (same as pm-cascade-iteration.sh)
-# ============================================================
-
-get_project_id() {
-  local owner="$1" number="$2"
-  local query result
-
-  if [[ "$owner" == "@me" ]]; then
-    query='query($number: Int!) {
-      viewer {
-        projectV2(number: $number) {
-          id
-        }
-      }
-    }'
-    result=$(gh api graphql -F number="$number" -f query="$query" --jq '.data.viewer.projectV2.id')
-  else
-    query='query($login: String!, $number: Int!) {
-      organization(login: $login) {
-        projectV2(number: $number) {
-          id
-        }
-      }
-    }'
-    result=$(gh api graphql -f login="$owner" -F number="$number" -f query="$query" --jq '.data.organization.projectV2.id' 2>/dev/null) || true
-
-    if [[ -z "$result" || "$result" == "null" ]]; then
-      query='query($login: String!, $number: Int!) {
-        user(login: $login) {
-          projectV2(number: $number) {
-            id
-          }
-        }
-      }'
-      result=$(gh api graphql -f login="$owner" -F number="$number" -f query="$query" --jq '.data.user.projectV2.id')
-    fi
-  fi
-
-  echo "$result"
-}
-
-get_project_fields() {
-  local project_id="$1"
-  local query='query($projectId: ID!) {
-    node(id: $projectId) {
-      ... on ProjectV2 {
-        fields(first: 50) {
-          nodes {
-            ... on ProjectV2Field {
-              id
-              name
-              dataType
-            }
-            ... on ProjectV2IterationField {
-              id
-              name
-              dataType
-              configuration {
-                iterations {
-                  id
-                  title
-                  startDate
-                }
-              }
-            }
-            ... on ProjectV2SingleSelectField {
-              id
-              name
-              dataType
-              options {
-                id
-                name
-              }
-            }
-          }
-        }
-      }
-    }
-  }'
-
-  gh api graphql -f projectId="$project_id" -f query="$query" --jq '.data.node.fields.nodes'
-}
-
-get_issue_node_id() {
-  local repo="$1" issue_number="$2"
-  gh api "repos/$repo/issues/$issue_number" --jq '.node_id'
-}
-
-add_issue_to_project() {
-  local project_id="$1" content_id="$2"
-  local mutation='mutation($projectId: ID!, $contentId: ID!) {
-    addProjectV2ItemById(input: {
-      projectId: $projectId
-      contentId: $contentId
-    }) {
-      item {
-        id
-      }
-    }
-  }'
-
-  gh api graphql -f projectId="$project_id" -f contentId="$content_id" -f query="$mutation" \
-    --jq '.data.addProjectV2ItemById.item.id'
-}
-
-update_iteration_field() {
-  local project_id="$1" item_id="$2" field_id="$3" iteration_id="$4"
-  local mutation='mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $iterationId: String!) {
-    updateProjectV2ItemFieldValue(input: {
-      projectId: $projectId
-      itemId: $itemId
-      fieldId: $fieldId
-      value: {
-        iterationId: $iterationId
-      }
-    }) {
-      projectV2Item {
-        id
-      }
-    }
-  }'
-
-  gh api graphql -f projectId="$project_id" -f itemId="$item_id" -f fieldId="$field_id" \
-    -f iterationId="$iteration_id" -f query="$mutation" --jq '.data.updateProjectV2ItemFieldValue.projectV2Item.id'
-}
-
-find_iteration_field_id() {
-  local fields_json="$1"
-  echo "$fields_json" | jq -r '.[] | select(.dataType == "ITERATION") | .id' | head -1
-}
-
-find_iteration_id_by_title() {
-  local fields_json="$1" title="$2"
-  echo "$fields_json" | jq -r --arg t "$title" '
-    .[] | select(.dataType == "ITERATION") | .configuration.iterations[]? | select(.title == $t) | .id
-  ' | head -1
-}
-
-get_available_iterations() {
-  local fields_json="$1"
-  echo "$fields_json" | jq -r '.[] | select(.dataType == "ITERATION") | .configuration.iterations[]? | .title'
-}
-
-# Get issue's project item ID (for updating fields)
-get_issue_item_id() {
-  local repo="$1" issue_number="$2" project_number="$3"
-  local owner="${repo%%/*}"
-  local repo_name="${repo##*/}"
-
-  local query='query($owner: String!, $repo: String!, $issueNumber: Int!) {
-    repository(owner: $owner, name: $repo) {
-      issue(number: $issueNumber) {
-        projectItems(first: 10) {
-          nodes {
-            id
-            project {
-              number
-            }
-          }
-        }
-      }
-    }
-  }'
-
-  gh api graphql \
-    -f owner="$owner" \
-    -f repo="$repo_name" \
-    -F issueNumber="$issue_number" \
-    -f query="$query" \
-    --jq --argjson pn "$project_number" '.data.repository.issue.projectItems.nodes[] | select(.project.number == $pn) | .id' 2>/dev/null | head -1
-}
+# Note: GraphQL functions are now in pm-utils.sh (DRY refactoring)
+# Available: get_project_id, get_project_fields, get_issue_node_id,
+#            add_issue_to_project, update_iteration_field, find_iteration_field_id,
+#            find_iteration_id_by_title, get_available_iterations, get_issue_item_id,
+#            get_child_issues, get_all_descendants
 
 # ============================================================
 # Main Execution
@@ -312,7 +145,7 @@ while IFS= read -r item; do
   title=$(echo "$item" | jq -r '.title')
   echo "  $idx. #$num - $title"
   ((idx++))
-done < <(echo "$CHILDREN_JSON" | jq -c '.[] | sort_by(.number)' 2>/dev/null || echo "$CHILDREN_JSON" | jq -c '.[]')
+done < <(echo "$CHILDREN_JSON" | jq -c 'sort_by(.number) | .[]')
 
 echo ""
 
