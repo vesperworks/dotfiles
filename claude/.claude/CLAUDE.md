@@ -39,9 +39,11 @@
 
 @./rules/security-rules.md
 @./rules/quality-standards.md
+@./rules/coding-conventions.md
 @./rules/lang-typescript.md
 @./rules/lang-python.md
 @./rules/lang-lua.md
+@./rules/lang-shell.md
 
 ## commit規則
 
