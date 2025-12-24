@@ -186,3 +186,61 @@ print_skip() { echo "⏭️ $*" >&2; }
 print_warn() { echo "⚠️ $*" >&2; }
 print_info() { echo "📝 $*" >&2; }
 print_wait() { echo "⏳ $*" >&2; }
+
+# ============================================================
+# Sub-issue Traversal Functions
+# ============================================================
+
+# Get direct child issues with title
+# Returns: JSON array of {number, title}
+# Example: [{"number": 11, "title": "Feature A"}, ...]
+get_child_issues() {
+  local repo="$1" parent_number="$2"
+  gh api "repos/$repo/issues/$parent_number/sub_issues" \
+    --jq '[.[] | {number: .number, title: .title}]' 2>/dev/null || echo "[]"
+}
+
+# Get all descendants of an issue recursively (BFS)
+# Returns: JSON array of {number, title, depth}
+# Example: [{"number": 11, "title": "Feature A", "depth": 1}, ...]
+get_all_descendants() {
+  local repo="$1" parent_number="$2" max_depth="${3:-10}"
+
+  local result="[]"
+  local current_queue next_queue
+  local current_depth=1
+
+  # Initialize with direct children
+  current_queue=$(gh api "repos/$repo/issues/$parent_number/sub_issues" \
+    --jq '[.[] | {number: .number, title: .title}]' 2>/dev/null || echo "[]")
+
+  while [[ $(echo "$current_queue" | jq 'length') -gt 0 ]] && [[ $current_depth -le $max_depth ]]; do
+    next_queue="[]"
+
+    # Process each item in current queue
+    while IFS= read -r item; do
+      [[ -z "$item" ]] && continue
+
+      local num title
+      num=$(echo "$item" | jq -r '.number')
+      title=$(echo "$item" | jq -r '.title')
+
+      # Add to result with depth
+      result=$(echo "$result" | jq --argjson n "$num" --arg t "$title" --argjson d "$current_depth" \
+        '. + [{number: $n, title: $t, depth: $d}]')
+
+      # Get children for next level (if not at max depth)
+      if [[ $current_depth -lt $max_depth ]]; then
+        local children
+        children=$(gh api "repos/$repo/issues/$num/sub_issues" \
+          --jq '[.[] | {number: .number, title: .title}]' 2>/dev/null || echo "[]")
+        next_queue=$(echo "[$next_queue, $children]" | jq -s 'add | add // []')
+      fi
+    done < <(echo "$current_queue" | jq -c '.[]')
+
+    current_queue="$next_queue"
+    ((current_depth++))
+  done
+
+  echo "$result"
+}

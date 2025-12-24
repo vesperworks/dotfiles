@@ -184,7 +184,8 @@ pm-agentはリポジトリタイプに応じてtype分類方法を自動切り�
 | `pm-bulk-issues.sh` | Issue一括作成（Issue Type自動対応） | ✅ |
 | `pm-link-hierarchy.sh` | Sub-issue関係設定 | ✅ |
 | `pm-project-fields.sh` | Projects V2フィールド設定（--bulk対応） | - |
-| `pm-cascade-iteration.sh` | 親→子へのIteration自動継承 | - |
+| `pm-cascade-iteration.sh` | 親→子へのIteration自動継承（--recursive対応） | - |
+| `pm-distribute-iterations.sh` | 子Issueを複数Iterationに分散配置 | - |
 
 ### 使用方法
 
@@ -270,17 +271,53 @@ pm-agentはリポジトリタイプに応じてtype分類方法を自動切り�
 
 #### 5. Iteration継承（親→子）
 
-親IssueのIterationを子Issue全てに自動継承:
+親IssueのIterationを子Issueに自動継承:
 
 ```bash
+# 直接の子のみ
 ~/.claude/skills/pm-agent/scripts/pm-cascade-iteration.sh 10 \
-  --project 1 --owner @me --repo owner/repo
+  --project 1 --owner @me
+
+# 全子孫に再帰的に適用（Epic → Feature → Story → Task）
+~/.claude/skills/pm-agent/scripts/pm-cascade-iteration.sh 10 \
+  --project 1 --owner @me --recursive
 ```
 
 **オプション**:
+- `--recursive`: 全子孫に再帰的にIterationを適用
+- `--max-depth <N>`: 再帰の最大深度（デフォルト: 10）
 - `--dry-run`: 実行せずにプレビュー
 
 **注意**: 親IssueにIterationが設定されている必要があります。
+
+#### 6. Iteration分散配置
+
+子Issue（Features等）を複数のIterationに分散配置:
+
+```bash
+# 子Issue一覧を確認
+~/.claude/skills/pm-agent/scripts/pm-distribute-iterations.sh 10 \
+  --project 1 --owner @me --list
+
+# 3つのスプリントに分散配置
+~/.claude/skills/pm-agent/scripts/pm-distribute-iterations.sh 10 \
+  --project 1 --owner @me \
+  --iterations "Sprint 1,Sprint 2,Sprint 3"
+
+# カスタム順序で配置 + 子孫にもcascade
+~/.claude/skills/pm-agent/scripts/pm-distribute-iterations.sh 10 \
+  --project 1 --owner @me \
+  --iterations "Sprint 1,Sprint 2,Sprint 3" \
+  --order "15,12,18,14,16,13" \
+  --cascade
+```
+
+**オプション**:
+- `--iterations <list>`: カンマ区切りのIteration名（必須）
+- `--order <numbers>`: Issue番号のカンマ区切りリスト（カスタム順序）
+- `--cascade`: 各子Issueの子孫にも同じIterationを適用
+- `--list`: 子Issue一覧を表示して終了（計画用）
+- `--dry-run`: 実行せずにプレビュー
 
 ### 特徴
 
