@@ -450,11 +450,13 @@ get_issue_iteration() {
 
   # Find the project item for the specified project
   local iteration_info
+  # Note: Using 'select(.iterationId)' instead of 'select(.iterationId != null)'
+  # to avoid bash history expansion issues with '!' character
   iteration_info=$(echo "$result" | jq -r --argjson pn "$project_number" '
     .data.repository.issue.projectItems.nodes[]
     | select(.project.number == $pn)
     | .fieldValues.nodes[]
-    | select(.iterationId != null)
+    | select(.iterationId)
     | {iterationId: .iterationId, title: .title, fieldId: .field.id, itemId: ""}
   ' 2>/dev/null | head -1)
 
