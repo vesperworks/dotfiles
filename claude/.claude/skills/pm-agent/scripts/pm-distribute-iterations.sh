@@ -13,7 +13,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/pm-utils.sh"
 
 usage() {
-  cat << EOF
+  cat <<EOF
 Usage: $0 <parent_issue_number> [options]
 
 Distribute child issues across multiple iterations.
@@ -61,24 +61,63 @@ DRY_RUN=false
 # Parse arguments
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --repo) REPO="$2"; shift 2 ;;
-    --project) PROJECT_NUMBER="$2"; shift 2 ;;
-    --owner) PROJECT_OWNER="$2"; shift 2 ;;
-    --iterations) ITERATIONS="$2"; shift 2 ;;
-    --order) CUSTOM_ORDER="$2"; shift 2 ;;
-    --cascade) CASCADE=true; shift ;;
-    --list) LIST_ONLY=true; shift ;;
-    --dry-run) DRY_RUN=true; shift ;;
-    -h|--help) usage ;;
-    -*) echo "Unknown option: $1"; usage ;;
-    *) PARENT_ISSUE="$1"; shift ;;
+    --repo)
+      REPO="$2"
+      shift 2
+      ;;
+    --project)
+      PROJECT_NUMBER="$2"
+      shift 2
+      ;;
+    --owner)
+      PROJECT_OWNER="$2"
+      shift 2
+      ;;
+    --iterations)
+      ITERATIONS="$2"
+      shift 2
+      ;;
+    --order)
+      CUSTOM_ORDER="$2"
+      shift 2
+      ;;
+    --cascade)
+      CASCADE=true
+      shift
+      ;;
+    --list)
+      LIST_ONLY=true
+      shift
+      ;;
+    --dry-run)
+      DRY_RUN=true
+      shift
+      ;;
+    -h | --help) usage ;;
+    -*)
+      echo "Unknown option: $1"
+      usage
+      ;;
+    *)
+      PARENT_ISSUE="$1"
+      shift
+      ;;
   esac
 done
 
 # Validate required arguments
-[[ -z "$PARENT_ISSUE" ]] && { echo "Error: parent_issue_number is required"; usage; }
-[[ -z "$PROJECT_NUMBER" ]] && { echo "Error: --project is required"; usage; }
-[[ -z "$PROJECT_OWNER" ]] && { echo "Error: --owner is required"; usage; }
+[[ -z "$PARENT_ISSUE" ]] && {
+  echo "Error: parent_issue_number is required"
+  usage
+}
+[[ -z "$PROJECT_NUMBER" ]] && {
+  echo "Error: --project is required"
+  usage
+}
+[[ -z "$PROJECT_OWNER" ]] && {
+  echo "Error: --owner is required"
+  usage
+}
 
 REPO="${REPO:-$(get_repo)}"
 
@@ -168,7 +207,7 @@ if [[ -z "$ITERATIONS" ]]; then
 fi
 
 # Parse iterations into array
-IFS=',' read -ra ITERATION_NAMES <<< "$ITERATIONS"
+IFS=',' read -ra ITERATION_NAMES <<<"$ITERATIONS"
 ITERATION_COUNT=${#ITERATION_NAMES[@]}
 
 echo "Distribution plan:"
@@ -177,7 +216,7 @@ echo ""
 
 # Build ordered list of issues
 if [[ -n "$CUSTOM_ORDER" ]]; then
-  IFS=',' read -ra ORDERED_ISSUES <<< "$CUSTOM_ORDER"
+  IFS=',' read -ra ORDERED_ISSUES <<<"$CUSTOM_ORDER"
   echo "Using custom order: $CUSTOM_ORDER"
 else
   # Default: sort by issue number
@@ -188,11 +227,11 @@ fi
 echo ""
 
 # Calculate distribution
-CHUNK_SIZE=$(( (${#ORDERED_ISSUES[@]} + ITERATION_COUNT - 1) / ITERATION_COUNT ))
+CHUNK_SIZE=$(((${#ORDERED_ISSUES[@]} + ITERATION_COUNT - 1) / ITERATION_COUNT))
 
 # Validate iterations exist
 for iter_name in "${ITERATION_NAMES[@]}"; do
-  iter_name=$(echo "$iter_name" | xargs)  # Trim whitespace
+  iter_name=$(echo "$iter_name" | xargs) # Trim whitespace
   iter_id=$(find_iteration_id_by_title "$FIELDS_JSON" "$iter_name")
   if [[ -z "$iter_id" || "$iter_id" == "null" ]]; then
     echo "Error: Iteration '$iter_name' not found in project" >&2
@@ -207,7 +246,7 @@ done
 
 # Show distribution plan
 echo "Distribution:"
-for ((i=0; i<ITERATION_COUNT; i++)); do
+for ((i = 0; i < ITERATION_COUNT; i++)); do
   iter_name=$(echo "${ITERATION_NAMES[$i]}" | xargs)
   start=$((i * CHUNK_SIZE))
   end=$((start + CHUNK_SIZE))
@@ -216,7 +255,7 @@ for ((i=0; i<ITERATION_COUNT; i++)); do
   fi
 
   if [[ $start -lt ${#ORDERED_ISSUES[@]} ]]; then
-    issues_in_iter=("${ORDERED_ISSUES[@]:$start:$((end-start))}")
+    issues_in_iter=("${ORDERED_ISSUES[@]:$start:$((end - start))}")
     echo "  $iter_name: ${issues_in_iter[*]}"
   else
     echo "  $iter_name: (none)"
@@ -238,7 +277,7 @@ echo ""
 updated_count=0
 cascade_count=0
 
-for ((i=0; i<ITERATION_COUNT; i++)); do
+for ((i = 0; i < ITERATION_COUNT; i++)); do
   iter_name=$(echo "${ITERATION_NAMES[$i]}" | xargs)
   iter_id=$(find_iteration_id_by_title "$FIELDS_JSON" "$iter_name")
 
@@ -248,7 +287,7 @@ for ((i=0; i<ITERATION_COUNT; i++)); do
     end=${#ORDERED_ISSUES[@]}
   fi
 
-  for ((j=start; j<end; j++)); do
+  for ((j = start; j < end; j++)); do
     issue_num="${ORDERED_ISSUES[$j]}"
     issue_title=$(echo "$CHILDREN_JSON" | jq -r --argjson n "$issue_num" '.[] | select(.number == $n) | .title')
 
@@ -284,7 +323,6 @@ for ((i=0; i<ITERATION_COUNT; i++)); do
 
           desc_num=$(echo "$desc" | jq -r '.number')
           desc_title=$(echo "$desc" | jq -r '.title')
-          desc_depth=$(echo "$desc" | jq -r '.depth')
 
           # Get or create project item for descendant
           desc_item_id=$(get_issue_item_id "$REPO" "$desc_num" "$PROJECT_NUMBER")

@@ -15,7 +15,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/pm-utils.sh"
 
 usage() {
-  cat << EOF
+  cat <<EOF
 Usage: $0 <issues.json> [options]
 
 Options:
@@ -52,21 +52,51 @@ CHECKPOINT_FILE="/tmp/claude/pm-checkpoint.json"
 # Parse arguments
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --repo) REPO="$2"; shift 2 ;;
-    --milestone) MILESTONE="$2"; shift 2 ;;
-    --dry-run) DRY_RUN=true; shift ;;
-    --checkpoint) CHECKPOINT_FILE="$2"; shift 2 ;;
-    --batch-size) BATCH_SIZE="$2"; shift 2 ;;
-    --delay) DELAY_SEC="$2"; shift 2 ;;
-    -h|--help) usage ;;
-    -*) echo "Unknown option: $1"; usage ;;
-    *) ISSUES_FILE="$1"; shift ;;
+    --repo)
+      REPO="$2"
+      shift 2
+      ;;
+    --milestone)
+      MILESTONE="$2"
+      shift 2
+      ;;
+    --dry-run)
+      DRY_RUN=true
+      shift
+      ;;
+    --checkpoint)
+      CHECKPOINT_FILE="$2"
+      shift 2
+      ;;
+    --batch-size)
+      BATCH_SIZE="$2"
+      shift 2
+      ;;
+    --delay)
+      DELAY_SEC="$2"
+      shift 2
+      ;;
+    -h | --help) usage ;;
+    -*)
+      echo "Unknown option: $1"
+      usage
+      ;;
+    *)
+      ISSUES_FILE="$1"
+      shift
+      ;;
   esac
 done
 
 # Validate input
-[[ -z "$ISSUES_FILE" ]] && { echo "Error: issues.json is required"; usage; }
-[[ ! -f "$ISSUES_FILE" ]] && { echo "Error: File not found: $ISSUES_FILE"; exit 1; }
+[[ -z "$ISSUES_FILE" ]] && {
+  echo "Error: issues.json is required"
+  usage
+}
+[[ ! -f "$ISSUES_FILE" ]] && {
+  echo "Error: File not found: $ISSUES_FILE"
+  exit 1
+}
 
 # Get repository
 REPO="${REPO:-$(get_repo)}"

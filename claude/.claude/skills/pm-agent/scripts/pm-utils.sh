@@ -87,7 +87,10 @@ set_issue_type() {
 # Note: due_on is required by pm-agent policy for deadline management
 create_milestone() {
   local repo="$1" title="$2" due_on="$3"
-  [[ -z "$due_on" ]] && { echo "Error: due_on is required (pm-agent policy)" >&2; return 1; }
+  [[ -z "$due_on" ]] && {
+    echo "Error: due_on is required (pm-agent policy)" >&2
+    return 1
+  }
   gh api "repos/$repo/milestones" \
     -X POST \
     -f title="$title" \
@@ -163,10 +166,10 @@ assign_milestone() {
 save_checkpoint() {
   local checkpoint_file="$1" number="$2" title="$3"
   if [[ ! -f "$checkpoint_file" ]]; then
-    echo '{"created":[]}' > "$checkpoint_file"
+    echo '{"created":[]}' >"$checkpoint_file"
   fi
   jq --arg n "$number" --arg t "$title" \
-    '.created += [{"number": $n, "title": $t}]' "$checkpoint_file" > "${checkpoint_file}.tmp"
+    '.created += [{"number": $n, "title": $t}]' "$checkpoint_file" >"${checkpoint_file}.tmp"
   mv "${checkpoint_file}.tmp" "$checkpoint_file"
 }
 

@@ -13,7 +13,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/pm-utils.sh"
 
 usage() {
-  cat << EOF
+  cat <<EOF
 Usage: $0 <issue_number> [options]
        $0 --bulk <json_file> [options]
 
@@ -75,28 +75,79 @@ DRY_RUN=false
 # Parse arguments
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --repo) REPO="$2"; shift 2 ;;
-    --project) PROJECT_NUMBER="$2"; shift 2 ;;
-    --owner) PROJECT_OWNER="$2"; shift 2 ;;
-    --status) STATUS_VALUE="$2"; shift 2 ;;
-    --priority) PRIORITY_VALUE="$2"; shift 2 ;;
-    --size) SIZE_VALUE="$2"; shift 2 ;;
-    --estimate) ESTIMATE_VALUE="$2"; shift 2 ;;
-    --iteration) ITERATION_VALUE="$2"; shift 2 ;;
-    --start-date) START_DATE="$2"; shift 2 ;;
-    --target-date) TARGET_DATE="$2"; shift 2 ;;
-    --bulk) BULK_FILE="$2"; shift 2 ;;
-    --list-fields) LIST_FIELDS=true; shift ;;
-    --dry-run) DRY_RUN=true; shift ;;
-    -h|--help) usage ;;
-    -*) echo "Unknown option: $1"; usage ;;
-    *) ISSUE_NUMBER="$1"; shift ;;
+    --repo)
+      REPO="$2"
+      shift 2
+      ;;
+    --project)
+      PROJECT_NUMBER="$2"
+      shift 2
+      ;;
+    --owner)
+      PROJECT_OWNER="$2"
+      shift 2
+      ;;
+    --status)
+      STATUS_VALUE="$2"
+      shift 2
+      ;;
+    --priority)
+      PRIORITY_VALUE="$2"
+      shift 2
+      ;;
+    --size)
+      SIZE_VALUE="$2"
+      shift 2
+      ;;
+    --estimate)
+      ESTIMATE_VALUE="$2"
+      shift 2
+      ;;
+    --iteration)
+      ITERATION_VALUE="$2"
+      shift 2
+      ;;
+    --start-date)
+      START_DATE="$2"
+      shift 2
+      ;;
+    --target-date)
+      TARGET_DATE="$2"
+      shift 2
+      ;;
+    --bulk)
+      BULK_FILE="$2"
+      shift 2
+      ;;
+    --list-fields)
+      LIST_FIELDS=true
+      shift
+      ;;
+    --dry-run)
+      DRY_RUN=true
+      shift
+      ;;
+    -h | --help) usage ;;
+    -*)
+      echo "Unknown option: $1"
+      usage
+      ;;
+    *)
+      ISSUE_NUMBER="$1"
+      shift
+      ;;
   esac
 done
 
 # Validate required arguments
-[[ -z "$PROJECT_NUMBER" ]] && { echo "Error: --project is required"; usage; }
-[[ -z "$PROJECT_OWNER" ]] && { echo "Error: --owner is required"; usage; }
+[[ -z "$PROJECT_NUMBER" ]] && {
+  echo "Error: --project is required"
+  usage
+}
+[[ -z "$PROJECT_OWNER" ]] && {
+  echo "Error: --owner is required"
+  usage
+}
 
 REPO="${REPO:-$(get_repo)}"
 
@@ -469,7 +520,10 @@ process_issue() {
 
 # Bulk mode
 if [[ -n "$BULK_FILE" ]]; then
-  [[ ! -f "$BULK_FILE" ]] && { echo "Error: Bulk file not found: $BULK_FILE"; exit 1; }
+  [[ ! -f "$BULK_FILE" ]] && {
+    echo "Error: Bulk file not found: $BULK_FILE"
+    exit 1
+  }
 
   echo ""
   echo "═══════════════════════════════════════════════"
@@ -521,7 +575,10 @@ if [[ -n "$BULK_FILE" ]]; then
 fi
 
 # Single issue mode - Validate issue number
-[[ -z "$ISSUE_NUMBER" ]] && { echo "Error: issue_number is required"; usage; }
+[[ -z "$ISSUE_NUMBER" ]] && {
+  echo "Error: issue_number is required"
+  usage
+}
 
 echo "  Repository: $REPO"
 echo "  Issue: #$ISSUE_NUMBER"

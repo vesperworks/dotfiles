@@ -14,7 +14,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/pm-utils.sh"
 
 usage() {
-  cat << EOF
+  cat <<EOF
 Usage: $0 [owner/repo] [options]
 
 Options:
@@ -39,11 +39,23 @@ WITH_PRIORITY=false
 # Parse arguments
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --force-labels) FORCE_LABELS=true; shift ;;
-    --with-priority) WITH_PRIORITY=true; shift ;;
-    -h|--help) usage ;;
-    -*) echo "Unknown option: $1"; usage ;;
-    *) REPO="$1"; shift ;;
+    --force-labels)
+      FORCE_LABELS=true
+      shift
+      ;;
+    --with-priority)
+      WITH_PRIORITY=true
+      shift
+      ;;
+    -h | --help) usage ;;
+    -*)
+      echo "Unknown option: $1"
+      usage
+      ;;
+    *)
+      REPO="$1"
+      shift
+      ;;
   esac
 done
 
@@ -72,7 +84,7 @@ create_labels() {
   local skipped=0
 
   for item in "$@"; do
-    IFS=':' read -r name color desc <<< "$item"
+    IFS=':' read -r name color desc <<<"$item"
     if gh label create "$name" --color "$color" --description "$desc" --repo "$REPO" 2>/dev/null; then
       print_success "Created: $name"
       ((created++))
@@ -110,14 +122,14 @@ if [[ "$FORCE_LABELS" == true ]]; then
   echo ""
 
   echo "Creating type:* labels..."
-  read created skipped <<< "$(create_labels "${type_labels[@]}")"
+  read -r created skipped <<<"$(create_labels "${type_labels[@]}")"
   ((total_created += created))
   ((total_skipped += skipped))
 
   if [[ "$WITH_PRIORITY" == true ]]; then
     echo ""
     echo "Creating priority:* labels..."
-    read created skipped <<< "$(create_labels "${priority_labels[@]}")"
+    read -r created skipped <<<"$(create_labels "${priority_labels[@]}")"
     ((total_created += created))
     ((total_skipped += skipped))
   fi
@@ -158,7 +170,7 @@ else
   echo ""
 
   echo "Creating type:* labels..."
-  read created skipped <<< "$(create_labels "${type_labels[@]}")"
+  read -r created skipped <<<"$(create_labels "${type_labels[@]}")"
   ((total_created += created))
   ((total_skipped += skipped))
 
@@ -166,7 +178,7 @@ else
     echo ""
     echo "⚠️ --with-priority is deprecated. Use Projects V2 Fields instead."
     echo "Creating priority:* labels..."
-    read created skipped <<< "$(create_labels "${priority_labels[@]}")"
+    read -r created skipped <<<"$(create_labels "${priority_labels[@]}")"
     ((total_created += created))
     ((total_skipped += skipped))
   fi

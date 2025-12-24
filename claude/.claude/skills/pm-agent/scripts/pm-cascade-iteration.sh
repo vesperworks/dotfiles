@@ -13,7 +13,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/pm-utils.sh"
 
 usage() {
-  cat << EOF
+  cat <<EOF
 Usage: $0 <parent_issue_number> [options]
 
 Cascade iteration from a parent issue to its sub-issues.
@@ -52,22 +52,55 @@ DRY_RUN=false
 # Parse arguments
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --repo) REPO="$2"; shift 2 ;;
-    --project) PROJECT_NUMBER="$2"; shift 2 ;;
-    --owner) PROJECT_OWNER="$2"; shift 2 ;;
-    --recursive) RECURSIVE=true; shift ;;
-    --max-depth) MAX_DEPTH="$2"; shift 2 ;;
-    --dry-run) DRY_RUN=true; shift ;;
-    -h|--help) usage ;;
-    -*) echo "Unknown option: $1"; usage ;;
-    *) PARENT_ISSUE="$1"; shift ;;
+    --repo)
+      REPO="$2"
+      shift 2
+      ;;
+    --project)
+      PROJECT_NUMBER="$2"
+      shift 2
+      ;;
+    --owner)
+      PROJECT_OWNER="$2"
+      shift 2
+      ;;
+    --recursive)
+      RECURSIVE=true
+      shift
+      ;;
+    --max-depth)
+      MAX_DEPTH="$2"
+      shift 2
+      ;;
+    --dry-run)
+      DRY_RUN=true
+      shift
+      ;;
+    -h | --help) usage ;;
+    -*)
+      echo "Unknown option: $1"
+      usage
+      ;;
+    *)
+      PARENT_ISSUE="$1"
+      shift
+      ;;
   esac
 done
 
 # Validate required arguments
-[[ -z "$PARENT_ISSUE" ]] && { echo "Error: parent_issue_number is required"; usage; }
-[[ -z "$PROJECT_NUMBER" ]] && { echo "Error: --project is required"; usage; }
-[[ -z "$PROJECT_OWNER" ]] && { echo "Error: --owner is required"; usage; }
+[[ -z "$PARENT_ISSUE" ]] && {
+  echo "Error: parent_issue_number is required"
+  usage
+}
+[[ -z "$PROJECT_NUMBER" ]] && {
+  echo "Error: --project is required"
+  usage
+}
+[[ -z "$PROJECT_OWNER" ]] && {
+  echo "Error: --owner is required"
+  usage
+}
 
 REPO="${REPO:-$(get_repo)}"
 
@@ -160,7 +193,6 @@ echo ""
 updated_count=0
 skipped_count=0
 max_depth_reached=0
-current_depth=0
 
 # Process by depth level for better output
 if [[ "$RECURSIVE" == true ]]; then

@@ -13,7 +13,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/pm-utils.sh"
 
 usage() {
-  cat << EOF
+  cat <<EOF
 Usage: $0 <hierarchy.json> [options]
 
 Options:
@@ -61,19 +61,43 @@ VERBOSE=false
 # Parse arguments
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --repo) REPO="$2"; shift 2 ;;
-    --dry-run) DRY_RUN=true; shift ;;
-    --force) FORCE=true; shift ;;
-    --verbose|-v) VERBOSE=true; shift ;;
-    -h|--help) usage ;;
-    -*) echo "Unknown option: $1"; usage ;;
-    *) HIERARCHY_FILE="$1"; shift ;;
+    --repo)
+      REPO="$2"
+      shift 2
+      ;;
+    --dry-run)
+      DRY_RUN=true
+      shift
+      ;;
+    --force)
+      FORCE=true
+      shift
+      ;;
+    --verbose | -v)
+      VERBOSE=true
+      shift
+      ;;
+    -h | --help) usage ;;
+    -*)
+      echo "Unknown option: $1"
+      usage
+      ;;
+    *)
+      HIERARCHY_FILE="$1"
+      shift
+      ;;
   esac
 done
 
 # Validate input
-[[ -z "$HIERARCHY_FILE" ]] && { echo "Error: hierarchy.json is required"; usage; }
-[[ ! -f "$HIERARCHY_FILE" ]] && { echo "Error: File not found: $HIERARCHY_FILE"; exit 1; }
+[[ -z "$HIERARCHY_FILE" ]] && {
+  echo "Error: hierarchy.json is required"
+  usage
+}
+[[ ! -f "$HIERARCHY_FILE" ]] && {
+  echo "Error: File not found: $HIERARCHY_FILE"
+  exit 1
+}
 
 # Get repository
 REPO="${REPO:-$(get_repo)}"
