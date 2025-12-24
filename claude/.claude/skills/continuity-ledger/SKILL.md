@@ -1,140 +1,160 @@
 ---
 name: continuity-ledger
-description: This skill should be used when the user asks to "continue from last session", "what did we do last time", "resume work", "where were we", "前回の続き", "どこまでやった", or when starting a multi-step workflow that requires state tracking across sessions. Provides session state persistence to survive context compression in long sessions.
-version: 0.1.0
+description: Maintains CONTINUITY.md as the canonical session briefing designed to survive context compaction. Automatically reads and updates the ledger every turn when the file exists. Does nothing if CONTINUITY.md is not initialized.
+version: 0.2.0
 ---
 
-# Continuity Ledger
+# Continuity Ledger (Compaction-Safe)
 
 ## Core Purpose
 
-Persist critical project state (goals, decisions, constraints, working context) across sessions to survive Claude Code's automatic context compression. Separates long-term state persistence from short-term task tracking (TodoWrite).
+Maintain a single Continuity Ledger (`CONTINUITY.md`) as the canonical session briefing designed to survive context compaction. Do not rely on earlier chat text unless it's reflected in the ledger.
 
 **Key Distinction**:
-- **TodoWrite**: Short-term tasks (< 1 day), in-session tracking
-- **Continuity Ledger**: Long-term state, cross-session persistence, decisions & constraints
+- **TodoWrite**: Short-term execution scaffolding (3-7 step plan)
+- **Continuity Ledger**: Long-running continuity across compaction (what/why/current state)
 
-## Quick Checklist (初期応答で必ず確認)
-
-1. CONTINUITY.md ファイルが存在するか確認
-2. 存在する場合: YAML frontmatter を読み込み、最終更新日時を確認
-3. 存在しない場合: ユーザーに初期化を提案
-4. Goal/Constraints/Decisions セクションを簡潔に要約
-5. UNCONFIRMED セクションの項目があれば確認を促す
-6. 現在のセッションの作業コンテキストを State セクションに反映
-
-## Basic Workflow
-
-### Step 1: State Detection (Fast-Path Exit)
+## Fast-Path Exit
 
 ```
 IF CONTINUITY.md does not exist:
-  IF user explicitly requested continuity:
-    Offer to initialize CONTINUITY.md from template
-  ELSE:
-    Exit (skill not applicable)
+  → Do nothing (skill is inactive)
+  → User must run /vw:continuity init to activate
 ```
 
-### Step 2: State Loading
+**This skill only activates when CONTINUITY.md exists.**
 
-Read CONTINUITY.md and parse:
-- YAML frontmatter (last_updated, session_id, phase, confidence)
-- Goal section (primary objective)
-- Constraints section (technical/organizational/time)
-- Decisions section (with timestamps)
-- State section (current phase, progress)
-- Working Set section (active files)
-- UNCONFIRMED section (assumptions requiring verification)
+## Every-Turn Workflow
 
-### Step 3: State Presentation
+When CONTINUITY.md exists, execute this at the **start of every assistant turn**:
 
-Summarize loaded state to user:
+### Step 1: Read Ledger
+
 ```
-## Session Continuity Loaded
-
-**Goal**: [Primary objective]
-**Phase**: [Current phase] (X% progress)
-**Last Updated**: [timestamp]
-
-### Key Decisions
-- [Most recent 3-5 decisions]
-
-### Active Working Set
-- [Currently relevant files]
-
-### Requires Confirmation (UNCONFIRMED)
-- [ ] [Items needing verification]
+Read CONTINUITY.md
+Parse current state:
+- Goal (incl. success criteria)
+- Constraints/Assumptions
+- Key decisions
+- State (Done/Now/Next)
+- Open questions
+- Working set
 ```
 
-### Step 4: State Update
+### Step 2: Detect Changes
 
-At significant checkpoints:
-1. Update State section with current progress
-2. Add new Decisions with timestamps
-3. Move confirmed items from UNCONFIRMED
-4. Update Working Set if files changed
-5. Write atomically (temp file → move)
+Check if any of these changed during the conversation:
+- Goal
+- Constraints/Assumptions
+- Key decisions (new decision made)
+- Progress state (Done/Now/Next)
+- Important tool outcomes (file edits, test results, etc.)
 
-## Trigger Phrases
+### Step 3: Update Ledger (if changes detected)
 
-This skill activates on:
-- "continue from last session" / "前回の続き"
-- "what did we do last time" / "どこまでやった"
-- "resume work" / "作業を再開"
-- "where were we" / "どこまで進んだ"
-- Multi-step workflow initiation requiring state persistence
+```
+IF changes detected:
+  Update relevant sections in CONTINUITY.md
+  Update last_updated timestamp
+  Write atomically (temp file → move)
+```
 
-## State File Structure (CONTINUITY.md)
+### Step 4: Display Ledger Snapshot
+
+Begin every reply with a brief snapshot:
 
 ```markdown
----
-last_updated: "2025-12-24T15:30:00+09:00"
-session_id: "abc123"
-phase: "Implementation"
-confidence: "high"
----
+## Ledger Snapshot
+**Goal**: [Primary objective]
+**Now**: [Current task]
+**Next**: [Upcoming task]
+**Open**: [Unresolved questions, if any]
 
+---
+[Continue with the actual work]
+```
+
+**Full ledger display**: Only when it materially changes or when user asks.
+
+## Auto-Update Triggers
+
+Update CONTINUITY.md whenever any of these change:
+
+| Trigger | Example |
+|---------|---------|
+| Goal changes | User redefines objective |
+| New constraint | "We can't use library X" |
+| Key decision made | "Let's use JWT for auth" |
+| State progress | Task completed, new blocker |
+| Tool outcome | Test failed, file created |
+
+## Compaction Detection
+
+If you notice missing recall or a compaction/summary event:
+
+1. Refresh/rebuild the ledger from visible context
+2. Mark gaps as `UNCONFIRMED`
+3. Ask up to 1-3 targeted questions
+4. Continue working
+
+## CONTINUITY.md Format
+
+```markdown
 # Goal
 [Primary objective in 1-2 sentences]
 
-# Constraints
+Success criteria:
+- [ ] Criterion 1
+- [ ] Criterion 2
+
+# Constraints/Assumptions
 - Technical: [...]
 - Organizational: [...]
 - Time: [...]
 
-# Decisions
-- [2025-12-24] Decision description with rationale
-- [2025-12-23] Earlier decision...
+# Key Decisions
+- [2025-12-24] Decision with rationale
+- [2025-12-23] Earlier decision
 
 # State
-Current Phase: [phase name]
-Progress: [percentage or milestone]
-Next Steps: [immediate next actions]
+
+## Done
+- Completed item 1
+- Completed item 2
+
+## Now
+- Current task
+
+## Next
+- Upcoming task 1
+- Upcoming task 2
+
+# Open Questions
+- [ ] Question requiring user input
+- [ ] UNCONFIRMED: Assumption needing verification
 
 # Working Set
-Active Files:
-- path/to/file1.md
-- path/to/file2.ts
-
-Related PRPs:
+- path/to/active/file.ts
 - PRPs/PRP-XXX-name.md
-
-# UNCONFIRMED
-- [ ] Assumption that needs verification
-- [ ] Another uncertain item
 ```
 
-## Rollback / Recovery (状態破損時)
+## Guidelines
 
-1. **Corruption Detection**: YAML frontmatter parsing failure
-2. **Recovery Options**:
-   - Git checkout previous version: `git checkout HEAD~1 -- CONTINUITY.md`
-   - Initialize fresh from template
-3. **Prevention**: Always use atomic updates (temp file + move)
+### Keep It Short and Stable
+- Facts only, no transcripts
+- Prefer bullets
+- Mark uncertainty as `UNCONFIRMED` (never guess)
 
-## Advanced References
+### Consistency with TodoWrite
+- Keep them consistent
+- When plan or state changes, update ledger at intent/progress level
+- Not every micro-step
 
-For detailed guidance, see:
-- [Trigger Detection Patterns](./references/trigger-detection.md)
-- [State Management Best Practices](./references/state-management.md)
-- [Official Claude Code Patterns](./references/official-patterns.md)
+### Atomic Updates
+- Always use temp file + move pattern
+- Prevents corruption on interruption
+
+## References
+
+- [State Management](./references/state-management.md)
+- [Official Patterns](./references/official-patterns.md)
