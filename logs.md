@@ -2,6 +2,24 @@
 
 ## 📅 2025年12月（現在の月）
 
+### 2025-12-26 - gitsigns設定簡素化：インラインdiff表示を無効化（完了）
+
+**背景**: `show_deleted`と`word_diff`が有効だったため、削除行やword単位の変更が常時表示されて煩わしかった
+
+**変更内容**:
+- `word_diff = true` を削除
+- `show_deleted = true` を削除
+- `current_line_blame = true` は維持（現在行のblame表示）
+
+**動作**:
+- サインカラム（`+`, `~`, `_`）で変更箇所を確認
+- 詳細は`<leader>dp`でプレビュー
+
+**関連ファイル**:
+- `lua/plugins/gitsigns.lua` - 設定削除
+
+---
+
 ### 2025-12-26 - Zen Mode統合 & obsidian-zoom削除（完了）
 
 **背景**: 集中モード（周辺dim + カーソル中央）を1キーで切り替えたい。既存のobsidian-zoom-v2はバグがあり使いにくかった。

@@ -14,8 +14,6 @@ return {
       virt_text = true,
       delay = 500,
     },
-    word_diff = true,  -- word単位のインラインdiff表示
-    show_deleted = true,  -- 削除行をバーチャルテキストで表示
     on_attach = function(bufnr)
       local gs = package.loaded.gitsigns
 
