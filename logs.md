@@ -2,6 +2,36 @@
 
 ## 📅 2025年12月（現在の月）
 
+### 2025-12-26 - Zen Mode統合 & obsidian-zoom削除（完了）
+
+**背景**: 集中モード（周辺dim + カーソル中央）を1キーで切り替えたい。既存のobsidian-zoom-v2はバグがあり使いにくかった。
+
+**変更内容**:
+- `obsidian-zoom-v2.lua` を削除
+- `<leader>z` で Zen Mode + Typewriter を同時トグル
+
+**キーバインド**:
+| キー | 機能 |
+|------|------|
+| `<leader>z` | Zen + Typewriter トグル（統合） |
+| `<leader>zm` | Zen Mode 単体トグル |
+| `<leader>zt` | Typewriter 単体トグル |
+
+**動作**:
+- Zen Mode: UI簡素化 + twilight連携（周辺dim）
+- Typewriter: カーソル常時センター
+
+**削除したキーバインド**:
+- `<leader>zz` - obsidian-zoom（削除）
+- `<leader>ZZ` - unzoom（削除）
+- `<leader>zs` - zoom status（削除）
+
+**関連ファイル**:
+- `lua/plugins/zen-modes.lua` - キーバインド追加
+- `lua/user-plugins/obsidian-zoom-v2.lua` - 削除
+
+---
+
 ### 2025-12-24 - oil.nvim + oil-git-status.nvim 導入（完了）
 
 **背景**: `<leader>e` でファイルエクスプローラーを開きたい。軽量でGit status表示も欲しい。

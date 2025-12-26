@@ -69,9 +69,8 @@ vim.opt.clipboard:append("unnamedplus")
 -- 次の飛び先も記録
 vim.opt.jumpoptions:append("stack")
 
--- User plugins (markdown helper, obsidian zoom etc.)
+-- User plugins (markdown helper etc.)
 require('user-plugins.markdown-helper').setup_keymaps()
-require('user-plugins.obsidian-zoom-v2')
 
 -- 進行中タスク表示プラグイン
 local ok_pending, pending_tasks = pcall(require, 'user-plugins.pending-tasks')

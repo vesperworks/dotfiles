@@ -52,8 +52,6 @@ return {
         },
       })
       
-      -- Obsidian Zoomスタイル機能を読み込み（v2版）
-      require('user-plugins.obsidian-zoom-v2')
     end,
     keys = {
       { "<leader>dp", function() require('dropbar.api').pick() end, desc = "パンくずリストナビ" },
@@ -64,6 +62,11 @@ return {
   {
     "folke/zen-mode.nvim",
     keys = {
+      { "<leader>z", function()
+        -- Zen Mode + Typewriter を同時トグル
+        vim.cmd("ZenMode")
+        vim.cmd("TWToggle")
+      end, desc = "Zen + Typewriter トグル" },
       { "<leader>zm", "<cmd>ZenMode<cr>", desc = "Zen Mode トグル" },
     },
     opts = {
