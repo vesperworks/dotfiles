@@ -72,6 +72,35 @@ return {
         end
       end, desc = "Zen + Typewriter トグル" },
       { "<leader>zm", "<cmd>ZenMode<cr>", desc = "Zen Mode トグル" },
+      { "<leader>Z", function()
+        -- Zen Writing Mode: 新規ファイル作成 → Zen Mode起動
+        local vault_path = vim.env.OBSIDIAN_VAULT_PATH or
+          "~/Library/Mobile Documents/iCloud~md~obsidian/Documents/MainVault"
+        local date = os.date("%Y%m%d")
+        local time = os.date("%H%M")
+        local filename = string.format("zen%s-%s.md", date, time)
+        local full_path = vim.fn.expand(vault_path) .. "/Inbox/" .. filename
+
+        -- ディレクトリ作成（存在しない場合）
+        vim.fn.mkdir(vim.fn.fnamemodify(full_path, ":h"), "p")
+
+        -- ファイルを開く
+        vim.cmd("edit " .. vim.fn.fnameescape(full_path))
+
+        -- 新規ファイルの場合、テンプレート挿入
+        if vim.fn.line('$') == 1 and vim.fn.getline(1) == '' then
+          local daily_link = string.format("[[%s]]", os.date("%Y-%m-%d"))
+          vim.api.nvim_buf_set_lines(0, 0, -1, false, { "# ", "", daily_link })
+          -- カーソルを1行目の # の後ろに配置
+          vim.api.nvim_win_set_cursor(0, { 1, 2 })
+        end
+
+        -- Zen Mode + Typewriter 起動
+        vim.cmd("ZenMode")
+        if vim.fn.exists(":TWToggle") == 2 then
+          vim.cmd("TWToggle")
+        end
+      end, desc = "Zen Writing Mode" },
     },
     config = function()
       -- render-markdown の heading 背景設定を保存

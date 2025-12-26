@@ -2,6 +2,32 @@
 
 ## 📅 2025年12月（現在の月）
 
+### 2025-12-26 - Zen Writing Mode実装：打つだけの執筆モード（完了）
+
+**背景**: 全てをシャットアウトして「打つだけ」の執筆モードが欲しい。自動でファイル作成 → 即座に書き始められる環境。
+
+**変更内容**:
+- `<leader>Z`（大文字Z）でZen Writing Mode起動
+- 自動ファイル作成: `$OBSIDIAN_VAULT_PATH/Inbox/zen20251226-1430.md`（YYYYMMDD-HHmm）
+- 初期テンプレート: Dailynoteへのリンク `[[2025-12-26]]` を自動挿入
+- ファイル作成後、Zen Mode + Typewriterを自動起動
+
+**キーバインド**:
+| キー | 機能 |
+|------|------|
+| `<leader>Z` | Zen Writing Mode（新規ファイル作成 + Zen起動） |
+| `<leader>z` | Zen + Typewriter トグル（既存） |
+
+**技術的メモ**:
+- ファイル名に時刻を含めることで重複を回避
+- Dailynoteリンクを残すためリネームは行わない
+- タイトルは `# 見出し` で管理するObsidian式
+
+**関連ファイル**:
+- `lua/plugins/zen-modes.lua` - `<leader>Z`キーバインド追加
+
+---
+
 ### 2025-12-26 - gitsigns設定簡素化：インラインdiff表示を無効化（完了）
 
 **背景**: `show_deleted`と`word_diff`が有効だったため、削除行やword単位の変更が常時表示されて煩わしかった
