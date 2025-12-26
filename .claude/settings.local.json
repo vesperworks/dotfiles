@@ -5,7 +5,8 @@
       "WebFetch(domain:www.codegenes.net)",
       "WebFetch(domain:www.seanh.cc)",
       "WebFetch(domain:koenwoortman.com)",
-      "WebFetch(domain:medium.com)"
+      "WebFetch(domain:medium.com)",
+      "WebFetch(domain:www.joshmedeski.com)"
     ]
   }
 }
