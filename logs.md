@@ -2,6 +2,31 @@
 
 ## 📅 2025年12月（現在の月）
 
+### 2025-12-26 - pending-tasks プレビューハイライト追加（完了）
+
+**背景**: `<leader>h`（heading-jump）と同様に、`<leader>j`（pending-tasks）でもj/k移動時に本文側の選択行に背景色をつけたい
+
+**変更内容**:
+- `M.ns_id` namespace追加（extmark管理用）
+- `M.clear_preview_highlight()` 関数追加
+- `M.preview_task()` にextmarkによる背景色ハイライト追加
+- `M.close_window()` でプレビューハイライトのクリア追加
+- `M.setup()` で `PendingTaskPreview` ハイライト定義追加
+
+**動作**:
+- `<leader>j` → 進行中タスク一覧表示
+- `j/k` → カーソル移動 + 本文側を該当行に移動 + **暗め背景でハイライト**
+- ウィンドウ閉じるとハイライト自動クリア
+
+**技術的メモ**:
+- `PendingTaskPreview`: 暗め背景(#292e42)のみ、文字色は元のまま
+- heading-jumpと同じextmarkパターンで統一
+
+**関連ファイル**:
+- `lua/user-plugins/pending-tasks.lua` - ハイライト機能追加
+
+---
+
 ### 2025-12-26 - Zen Writing Mode実装：打つだけの執筆モード（完了）
 
 **背景**: 全てをシャットアウトして「打つだけ」の執筆モードが欲しい。自動でファイル作成 → 即座に書き始められる環境。

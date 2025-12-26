@@ -20,6 +20,9 @@ M.state = {
   source_buf = nil, -- 元のバッファID
 }
 
+-- extmark用namespace
+M.ns_id = vim.api.nvim_create_namespace("pending_tasks_preview")
+
 -- 親見出しを取得（テキスト含む）
 local function get_parent_heading(lines, task_lnum)
   for i = task_lnum - 1, 1, -1 do
@@ -100,6 +103,11 @@ end
 
 -- ウィンドウを閉じる
 function M.close_window()
+  -- プレビューハイライトをクリア
+  if M.state.source_buf and vim.api.nvim_buf_is_valid(M.state.source_buf) then
+    vim.api.nvim_buf_clear_namespace(M.state.source_buf, M.ns_id, 0, -1)
+  end
+
   if M.state.win and vim.api.nvim_win_is_valid(M.state.win) then
     vim.api.nvim_win_close(M.state.win, true)
   end
@@ -257,6 +265,13 @@ function M.setup_window_keymaps(buf)
   end, opts)
 end
 
+-- プレビューハイライトをクリア
+function M.clear_preview_highlight()
+  if M.state.source_buf and vim.api.nvim_buf_is_valid(M.state.source_buf) then
+    vim.api.nvim_buf_clear_namespace(M.state.source_buf, M.ns_id, 0, -1)
+  end
+end
+
 -- タスクをプレビュー（ウィンドウを閉じずに本文側を移動）
 function M.preview_task(task_index)
   local task = M.state.tasks[task_index]
@@ -264,6 +279,18 @@ function M.preview_task(task_index)
 
   -- 元のバッファを表示しているウィンドウを探してカーソル移動
   if M.state.source_buf and vim.api.nvim_buf_is_valid(M.state.source_buf) then
+    -- 前のハイライトをクリア
+    M.clear_preview_highlight()
+
+    -- 反転ハイライトを適用（TaskInProgress反転色）
+    vim.api.nvim_buf_set_extmark(M.state.source_buf, M.ns_id, task.lnum - 1, 0, {
+      end_row = task.lnum - 1,
+      end_col = 0,
+      hl_group = "PendingTaskPreview",
+      hl_eol = true,
+      line_hl_group = "PendingTaskPreview",
+    })
+
     for _, win in ipairs(vim.api.nvim_list_wins()) do
       if vim.api.nvim_win_get_buf(win) == M.state.source_buf then
         vim.api.nvim_win_set_cursor(win, { task.lnum, 0 })
@@ -325,6 +352,11 @@ function M.setup(opts)
   if opts then
     M.config = vim.tbl_deep_extend("force", M.config, opts)
   end
+
+  -- プレビュー用ハイライト（暗め背景、文字色はそのまま）
+  vim.api.nvim_set_hl(0, "PendingTaskPreview", {
+    bg = "#292e42", -- 暗めの背景（tokyonight visual色）
+  })
 
   -- autocmdグループ作成
   local group = vim.api.nvim_create_augroup("PendingTasks", { clear = true })
