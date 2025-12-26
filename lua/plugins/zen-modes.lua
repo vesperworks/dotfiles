@@ -61,44 +61,72 @@ return {
   -- zen-mode.nvim - 安定したZenモード
   {
     "folke/zen-mode.nvim",
+    dependencies = { "joshuadanpeterson/typewriter.nvim" },
     keys = {
       { "<leader>z", function()
         -- Zen Mode + Typewriter を同時トグル
         vim.cmd("ZenMode")
-        vim.cmd("TWToggle")
+        -- TWToggle はプラグインがロードされている場合のみ実行
+        if vim.fn.exists(":TWToggle") == 2 then
+          vim.cmd("TWToggle")
+        end
       end, desc = "Zen + Typewriter トグル" },
       { "<leader>zm", "<cmd>ZenMode<cr>", desc = "Zen Mode トグル" },
     },
-    opts = {
-      window = {
-        backdrop = 0.95, -- シェード背景
-        width = 120, -- 幅
-        height = 1, -- 高さ (1 = 100%)
-        options = {
-          signcolumn = "no", -- サインカラム無効
-          number = false, -- 行番号無効
-          relativenumber = false, -- 相対行番号無効
-          cursorline = false, -- カーソル行ハイライト無効
-          cursorcolumn = false, -- カーソル列ハイライト無効
-          foldcolumn = "0", -- fold列無効
-          list = false, -- 空白文字無効
+    config = function()
+      -- render-markdown の heading 背景設定を保存
+      local saved_backgrounds = nil
+
+      require("zen-mode").setup({
+        window = {
+          backdrop = 0.95, -- シェード背景
+          width = 120, -- 幅
+          height = 1, -- 高さ (1 = 100%)
+          options = {
+            signcolumn = "no", -- サインカラム無効
+            number = false, -- 行番号無効
+            relativenumber = false, -- 相対行番号無効
+            cursorline = false, -- カーソル行ハイライト無効
+            cursorcolumn = false, -- カーソル列ハイライト無効
+            foldcolumn = "0", -- fold列無効
+            list = false, -- 空白文字無効
+          },
         },
-      },
-      plugins = {
-        options = {
-          enabled = true,
-          ruler = false, -- ルーラー無効
-          showcmd = false, -- コマンド表示無効
+        plugins = {
+          options = {
+            enabled = true,
+            ruler = false, -- ルーラー無効
+            showcmd = false, -- コマンド表示無効
+          },
+          twilight = { enabled = true }, -- twilight連携
+          gitsigns = { enabled = false }, -- gitsigns無効
+          tmux = { enabled = false }, -- tmux連携無効
+          kitty = {
+            enabled = false,
+            font = "+4", -- フォントサイズ増加
+          },
         },
-        twilight = { enabled = true }, -- twilight連携
-        gitsigns = { enabled = false }, -- gitsigns無効
-        tmux = { enabled = false }, -- tmux連携無効
-        kitty = {
-          enabled = false,
-          font = "+4", -- フォントサイズ増加
-        },
-      },
-    },
+        on_open = function()
+          -- Zen Mode 開始時: heading 背景を無効化
+          local ok, rm = pcall(require, 'render-markdown')
+          if ok then
+            local config = rm.get_config and rm.get_config()
+            if config and config.heading then
+              saved_backgrounds = config.heading.backgrounds
+              rm.setup({ heading = { backgrounds = {} } })
+            end
+          end
+        end,
+        on_close = function()
+          -- Zen Mode 終了時: heading 背景を復元
+          local ok, rm = pcall(require, 'render-markdown')
+          if ok and saved_backgrounds then
+            rm.setup({ heading = { backgrounds = saved_backgrounds } })
+            saved_backgrounds = nil
+          end
+        end,
+      })
+    end,
   },
 
   -- twilight.nvim ─ 周辺減光

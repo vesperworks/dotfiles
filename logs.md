@@ -9,6 +9,7 @@
 **変更内容**:
 - `obsidian-zoom-v2.lua` を削除
 - `<leader>z` で Zen Mode + Typewriter を同時トグル
+- Zen Mode中はrender-markdownのheading背景を無効化（twilightのdimが効くように）
 
 **キーバインド**:
 | キー | 機能 |
@@ -18,8 +19,13 @@
 | `<leader>zt` | Typewriter 単体トグル |
 
 **動作**:
-- Zen Mode: UI簡素化 + twilight連携（周辺dim）
+- Zen Mode: UI簡素化 + twilight連携（周辺dim）+ heading背景無効化
 - Typewriter: カーソル常時センター
+
+**技術的メモ**:
+- twilight.nvimはpriority=10000でforegroundをdim
+- render-markdownのheading背景はpriority=4096でbackgroundを設定
+- 背景色があるとdimが見えないため、Zen Mode中のみ背景を無効化
 
 **削除したキーバインド**:
 - `<leader>zz` - obsidian-zoom（削除）
@@ -27,7 +33,7 @@
 - `<leader>zs` - zoom status（削除）
 
 **関連ファイル**:
-- `lua/plugins/zen-modes.lua` - キーバインド追加
+- `lua/plugins/zen-modes.lua` - キーバインド追加、on_open/on_close追加
 - `lua/user-plugins/obsidian-zoom-v2.lua` - 削除
 
 ---
