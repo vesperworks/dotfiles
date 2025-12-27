@@ -2,6 +2,69 @@
 
 ## 📅 2025年12月（現在の月）
 
+### 2025-12-27 - leader c クオート解除が動作しない問題を修正（完了）
+
+**背景**: `>` で始まる通常のクオート行を選択して `<leader>c` を押しても、解除メニューが表示されず新規Callout作成になってしまっていた
+
+**原因**: `insert_callout`関数のCallout検出ロジックが `^%s*>%s*%[!` パターン（Calloutヘッダーのみ）を使っていたため、通常のクオート行（`> テキスト`）は検出されなかった
+
+**変更内容**:
+- 検出パターンを `^%s*>` に変更し、通常のクオート行も検出するように修正
+- メニュー表示を廃止し、直接解除するように変更
+
+**動作**:
+- `> テキスト` を選択 → `<leader>c` → 直接解除 ✅
+
+**関連ファイル**:
+- `lua/user-plugins/markdown-helper.lua` - L360-369 検出ロジック修正
+
+---
+
+### 2025-12-27 - go-up.nvim導入試行→削除（Neovim制限により断念）
+
+**背景**: typewriter.nvimはscrolloffを利用するため、ファイル先頭ではカーソルを中央にできなかった
+
+**試行内容**:
+- go-up.nvimを導入（extmarkのvirt_lines_aboveを利用）
+- しかし動作せず
+
+**原因調査**:
+- `virt_lines_above=true`は行0（ファイル先頭）で動作しない
+- [Neovim Issue #16166](https://github.com/neovim/neovim/issues/16166)（2021年〜Open）
+- [Issue #22167](https://github.com/neovim/neovim/issues/22167)（Duplicate）
+- 「拡張スクロールAPI」が必要とのことで未解決
+
+**結論**:
+- go-up.nvimを削除
+- ファイル先頭での中央化は現時点では技術的に不可能
+
+**関連ファイル**:
+- `lua/plugins/zen-modes.lua` - go-up.nvim削除
+- `thoughts/shared/research/2025-12-27-typewriter-cursor-centering.md` - 調査記録
+
+---
+
+### 2025-12-27 - Zen ModeでAlacritty透明度切り替え（完了）
+
+**背景**: Zen Mode中にデスクトップが見えるよう、ほぼ透明にしたい
+
+**変更内容**:
+- on_open: opacity 0.8 → 0.05（ほぼ透明 + blur維持）
+- on_close: opacity 0.05 → 0.8（元に戻す）
+
+**動作**:
+- `<leader>z` → Zen Mode開始 → Alacrittyがほぼ透明に
+- Zen Mode終了 → 通常の透明度に戻る
+
+**技術的メモ**:
+- Alacrittyはファイル変更を自動検出して即座に反映
+- `vim.fn.system()` + `sed -i ''` でtomlファイルを直接書き換え
+
+**関連ファイル**:
+- `lua/plugins/zen-modes.lua` - on_open/on_close追加
+
+---
+
 ### 2025-12-27 - 補完トリガーキーを`;`に変更（完了）
 
 **背景**: 補完メニュー表示を素早くアクセスしたい

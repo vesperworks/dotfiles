@@ -357,26 +357,18 @@ function M.insert_callout()
   -- 選択範囲の行を取得
   local lines = vim.api.nvim_buf_get_lines(0, start_row - 1, end_row, false)
   
-  -- 既にcalloutかどうかをチェック
-  local has_callout = false
+  -- 既にcallout/quoteかどうかをチェック
+  local has_quote = false
   for _, line in ipairs(lines) do
-    if string.match(line, "^%s*>%s*%[!") then
-      has_callout = true
+    if string.match(line, "^%s*>") then
+      has_quote = true
       break
     end
   end
-  
-  if has_callout then
-    -- 既にcalloutがある場合は選択メニューを表示
-    vim.ui.select({"1. Remove Callout", "2. Change Callout Type"}, {
-      prompt = "既存のCalloutがあります:",
-    }, function(choice)
-      if choice == "1. Remove Callout" then
-        M.remove_callout(start_row, end_row)
-      elseif choice == "2. Change Callout Type" then
-        M.change_callout_type(start_row, end_row)
-      end
-    end)
+
+  if has_quote then
+    -- 既にquote/calloutがある場合は直接解除
+    M.remove_callout(start_row, end_row)
   else
     -- 新しいcalloutを作成
     M.create_new_callout(start_row, end_row)
