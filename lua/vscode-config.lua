@@ -48,6 +48,13 @@ vim.keymap.set({ "n", "v" }, "<leader>/", vscode_action("editor.action.commentLi
 -- Move the current visual selection to the end of the file
 vim.keymap.set("v", "<leader>m", ":move $<CR>gv=gv", { desc = "Move selection to end" })
 
+-- Emacs風キーバインド（インサート/コマンドラインモード）
+vim.keymap.set('i', '<C-a>', '<Home>', { desc = "行頭へ移動" })
+vim.keymap.set('i', '<C-e>', '<End>', { desc = "行末へ移動" })
+vim.keymap.set('c', '<C-a>', '<Home>', { desc = "行頭へ移動" })
+vim.keymap.set('c', '<C-e>', '<End>', { desc = "行末へ移動" })
+vim.keymap.set('i', '<C-k>', '<C-o>D', { desc = "行末まで削除" })
+
 -- VSCode用の限定プラグインセット
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not vim.loop.fs_stat(lazypath) then

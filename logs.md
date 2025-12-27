@@ -2,6 +2,49 @@
 
 ## 📅 2025年12月（現在の月）
 
+### 2025-12-27 - 補完トリガーキーを`;`に変更（完了）
+
+**背景**: 補完メニュー表示を素早くアクセスしたい
+
+**変更内容**:
+- `<C-Space>` → `;` で補完メニュー表示
+
+**キーマップ**:
+| キー | 機能 |
+|------|------|
+| `;` | 補完メニュー表示 |
+| `<C-n>` | 次の候補 |
+| `<C-p>` | 前の候補 |
+| `<C-c>` | キャンセル |
+
+**関連ファイル**:
+- `lua/plugins/cmp.lua` - キーマップ変更
+
+---
+
+### 2025-12-27 - VSCode環境にEmacs風キーバインド追加（完了）
+
+**背景**: VSCode + vscode-neovim環境で `<C-a>` が全選択として動作してしまい、Emacs風の行頭移動が効いていなかった
+
+**変更内容**:
+- `vscode-config.lua` にEmacs風キーバインドを追加
+
+**キーマップ**:
+| キー | 機能 |
+|------|------|
+| `<C-a>` | 行頭へ移動（Insert/Command） |
+| `<C-e>` | 行末へ移動（Insert/Command） |
+| `<C-k>` | 行末まで削除（Insert） |
+
+**技術的メモ**:
+- VSCode環境では `init.lua` が early return するため、`vscode-config.lua` に個別設定が必要
+- VSCode側のショートカットが先にキャッチする場合は `keybindings.json` で `vscode-neovim.send` を使用
+
+**関連ファイル**:
+- `lua/vscode-config.lua` - Emacs風キーバインド追加
+
+---
+
 ### 2025-12-26 - pending-tasks プレビューハイライト追加（完了）
 
 **背景**: `<leader>h`（heading-jump）と同様に、`<leader>j`（pending-tasks）でもj/k移動時に本文側の選択行に背景色をつけたい
