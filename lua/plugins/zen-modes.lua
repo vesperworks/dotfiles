@@ -145,6 +145,8 @@ return {
               rm.setup({ heading = { backgrounds = {} } })
             end
           end
+          -- Alacritty透明度を0.05に変更（ほぼ透明 + blur）
+          vim.fn.system([[sed -i '' 's/^opacity = .*/opacity = 0.05/' ~/.config/alacritty/alacritty.toml]])
         end,
         on_close = function()
           -- Zen Mode 終了時: heading 背景を復元
@@ -153,6 +155,8 @@ return {
             rm.setup({ heading = { backgrounds = saved_backgrounds } })
             saved_backgrounds = nil
           end
+          -- Alacritty透明度を0.8に戻す
+          vim.fn.system([[sed -i '' 's/^opacity = .*/opacity = 0.8/' ~/.config/alacritty/alacritty.toml]])
         end,
       })
     end,
