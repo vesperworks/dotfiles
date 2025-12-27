@@ -220,7 +220,11 @@ if [[ -n "$CUSTOM_ORDER" ]]; then
   echo "Using custom order: $CUSTOM_ORDER"
 else
   # Default: sort by issue number
-  mapfile -t ORDERED_ISSUES < <(echo "$CHILDREN_JSON" | jq -r '.[].number' | sort -n)
+  # Note: Using while loop instead of mapfile for macOS bash 3.x compatibility
+  ORDERED_ISSUES=()
+  while IFS= read -r num; do
+    ORDERED_ISSUES+=("$num")
+  done < <(echo "$CHILDREN_JSON" | jq -r '.[].number' | sort -n)
   echo "Using default order (by issue number)"
 fi
 

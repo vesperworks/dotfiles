@@ -501,10 +501,14 @@ get_issue_item_id() {
     }
   }'
 
+  # Note: Using pipe to jq instead of --jq because we need --argjson for project_number
   gh api graphql \
     -f owner="$owner" \
     -f repo="$repo_name" \
     -F issueNumber="$issue_number" \
-    -f query="$query" \
-    --jq --argjson pn "$project_number" '.data.repository.issue.projectItems.nodes[] | select(.project.number == $pn) | .id' 2>/dev/null | head -1
+    -f query="$query" 2>/dev/null | jq -r --argjson pn "$project_number" '
+      [.data.repository.issue.projectItems.nodes[]
+      | select(.project.number == $pn)
+      | .id][0] // empty
+    '
 }
