@@ -2,6 +2,9 @@
 
 # auto-format.sh - 自動フォーマット・Lint・テスト実行スクリプト
 # ファイルの種類に応じて適切なツールを実行する
+#
+# Note: Commands are internally generated (from package.json scripts),
+#       not from external input, so bash -c usage is safe here.
 
 # Claudeから渡される引数を取得
 TOOL_NAME="$1"
@@ -121,9 +124,8 @@ main() {
                 if command -v parallel &> /dev/null && [ ${#commands[@]} -gt 0 ]; then
                     printf "%s\n" "${commands[@]}" | parallel --jobs 3 --keep-order "{} 2>&1" || true
                 else
-                    # parallelがない場合は順次実行
                     for cmd in "${commands[@]}"; do
-                        eval "$cmd 2>&1" || true
+                        bash -c "$cmd" 2>&1 || true
                     done
                 fi
             else
@@ -152,12 +154,11 @@ main() {
                     fi
                 fi
                 
-                # コマンドを並列実行
                 if command -v parallel &> /dev/null && [ ${#commands[@]} -gt 0 ]; then
-                    printf "%s\n" "${commands[@]}" | parallel --jobs 3 --keep-order "eval {} 2>&1" || true
+                    printf "%s\n" "${commands[@]}" | parallel --jobs 3 --keep-order "bash -c {} 2>&1" || true
                 else
                     for cmd in "${commands[@]}"; do
-                        eval "$cmd 2>&1" || true
+                        bash -c "$cmd" 2>&1 || true
                     done
                 fi
             else
@@ -179,17 +180,16 @@ main() {
                 debug_log "shfmtが見つかりません"
             fi
             
-            # shellcheckが利用可能か確認
+            # ShellCheckが利用可能か確認
             if command -v shellcheck &> /dev/null; then
                 debug_log "Running: shellcheck"
                 commands+=("shellcheck '$FILE_PATH'")
             else
-                debug_log "shellcheckが見つかりません"
+                debug_log "ShellCheckが見つかりません"
             fi
             
-            # コマンドを実行
             for cmd in "${commands[@]}"; do
-                eval "$cmd 2>&1" || true
+                bash -c "$cmd" 2>&1 || true
             done
             ;;
             

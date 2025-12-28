@@ -90,7 +90,7 @@ for pattern in "${sensitive_patterns[@]}"; do
     fi
 done
 
-# Check for path traversal
+# Check for path traversal attempts
 if [[ "$file_path" == *".."* ]]; then
     echo "⚠️ パストラバーサルを検出: $file_path" >&2
     exit 2

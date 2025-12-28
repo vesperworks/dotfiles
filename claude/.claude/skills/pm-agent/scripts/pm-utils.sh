@@ -5,6 +5,14 @@
 # This file provides common functions for pm-agent scripts.
 # All functions are designed to work with sandbox restrictions.
 
+# Load security utilities (required)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SECURITY_UTILS="${SCRIPT_DIR}/../../../scripts/security-utils.sh"
+if [[ -f "$SECURITY_UTILS" ]]; then
+  # shellcheck source=../../../scripts/security-utils.sh
+  source "$SECURITY_UTILS"
+fi
+
 # Extract issue number from URL
 # Input: https://github.com/owner/repo/issues/123
 # Output: 123
@@ -77,6 +85,9 @@ get_org_issue_types() {
 set_issue_type() {
   local repo="$1" issue_number="$2" issue_type="$3"
 
+  validate_repo "$repo" || return 1
+  validate_number "$issue_number" || return 1
+
   gh api "repos/$repo/issues/$issue_number" \
     -X PATCH \
     -f type="$issue_type" \
@@ -87,10 +98,14 @@ set_issue_type() {
 # Note: due_on is required by pm-agent policy for deadline management
 create_milestone() {
   local repo="$1" title="$2" due_on="$3"
+
+  validate_repo "$repo" || return 1
   [[ -z "$due_on" ]] && {
     echo "Error: due_on is required (pm-agent policy)" >&2
     return 1
   }
+  validate_date "$due_on" || return 1
+
   gh api "repos/$repo/milestones" \
     -X POST \
     -f title="$title" \
@@ -103,6 +118,10 @@ create_milestone() {
 # Reference: https://docs.github.com/en/rest/issues/sub-issues
 get_issue_id() {
   local repo="$1" issue_number="$2"
+
+  validate_repo "$repo" || return 1
+  validate_number "$issue_number" || return 1
+
   gh api "repos/$repo/issues/$issue_number" --jq '.id'
 }
 
@@ -135,13 +154,15 @@ remove_sub_issue() {
 add_sub_issue() {
   local repo="$1" parent_number="$2" child_number="$3"
 
-  # Get child issue ID (numeric integer, not node_id)
+  validate_repo "$repo" || return 1
+  validate_number "$parent_number" || return 1
+  validate_number "$child_number" || return 1
+
   local child_id
   child_id=$(get_issue_id "$repo" "$child_number")
 
-  # Validate child_id is a number
   if ! [[ "$child_id" =~ ^[0-9]+$ ]]; then
-    echo "Error: Invalid issue ID for #$child_number: $child_id" >&2
+    echo "Error: Invalid issue ID for #$child_number" >&2
     return 1
   fi
 
@@ -156,6 +177,11 @@ add_sub_issue() {
 # Assign milestone to issue (REST API)
 assign_milestone() {
   local repo="$1" issue_number="$2" milestone_number="$3"
+
+  validate_repo "$repo" || return 1
+  validate_number "$issue_number" || return 1
+  validate_number "$milestone_number" || return 1
+
   gh api "repos/$repo/issues/$issue_number" \
     -X PATCH \
     -F milestone="$milestone_number" \

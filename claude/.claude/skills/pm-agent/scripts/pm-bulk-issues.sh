@@ -14,6 +14,14 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/pm-utils.sh"
 
+# Load security utilities (required)
+SECURITY_UTILS="${SCRIPT_DIR}/../../../scripts/security-utils.sh"
+# shellcheck source=../../../scripts/security-utils.sh
+source "$SECURITY_UTILS" || {
+  echo "Error: security-utils.sh not found" >&2
+  exit 1
+}
+
 usage() {
   cat <<EOF
 Usage: $0 <issues.json> [options]
@@ -128,10 +136,39 @@ skipped_count=0
 count=0
 
 while IFS= read -r issue; do
-  title=$(echo "$issue" | jq -r '.title')
-  body=$(echo "$issue" | jq -r '.body // ""')
+  # Extract values from JSON
+  raw_title=$(echo "$issue" | jq -r '.title')
+  raw_body=$(echo "$issue" | jq -r '.body // ""')
   issue_type=$(echo "$issue" | jq -r '.type // ""')
-  labels=$(echo "$issue" | jq -r '.labels // [] | join(",")')
+  raw_labels=$(echo "$issue" | jq -r '.labels // [] | join(",")')
+
+  # Validate and sanitize inputs
+  if [[ -z "$raw_title" ]] || [[ "$raw_title" == "null" ]]; then
+    print_warn "Skipping issue with empty title"
+    continue
+  fi
+  title=$(sanitize_string "$raw_title" 256)
+  if [[ -z "$title" ]]; then
+    print_warn "Skipping issue with invalid title"
+    continue
+  fi
+
+  body=""
+  if [[ -n "$raw_body" ]] && [[ "$raw_body" != "null" ]]; then
+    body=$(sanitize_string "$raw_body" 65536)
+  fi
+
+  labels=""
+  if [[ -n "$raw_labels" ]] && validate_labels "$raw_labels"; then
+    labels="$raw_labels"
+  elif [[ -n "$raw_labels" ]]; then
+    print_warn "Invalid labels format, skipping labels"
+  fi
+
+  if [[ -n "$issue_type" ]] && ! validate_issue_type "$issue_type"; then
+    print_warn "Invalid issue type: $issue_type"
+    issue_type=""
+  fi
 
   # Check checkpoint (idempotency)
   if is_already_created "$CHECKPOINT_FILE" "$title"; then
