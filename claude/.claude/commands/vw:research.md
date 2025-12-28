@@ -238,7 +238,46 @@ AskUserQuestion:
           description: "結果に満足、終了"
 ```
 
-### Step 3.3: Handle Follow-ups (Iteration)
+### Step 3.3: Confirm Completion & Save Atomic Note
+
+**CRITICAL**: When user selects "この調査は完了", ALWAYS confirm and save as Atomic Note.
+
+1. **Confirm completion with Q&A summary**:
+
+```yaml
+AskUserQuestion:
+  questions:
+    - question: "以下の内容でリサーチを完了してよいですか？\n\n❓ **調べたかったこと**:\n{user's original question}\n\n✅ **答え**:\n{1-2 sentence conclusion}"
+      header: "完了確認"
+      multiSelect: false
+      options:
+        - label: "はい、この内容で保存"
+          description: "Atomicノート形式で保存して終了"
+        - label: "結論を修正したい"
+          description: "答えの内容を調整"
+        - label: "まだ調査を続ける"
+          description: "追加の調査が必要"
+```
+
+2. **If confirmed, save as Atomic Note**:
+   - Use Skill `research-output` with Atomic Note format
+   - Location: `thoughts/shared/research/{YYYY-MM-DD}-{topic-kebab-case}.md`
+   - Format: Q&A pair focused (see research-output skill)
+
+3. **Show confirmation**:
+
+```markdown
+✅ リサーチ完了
+
+📄 保存先: `thoughts/shared/research/{filename}`
+
+**Q**: {調べたかったこと}
+**A**: {答え}
+
+関連タグ: #{tag1} #{tag2}
+```
+
+### Step 3.4: Handle Follow-ups (Iteration)
 
 If user asks follow-up questions:
 
