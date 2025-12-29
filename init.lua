@@ -84,6 +84,16 @@ if ok_heading then
   heading_jump.setup()
 end
 
+-- Obsidianリンクホバープレビュー
+local ok_hover, hover_preview = pcall(require, 'user-plugins.obsidian-hover-preview')
+if ok_hover then
+  hover_preview.setup({
+    delay = 500,
+    max_height = 15,
+    preview_lines = 50,
+  })
+end
+
 -- タスクタイマーシステムを初期化
 local ok, task_timer = pcall(require, 'user-plugins.task-timer')
 if ok then
