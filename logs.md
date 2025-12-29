@@ -2,6 +2,47 @@
 
 ## 📅 2025年12月（現在の月）
 
+### 2025-12-29 - leader m 移動先を # NEXT の1行上に変更（完了）
+
+**背景**: `<leader>m` で選択範囲を一番下ではなく、`# NEXT` の1行上に移動したい
+
+**変更内容**:
+- `# NEXT` がある → その1行上に移動
+- `# NEXT` がない → 一番上に移動
+- 移動した行の前に空白行を1行追加
+
+**技術的メモ**:
+- `'<` `'>` マークは関数実行時に未更新のため、`vim.fn.line("v")` と `vim.fn.line(".")` で現在の選択を取得
+
+**関連ファイル**:
+- `init.lua` - `<leader>m` キーマップ変更
+
+---
+
+### 2025-12-29 - Callout拡張：AI追加・Quote整理（完了）
+
+**背景**: codeblockではなくcalloutに「ai」が欲しい。普通のQuoteにタイトルを付けたい。`>`のみの名前を整理したい
+
+**変更内容**:
+- `ai` callout追加（🤖 AI、ティール色、`#ai`タグ付き）
+- `quote` → `[!quote]` 形式（タイトル付きCallout）に変更
+- `blockquote` 新規追加（`>`のみ、Calloutヘッダーなし）
+- キーバインド整理: `n`=note, `a`=ai, `q`=quote, `b`=blockquote
+
+**キーバインド**:
+| キー | 機能 |
+|------|------|
+| `a` | 🤖 AI（新規） |
+| `q` | 💬 Quote（タイトル付き） |
+| `b` | 📎 Blockquote（>のみ） |
+| `n` | 📝 Note（旧`a`から変更） |
+
+**関連ファイル**:
+- `lua/user-plugins/markdown-helper.lua` - callout_types、処理ロジック修正
+- `lua/plugins/render-markdown.lua` - ai callout定義、ハイライト追加
+
+---
+
 ### 2025-12-27 - leader c クオート解除が動作しない問題を修正（完了）
 
 **背景**: `>` で始まる通常のクオート行を選択して `<leader>c` を押しても、解除メニューが表示されず新規Callout作成になってしまっていた
