@@ -403,7 +403,7 @@ end
 -- Calloutの種類を変更する関数
 function M.change_callout_type(start_row, end_row)
   local callout_types = {
-    { "note", "📝 Note", "a" },
+    { "note", "📝 Note", "n" },
     { "warning", "⚠️ Warning", "s" },
     { "error", "❌ Error", "d" },
     { "info", "ℹ️ Info", "f" },
@@ -412,7 +412,9 @@ function M.change_callout_type(start_row, end_row)
     { "question", "❓ Question", "j" },
     { "think", "🤔 Think", "t" },
     { "idea", "💡 Idea", "i" },
-    { "quote", "💬 Quote (普通のクオート)", "k" },
+    { "ai", "🤖 AI", "a" },
+    { "quote", "💬 Quote (タイトル付き)", "q" },
+    { "blockquote", "📎 Blockquote (>のみ)", "b" },
     { "code", "💻 Code Block", "c" },
   }
   
@@ -430,8 +432,8 @@ function M.change_callout_type(start_row, end_row)
     local lines = vim.api.nvim_buf_get_lines(0, start_row - 1, end_row, false)
     local new_lines = {}
     
-    if callout_type == "quote" then
-      -- quoteの場合はCalloutヘッダーを削除
+    if callout_type == "blockquote" then
+      -- blockquoteの場合はCalloutヘッダーを削除
       for _, line in ipairs(lines) do
         if string.match(line, "^%s*>%s*%[!") then
           -- Calloutヘッダー行を削除（何も追加しない）
@@ -450,6 +452,8 @@ function M.change_callout_type(start_row, end_row)
             callout_header = indent .. "> [!" .. callout_type .. "] #think"
           elseif callout_type == "idea" then
             callout_header = indent .. "> [!" .. callout_type .. "] #idea"
+          elseif callout_type == "ai" then
+            callout_header = indent .. "> [!" .. callout_type .. "] #ai"
           else
             callout_header = indent .. "> [!" .. callout_type .. "]"
           end
@@ -716,7 +720,7 @@ function M.create_new_callout(start_row, end_row)
   end
   
   local callout_types = {
-    { "note", "📝 Note", "a" },
+    { "note", "📝 Note", "n" },
     { "warning", "⚠️ Warning", "s" },
     { "error", "❌ Error", "d" },
     { "info", "ℹ️ Info", "f" },
@@ -725,10 +729,12 @@ function M.create_new_callout(start_row, end_row)
     { "question", "❓ Question", "j" },
     { "think", "🤔 Think", "t" },
     { "idea", "💡 Idea", "i" },
-    { "quote", "💬 Quote (普通のクオート)", "k" },
+    { "ai", "🤖 AI", "a" },
+    { "quote", "💬 Quote (タイトル付き)", "q" },
+    { "blockquote", "📎 Blockquote (>のみ)", "b" },
     { "code", "💻 Code Block", "c" },
   }
-  
+
   M.show_callout_selection(callout_types, "Calloutの種類を選択:", function(choice)
     if not choice then return end
     
@@ -753,8 +759,8 @@ function M.create_new_callout(start_row, end_row)
       end
     end
     
-    -- quoteの場合は特別処理（Calloutヘッダーなし）
-    if callout_type == "quote" then
+    -- blockquoteの場合は特別処理（Calloutヘッダーなし、>のみ）
+    if callout_type == "blockquote" then
       for _, line in ipairs(lines) do
         if line == "" then
           table.insert(new_lines, common_indent .. ">")
@@ -772,11 +778,13 @@ function M.create_new_callout(start_row, end_row)
         callout_header = common_indent .. "> [!" .. callout_type .. "] #think"
       elseif callout_type == "idea" then
         callout_header = common_indent .. "> [!" .. callout_type .. "] #idea"
+      elseif callout_type == "ai" then
+        callout_header = common_indent .. "> [!" .. callout_type .. "] #ai"
       else
         callout_header = common_indent .. "> [!" .. callout_type .. "]"
       end
       table.insert(new_lines, callout_header)
-      
+
       for _, line in ipairs(lines) do
         if line == "" then
           table.insert(new_lines, common_indent .. ">")
@@ -788,18 +796,18 @@ function M.create_new_callout(start_row, end_row)
         end
       end
     end
-    
+
     -- 安全な行置換
     local success, err = pcall(function()
       vim.api.nvim_buf_set_lines(0, start_row - 1, end_row, false, new_lines)
     end)
-    
+
     if not success then
       return
     end
-    
+
     -- カーソルを適切な位置に移動
-    if callout_type == "quote" then
+    if callout_type == "blockquote" then
       vim.api.nvim_win_set_cursor(0, {start_row, #(common_indent .. "> ")})
     else
       vim.api.nvim_win_set_cursor(0, {start_row + 1, #(common_indent .. "> ")})
