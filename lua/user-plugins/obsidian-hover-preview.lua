@@ -44,14 +44,16 @@ local function resolve_link_path(link_text)
     return nil
   end
 
-  local client = obsidian.get_client()
-  if not client then
+  local client_ok, client = pcall(obsidian.get_client)
+  if not client_ok or not client then
     return nil
   end
 
-  -- obsidian.nvimのresolve_note機能を使用
-  local note = client:resolve_note(link_text)
-  if note then
+  -- obsidian.nvimのresolve_note機能を使用（エラーハンドリング付き）
+  local resolve_ok, note = pcall(function()
+    return client:resolve_note(link_text)
+  end)
+  if resolve_ok and note then
     return tostring(note.path)
   end
   return nil
