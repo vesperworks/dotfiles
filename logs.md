@@ -2,6 +2,37 @@
 
 ## 📅 2025年12月（現在の月）
 
+### 2025-12-30 - Wikilink Surround機能追加（完了）
+
+**背景**: Visual modeで選択範囲を`[[wikilink]]`形式で囲みたい
+
+**変更内容**:
+- `<leader>[` でVisual mode選択範囲を `[[]]` で囲む機能を追加
+- surroundプラグイン不要のシンプルな実装（YAGNI原則）
+
+**キーマップ**:
+| キー | モード | 動作 |
+|------|--------|------|
+| `<leader>[` | Visual | 選択範囲を`[[wikilink]]`で囲む |
+
+**使用方法**:
+1. Visual modeで囲みたいテキストを選択
+2. `<leader>[` を押す
+3. 選択範囲が `[[選択テキスト]]` になる
+
+**技術的メモ**:
+- Vimネイティブのキーシーケンス `c[[<C-r>"]]<Esc>` を使用
+- `c` で選択削除+Insertモード → `<C-r>"` で削除テキストを貼り付け
+- Lua関数より確実でシンプル（マーク位置の問題を回避）
+
+**関連ファイル**:
+- `lua/user-plugins/markdown-helper.lua` - キーマップ追加（L863-866）
+- `lua/user-plugins/obsidian-hover-preview.lua` - エラーハンドリング追加（L47-59）
+
+**調査レポート**: `thoughts/shared/research/2025-12-30-wikilink-surround-implementation.md`
+
+---
+
 ### 2025-12-29 - Obsidianリンクホバープレビュー実装（完了）
 
 **背景**: `[[wikilink]]`上にカーソルを500ms置くとプレビュー表示、フォーカス移動して通常操作可能にしたい
