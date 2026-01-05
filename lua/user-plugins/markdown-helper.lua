@@ -857,8 +857,13 @@ function M.setup_keymaps()
   -- Callout関連のキーマップ（Normal & Visual mode）
   vim.keymap.set('n', '<leader>c', M.insert_callout, 
     vim.tbl_extend('force', opts, { desc = "Insert/toggle/remove Callout" }))
-  vim.keymap.set('v', '<leader>c', M.insert_callout, 
+  vim.keymap.set('v', '<leader>c', M.insert_callout,
     vim.tbl_extend('force', opts, { desc = "Insert/toggle/remove Callout (Visual)" }))
+
+  -- Wikilink surround: Visual modeで選択範囲を[[]]で囲む
+  -- c = change（選択削除+挿入モード）、<C-r>" = 削除したテキストを貼り付け
+  vim.keymap.set('v', '<leader>[', 'c[[<C-r>"]]<Esc>',
+    vim.tbl_extend('force', opts, { desc = "Wrap selection in [[wikilink]]" }))
 end
 
 -- 便利なヘルプ関数：現在行のmarkdown要素を表示
