@@ -35,16 +35,16 @@ return {
         fg = '#6c7086',
       })
 
-      -- 実行中 [>] - 黄色（旧[-]のスタイル）
+      -- 実行中 [>] - オレンジ
       vim.api.nvim_set_hl(0, 'TaskStatusInProgress', {
-        fg = '#f9e2af',
+        fg = '#fab387',
         italic = true,
       })
 
-      -- 中断中 [/] - 青
+      -- 中断中 [/] - 目立つ赤
       vim.api.nvim_set_hl(0, 'TaskStatusPaused', {
-        fg = '#89b4fa',
-        italic = true,
+        fg = '#ff6b6b',
+        bold = true,
       })
 
       -- 成功 [v] - 暗い緑 + 打ち消し線
@@ -59,9 +59,9 @@ return {
         strikethrough = true,
       })
 
-      -- 中止 [-] - 薄いグレー + 打ち消し線
+      -- 中止 [-] - 黄色 + 打ち消し線
       vim.api.nvim_set_hl(0, 'TaskStatusCancelled', {
-        fg = '#585b70',
+        fg = '#f9e2af',
         strikethrough = true,
       })
       
@@ -105,7 +105,8 @@ return {
             vim.api.nvim_buf_set_extmark(bufnr, ns_id, lnum - 1, 0, {
               end_col = #line,
               hl_group = hl_group,
-              priority = 10000,  -- 高優先度で他のハイライトを上書き
+              hl_mode = 'replace',  -- 既存のハイライトを完全に置き換え
+              priority = 10000,
             })
           end
         end
