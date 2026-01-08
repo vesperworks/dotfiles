@@ -1,6 +1,51 @@
 # Neovim Development Logs
 
-## 📅 2025年12月（現在の月）
+## 📅 2026年1月
+
+### 2026-01-08 - cheatsheet.nvim + which-key.nvim導入（完了）
+
+**背景**: nvimの元々のコマンド（dd, yy, ciw等）とカスタムキーマップをサッと確認したい
+
+**導入プラグイン**:
+- `cheatsheet.nvim` - Vim標準コマンドのチートシート表示（Telescope連携）
+- `which-key.nvim` - キー入力中に候補をポップアップ表示
+
+**キーマップ**:
+| キー | 機能 |
+|------|------|
+| `<leader>?` | チートシート検索（Vim標準コマンド、Nerd Fonts、Regex等） |
+| `<leader>k` | カスタムキーマップ検索（既存Telescope） |
+| `<leader>` + 300ms待機 | 次のキー候補をポップアップ表示 |
+
+**関連ファイル**:
+- `lua/plugins/cheatsheet.lua` - 新規作成
+- `lua/plugins/which-key.lua` - 新規作成
+
+---
+
+### 2026-01-08 - Callout foldlevelをH6以下に修正（完了）
+
+**背景**: calloutの折りたたみが見出しと同列（兄弟関係）になっていたため、`zc`でcalloutだけを閉じられなかった
+
+**変更内容**:
+- callout終了時に親見出しレベルに戻す処理を削除
+- calloutは常にfoldlevel 7（H6より深い階層）として扱う
+
+**動作**:
+- `zc` → callout上でcallout（foldlevel 7）のみ閉じる
+- 再度`zc` → 親見出し（foldlevel 1-6）が閉じる
+- calloutと見出しが独立した階層として操作可能
+
+**技術的メモ**:
+- callout終了時に`<7`を返すことでfold終端を確実に制御
+- 親レベルへの復帰は`=`による自動継承に任せる
+
+**関連ファイル**:
+- `lua/user-plugins/markdown-fold.lua` - foldexpr修正（L92-98）
+
+---
+
+## 📅 2025年12月
 
 ### 2025-12-30 - Wikilink Surround機能追加（完了）
 
