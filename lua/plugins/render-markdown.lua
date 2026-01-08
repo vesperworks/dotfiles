@@ -47,9 +47,9 @@ return {
         bold = true,
       })
 
-      -- 成功 [v] - 暗い緑 + 打ち消し線
+      -- 成功 [v] - ティール + 打ち消し線
       vim.api.nvim_set_hl(0, 'TaskStatusSuccess', {
-        fg = '#5a7a3a',
+        fg = '#70D3C4',
         strikethrough = true,
       })
 
