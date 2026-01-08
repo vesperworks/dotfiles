@@ -125,9 +125,9 @@ vim.keymap.set('n', '<leader>t', function() task_timer.jump_to_active_timer() en
     { desc = "🎯 稼働中タイマーにジャンプ", silent = true })
 end
 
--- Move the current visual selection to # NEXT (or top if not found)
-vim.keymap.set("v", "<leader>m", function()
-  -- 現在のビジュアル選択範囲を取得（'<'>ではなくv/.を使う）
+-- Move selection to heading (generic function)
+-- to_bottom: if true, move to bottom of section; if false, move right after heading
+local function move_selection_to_heading(pattern, to_bottom)
   local v_start = vim.fn.line("v")
   local v_end = vim.fn.line(".")
   if v_start > v_end then
@@ -135,37 +135,56 @@ vim.keymap.set("v", "<leader>m", function()
   end
   local line_count = v_end - v_start + 1
 
-  -- # NEXT の行を検索
-  local next_line = nil
+  -- Search for target heading
+  local target_line = nil
   for i = 1, vim.fn.line('$') do
     local line = vim.fn.getline(i)
-    if line:match("^# NEXT") then
-      next_line = i
+    if line:match(pattern) then
+      target_line = i
       break
     end
   end
 
-  -- ビジュアルモードを抜ける
+  -- Exit visual mode
   vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "x", false)
 
   local dest
-  if next_line then
-    dest = next_line - 2
+  if target_line then
+    if to_bottom then
+      -- Find next heading or end of file
+      local next_heading = nil
+      for i = target_line + 1, vim.fn.line('$') do
+        if vim.fn.getline(i):match("^#+ ") then
+          next_heading = i
+          break
+        end
+      end
+      dest = (next_heading and next_heading - 1) or vim.fn.line('$')
+    else
+      dest = target_line  -- Right after the heading
+    end
   else
     dest = 0
   end
 
-  -- 明示的に範囲を指定して移動
+  -- Move selection
   vim.cmd(string.format(":%d,%dmove %d", v_start, v_end, dest))
 
-  -- 移動後の行の前に空白行を追加
+  -- Add blank line before moved content
   local new_start = dest + 1
   vim.fn.append(new_start - 1, "")
 
-  -- 移動後の行を選択してインデント調整（空白行追加で1行ずれる）
+  -- Re-select and fix indentation
   local new_end = new_start + line_count
   vim.cmd(string.format("normal! %dGV%dG=", new_start + 1, new_end))
-end, { desc = "Move selection to # NEXT", silent = true })
+end
+
+-- Move selection keymaps
+vim.keymap.set("v", "<leader>mn", function() move_selection_to_heading("^# NEXT", false) end, { desc = "Move to # NEXT", silent = true })
+vim.keymap.set("v", "<leader>mw", function() move_selection_to_heading("^## WANTS", false) end, { desc = "Move to ## WANTS", silent = true })
+vim.keymap.set("v", "<leader>md", function() move_selection_to_heading("^# DONE", true) end, { desc = "Move to # DONE (bottom)", silent = true })
+vim.keymap.set("v", "<leader>ms", function() move_selection_to_heading("^## SHOULD", false) end, { desc = "Move to ## SHOULD", silent = true })
+vim.keymap.set("v", "<leader>mm", function() move_selection_to_heading("^## MUST", false) end, { desc = "Move to ## MUST", silent = true })
 
 -- Cmd+S で保存
 vim.keymap.set('n', '<C-s>', ':w<CR>', { desc = "ファイル保存", silent = true })
