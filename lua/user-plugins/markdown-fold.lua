@@ -89,18 +89,12 @@ function M.foldexpr()
     return ">" .. CALLOUT_LEVEL
   end
   
-  -- callout本体（専用foldlevelを維持）
+  -- callout本体（専用foldlevel 7を維持、H6より深い階層）
   if is_callout_body(line) then
-    local parent_level = get_parent_heading_level(lnum)
     if not is_callout_body(next_line) then
-      return "<" .. parent_level
+      return "<" .. CALLOUT_LEVEL
     end
     return CALLOUT_LEVEL
-  end
-
-  -- calloutが終わった直後の行では親見出しのレベルに戻す
-  if (is_callout_start(prev_line) or is_callout_body(prev_line)) and not is_callout_body(line) then
-    return get_parent_heading_level(lnum)
   end
   
   -- デフォルト：親のfoldレベルを継承
