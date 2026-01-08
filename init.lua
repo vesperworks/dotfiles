@@ -74,6 +74,12 @@ if ok_hover then
   })
 end
 
+-- Markdown見出しzoom
+local ok_zoom, markdown_zoom = pcall(require, 'user-plugins.markdown-zoom')
+if ok_zoom then
+  markdown_zoom.setup()
+end
+
 -- タスクタイマーシステムを初期化
 local ok, task_timer = pcall(require, 'user-plugins.task-timer')
 if ok then
