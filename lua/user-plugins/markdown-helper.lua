@@ -870,12 +870,16 @@ function M.setup_keymaps()
   -- c = change（選択削除+挿入モード）、<C-r>" = 削除したテキストを貼り付け
   vim.keymap.set('v', '<leader>[', 'c[[<C-r>"]]<Esc>',
     vim.tbl_extend('force', opts, { desc = "Wrap selection in [[wikilink]]" }))
+
+  -- Extract to Note: 選択範囲を新規ノートとして抽出
+  vim.keymap.set('v', '<leader>a', M.extract_to_note,
+    vim.tbl_extend('force', opts, { desc = "Extract selection to new note" }))
 end
 
 -- 便利なヘルプ関数：現在行のmarkdown要素を表示
 function M.show_current_element()
   local current_line = vim.api.nvim_get_current_line()
-  
+
   if string.match(current_line, "^#+%s") then
     local level = #string.match(current_line, "^(#+)")
     print("Header level " .. level)
@@ -892,6 +896,97 @@ function M.show_current_element()
   else
     print("Plain text")
   end
+end
+
+-- 選択範囲を新規ノートとして抽出する関数
+function M.extract_to_note()
+  local start_row, end_row
+
+  -- Visual modeの判定と範囲取得
+  local mode = vim.fn.mode()
+  if mode == 'v' or mode == 'V' or mode == '\022' then
+    local visual_start = vim.fn.getpos("v")
+    local cursor_pos = vim.api.nvim_win_get_cursor(0)
+
+    start_row = visual_start[2]
+    end_row = cursor_pos[1]
+
+    if start_row > end_row then
+      start_row, end_row = end_row, start_row
+    end
+
+    vim.cmd('normal! \\<Esc>')
+
+    if start_row == 0 or end_row == 0 then
+      local cursor_pos_fallback = vim.api.nvim_win_get_cursor(0)
+      start_row = cursor_pos_fallback[1]
+      end_row = cursor_pos_fallback[1]
+    end
+  else
+    vim.notify("Visual modeで範囲を選択してください", vim.log.levels.WARN)
+    return
+  end
+
+  -- 選択範囲の行を取得
+  local lines = vim.api.nvim_buf_get_lines(0, start_row - 1, end_row, false)
+  if #lines == 0 then
+    vim.notify("選択範囲が空です", vim.log.levels.WARN)
+    return
+  end
+
+  -- 1行目からタイトルを抽出（#+ を除去）
+  local first_line = lines[1]
+  local title = first_line:gsub("^#+ ", ""):gsub("^%s+", ""):gsub("%s+$", "")
+
+  if title == "" then
+    vim.notify("タイトルが空です", vim.log.levels.WARN)
+    return
+  end
+
+  -- ファイルパスを決定
+  local vault_path = vim.env.OBSIDIAN_VAULT_PATH or
+    "~/Library/Mobile Documents/iCloud~md~obsidian/Documents/MainVault"
+  vault_path = vim.fn.expand(vault_path)
+  local filename = title .. ".md"
+  local full_path = vault_path .. "/" .. filename
+
+  -- ファイルが既に存在するかチェック
+  if vim.fn.filereadable(full_path) == 1 then
+    vim.notify("ファイルが既に存在します: " .. filename, vim.log.levels.ERROR)
+    return
+  end
+
+  -- 新規ファイルの内容を構築
+  local daily_link = string.format("[[%s]]", os.date("%Y-%m-%d"))
+  local new_file_lines = {
+    "# " .. title,
+    "",
+  }
+
+  -- 2行目以降を本文として追加
+  for i = 2, #lines do
+    table.insert(new_file_lines, lines[i])
+  end
+
+  -- 空行とDailyリンクを追加
+  table.insert(new_file_lines, "")
+  table.insert(new_file_lines, daily_link)
+
+  -- 新規ファイルを作成して内容を書き込み
+  local file = io.open(full_path, "w")
+  if file then
+    file:write(table.concat(new_file_lines, "\n"))
+    file:close()
+  else
+    vim.notify("ファイルを作成できませんでした: " .. full_path, vim.log.levels.ERROR)
+    return
+  end
+
+  -- 元ファイルの選択範囲を [[タイトル]] に置換
+  local wikilink = "[[" .. title .. "]]"
+  vim.api.nvim_buf_set_lines(0, start_row - 1, end_row, false, { wikilink })
+
+  vim.notify("ノートを作成しました: " .. filename, vim.log.levels.INFO)
 end
 
 return M
