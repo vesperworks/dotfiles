@@ -5,8 +5,9 @@ local M = {}
 
 -- 設定
 M.config = {
-  pattern = "^%s*%-%s*%[>%]", -- "- [>]" にマッチ
-  max_items = 5, -- 最大表示件数
+  pattern_in_progress = "^%s*%-%s*%[>%]", -- "- [>]" 実行中
+  pattern_paused = "^%s*%-%s*%[/%]",      -- "- [/]" 中断中
+  max_items = 7, -- 最大表示件数
   min_height = 1, -- 最小高さ
   border = "rounded", -- ボーダースタイル
 }
@@ -40,12 +41,13 @@ local function get_parent_heading(lines, task_lnum)
   return nil -- 見出しなし
 end
 
--- 現在のバッファから "- [-]" 行を収集（タイマー連携付き）
+-- 現在のバッファから "- [>]" と "- [/]" 行を収集（タイマー連携付き）
 function M.collect_pending_tasks()
   local bufnr = vim.api.nvim_get_current_buf()
   local file_path = vim.api.nvim_buf_get_name(bufnr)
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-  local tasks = {}
+  local tasks_in_progress = {}
+  local tasks_paused = {}
 
   -- task-timer連携
   local ok_display, timer_display = pcall(require, "user-plugins.task-timer-display")
@@ -56,36 +58,67 @@ function M.collect_pending_tasks()
   end
 
   for lnum, line in ipairs(lines) do
-    if line:match(M.config.pattern) then
+    local is_in_progress = line:match(M.config.pattern_in_progress)
+    local is_paused = line:match(M.config.pattern_paused)
+
+    if is_in_progress or is_paused then
       -- チェックボックス以降のテキストを抽出
-      local text = line:gsub("^%s*%-%s*%[>%]%s*", "")
+      local text = line:gsub("^%s*%-%s*%[[>/]%]%s*", "")
+      local status = is_in_progress and ">" or "/"
 
       local task = {
         lnum = lnum,
         text = text,
         full_line = line,
+        status = status,
         elapsed = nil,
         elapsed_text = nil,
         heading = get_parent_heading(lines, lnum),
       }
 
-      -- タイマー情報を取得
-      if ok_display and file_path ~= "" then
+      -- タイマー情報を取得（実行中のみ）
+      if is_in_progress and ok_display and file_path ~= "" then
         local task_id = timer_display.generate_task_id(file_path, line)
         if active_timers[task_id] then
           task.elapsed = os.time() - active_timers[task_id].start_time
           task.elapsed_text = timer_display.format_elapsed_time(active_timers[task_id].start_time)
-          -- タイマー稼働中のみ追加
-          table.insert(tasks, task)
         end
+      end
+
+      if is_in_progress then
+        table.insert(tasks_in_progress, task)
+      else
+        table.insert(tasks_paused, task)
       end
     end
   end
 
-  -- ソート（経過時間が短い順）
-  table.sort(tasks, function(a, b)
-    return a.elapsed < b.elapsed
+  -- 実行中をソート（経過時間が短い順、タイマーなしは後ろ）
+  table.sort(tasks_in_progress, function(a, b)
+    if a.elapsed and b.elapsed then
+      return a.elapsed < b.elapsed
+    elseif a.elapsed then
+      return true
+    elseif b.elapsed then
+      return false
+    else
+      return a.lnum < b.lnum
+    end
   end)
+
+  -- 中断中をソート（行番号順）
+  table.sort(tasks_paused, function(a, b)
+    return a.lnum < b.lnum
+  end)
+
+  -- 実行中を優先して結合
+  local tasks = {}
+  for _, task in ipairs(tasks_in_progress) do
+    table.insert(tasks, task)
+  end
+  for _, task in ipairs(tasks_paused) do
+    table.insert(tasks, task)
+  end
 
   -- 最大件数で切り詰め
   if #tasks > M.config.max_items then
@@ -128,7 +161,7 @@ function M.render_window()
 
   -- タスクがない場合はメッセージ表示して終了
   if #tasks == 0 then
-    vim.notify("実行中のタスク (- [>]) はありません", vim.log.levels.INFO)
+    vim.notify("実行中・中断中のタスクはありません", vim.log.levels.INFO)
     return
   end
 
@@ -138,9 +171,10 @@ function M.render_window()
 
   -- 表示内容を作成（ハイライト位置も記録）
   local display_lines = {}
-  local highlight_info = {} -- { heading_start, heading_end, heading_level } or nil
+  local highlight_info = {} -- { heading_start, heading_end, heading_level, status } or nil
   for i, task in ipairs(tasks) do
     local time_str = task.elapsed_text or ""
+    local status_str = "[" .. task.status .. "] "
     local heading_str = ""
     if task.heading then
       heading_str = task.heading.prefix .. " " .. task.heading.text .. " > "
@@ -149,24 +183,21 @@ function M.render_window()
     local line
     local prefix_len -- 見出し部分の開始位置
     if time_str ~= "" then
-      prefix_len = #string.format(" %d. %s ", i, time_str)
-      line = string.format(" %d. %s %s%s  (L:%d)", i, time_str, heading_str, task.text, task.lnum)
+      prefix_len = #string.format(" %d. %s%s", i, status_str, time_str) + 1
+      line = string.format(" %d. %s%s %s%s  (L:%d)", i, status_str, time_str, heading_str, task.text, task.lnum)
     else
-      prefix_len = #string.format(" %d. ", i)
-      line = string.format(" %d. %s%s  (L:%d)", i, heading_str, task.text, task.lnum)
+      prefix_len = #string.format(" %d. %s", i, status_str)
+      line = string.format(" %d. %s%s%s  (L:%d)", i, status_str, heading_str, task.text, task.lnum)
     end
     table.insert(display_lines, line)
 
     -- ハイライト位置情報を記録
-    if task.heading then
-      table.insert(highlight_info, {
-        heading_start = prefix_len,
-        heading_end = prefix_len + #heading_str,
-        heading_level = task.heading.level,
-      })
-    else
-      table.insert(highlight_info, nil)
-    end
+    table.insert(highlight_info, {
+      heading_start = prefix_len,
+      heading_end = prefix_len + #heading_str,
+      heading_level = task.heading and task.heading.level or nil,
+      status = task.status,
+    })
   end
 
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, display_lines)
@@ -174,15 +205,18 @@ function M.render_window()
   -- 各行にハイライトを適用（見出し部分とタスク部分で色分け）
   for i, info in ipairs(highlight_info) do
     local line_idx = i - 1
-    if info then
+    -- ステータスに応じたハイライト色
+    local status_hl = info.status == ">" and "TaskStatusInProgress" or "TaskStatusPaused"
+
+    if info.heading_level then
       -- 見出し部分: Treesitterの見出し色
       local heading_hl = "@markup.heading." .. info.heading_level
       vim.api.nvim_buf_add_highlight(buf, -1, heading_hl, line_idx, info.heading_start, info.heading_end)
-      -- タスク部分: TaskInProgress色
-      vim.api.nvim_buf_add_highlight(buf, -1, "TaskInProgress", line_idx, info.heading_end, -1)
+      -- タスク部分: ステータスに応じた色
+      vim.api.nvim_buf_add_highlight(buf, -1, status_hl, line_idx, info.heading_end, -1)
     else
-      -- 見出しなし: 全体をTaskInProgress色
-      vim.api.nvim_buf_add_highlight(buf, -1, "TaskInProgress", line_idx, 0, -1)
+      -- 見出しなし: 全体をステータスに応じた色
+      vim.api.nvim_buf_add_highlight(buf, -1, status_hl, line_idx, 0, -1)
     end
   end
 
@@ -208,7 +242,7 @@ function M.render_window()
     col = 0,
     style = "minimal",
     border = M.config.border,
-    title = " 実行中タスク [>] ",
+    title = " タスク [>]/[/]  (/ で一括中止) ",
     title_pos = "center",
   })
   M.state.win = win
@@ -262,6 +296,15 @@ function M.setup_window_keymaps(buf)
     local prev_line = math.max(cursor[1] - 1, 1)
     vim.api.nvim_win_set_cursor(M.state.win, { prev_line, 0 })
     M.preview_task(prev_line)
+  end, opts)
+
+  -- / で全実行中タスクを一括中止 [>] → [/]
+  vim.keymap.set("n", "/", function()
+    M.close_window()
+    local ok, timer = pcall(require, "user-plugins.task-timer")
+    if ok then
+      timer.cancel_all_in_progress_tasks()
+    end
   end, opts)
 end
 

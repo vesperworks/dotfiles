@@ -849,7 +849,7 @@ function M.setup_keymaps()
   vim.keymap.set('n', '<leader>/', function()
     local timer = require('user-plugins.task-timer')
     timer.cancel_all_in_progress_tasks()
-  end, vim.tbl_extend('force', opts, { desc = "Cancel all in-progress tasks [-] to [/]" }))
+  end, vim.tbl_extend('force', opts, { desc = "Cancel all in-progress tasks [>] to [/]" }))
   
   -- リストアイテム関連のキーマップ（Normal & Visual mode）
   vim.keymap.set({'n', 'v'}, '<leader>*', function()
