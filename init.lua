@@ -22,28 +22,8 @@ vim.cmd [[
   highlight EndOfBuffer guibg=NONE ctermbg=NONE
 ]]
 
--- タスクチェックボックスのハイライト設定
-vim.api.nvim_create_autocmd("FileType", {
-  pattern = "markdown",
-  callback = function()
-    -- 未完了タスク: 通常の文字色
-    vim.api.nvim_set_hl(0, "TaskTodo", { fg = "#ffffff" })
-    -- 実行中タスク: 指定の明るいオレンジ色
-    vim.api.nvim_set_hl(0, "TaskInProgress", { fg = "#F5CA81" })  -- 指定のオレンジ色
-    -- 完了タスク: 暗い文字色 + ストライクスルー
-    vim.api.nvim_set_hl(0, "TaskCompleted", { fg = "#6b7280", strikethrough = true })
-    -- キャンセルタスク: 明るい赤色（2段階アップ）、ストライクスルーなし
-    vim.api.nvim_set_hl(0, "TaskCancelled", { fg = "#f87171" })  -- 明るい赤色
-    
-    -- マッチングルールを設定
-    vim.fn.matchadd("TaskTodo", "^\\s*[-*]\\s*\\[ \\].*$")
-    vim.fn.matchadd("TaskInProgress", "^\\s*[-*]\\s*\\[-\\].*$")
-    vim.fn.matchadd("TaskCompleted", "^\\s*[-*]\\s*\\[x\\].*$")
-    vim.fn.matchadd("TaskCancelled", "^\\s*[-*]\\s*\\[/\\].*$")
-  end,
-})
-
 -- Markdownファイルだけに反映（おすすめ）
+-- ※タスクステータスのハイライトはrender-markdown.luaに移動済み
 vim.api.nvim_create_autocmd("FileType", {
   pattern = "markdown",
   callback = function()

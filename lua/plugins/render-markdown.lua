@@ -29,20 +29,40 @@ return {
         },
       }
       
-      -- 完了済みタスクのハイライトグループを定義
-      vim.api.nvim_set_hl(0, 'RenderMarkdownChecked', {
-        fg = '#6c7086',  -- 薄いグレー色
-        strikethrough = true,  -- 打ち消し線
+      -- タスクステータス用ハイライトグループを定義（TaskStatus*で統一）
+      -- 未着手 [ ] - グレー
+      vim.api.nvim_set_hl(0, 'TaskStatusTodo', {
+        fg = '#6c7086',
       })
-      
-      vim.api.nvim_set_hl(0, 'RenderMarkdownUnchecked', {
-        fg = '#cdd6f4',  -- 通常の色
+
+      -- 実行中 [>] - 黄色（旧[-]のスタイル）
+      vim.api.nvim_set_hl(0, 'TaskStatusInProgress', {
+        fg = '#f9e2af',
+        italic = true,
       })
-      
-      -- 実行中タスクのハイライトグループを定義
-      vim.api.nvim_set_hl(0, 'RenderMarkdownInProgress', {
-        fg = '#f9e2af',  -- 黄色っぽい色
-        italic = true,   -- イタリック
+
+      -- 中断中 [/] - 青
+      vim.api.nvim_set_hl(0, 'TaskStatusPaused', {
+        fg = '#89b4fa',
+        italic = true,
+      })
+
+      -- 成功 [v] - 暗い緑 + 打ち消し線
+      vim.api.nvim_set_hl(0, 'TaskStatusSuccess', {
+        fg = '#5a7a3a',
+        strikethrough = true,
+      })
+
+      -- 失敗 [x] - 暗い赤 + 打ち消し線
+      vim.api.nvim_set_hl(0, 'TaskStatusFailed', {
+        fg = '#8f4050',
+        strikethrough = true,
+      })
+
+      -- 中止 [-] - 薄いグレー + 打ち消し線
+      vim.api.nvim_set_hl(0, 'TaskStatusCancelled', {
+        fg = '#585b70',
+        strikethrough = true,
       })
       
       -- Callout用のハイライトグループを定義
@@ -56,14 +76,46 @@ return {
       vim.api.nvim_set_hl(0, 'RenderMarkdownQuote', { fg = '#b4befe', bold = true })
       vim.api.nvim_set_hl(0, 'RenderMarkdownAI', { fg = '#94e2d5', bold = true })     -- ティール色
       
-      -- タスクのハイライトを適用するautocmd
-      vim.api.nvim_create_autocmd("FileType", {
-        pattern = "markdown",
-        callback = function()
-          -- 完了済みタスクの行全体にハイライトを適用
-          vim.fn.matchadd('RenderMarkdownChecked', '^\\s*[*-]\\s*\\[x\\].*$')
-          -- 実行中タスクの行全体にハイライトを適用
-          vim.fn.matchadd('RenderMarkdownInProgress', '^\\s*[*-]\\s*\\[-\\].*$')
+      -- タスクステータスのextmarkハイライト用namespace
+      local ns_id = vim.api.nvim_create_namespace('task_status_highlight')
+
+      -- タスクステータスに応じたハイライトを適用する関数
+      local function apply_task_highlights(bufnr)
+        if vim.bo[bufnr].filetype ~= 'markdown' then return end
+
+        -- 既存のextmarkをクリア
+        vim.api.nvim_buf_clear_namespace(bufnr, ns_id, 0, -1)
+
+        local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+        for lnum, line in ipairs(lines) do
+          local hl_group = nil
+          if line:match('^%s*[*-]%s*%[>%]') then
+            hl_group = 'TaskStatusInProgress'
+          elseif line:match('^%s*[*-]%s*%[/%]') then
+            hl_group = 'TaskStatusPaused'
+          elseif line:match('^%s*[*-]%s*%[v%]') then
+            hl_group = 'TaskStatusSuccess'
+          elseif line:match('^%s*[*-]%s*%[x%]') then
+            hl_group = 'TaskStatusFailed'
+          elseif line:match('^%s*[*-]%s*%[%-%]') then
+            hl_group = 'TaskStatusCancelled'
+          end
+
+          if hl_group then
+            vim.api.nvim_buf_set_extmark(bufnr, ns_id, lnum - 1, 0, {
+              end_col = #line,
+              hl_group = hl_group,
+              priority = 10000,  -- 高優先度で他のハイライトを上書き
+            })
+          end
+        end
+      end
+
+      -- タスクハイライトを適用するautocmd
+      vim.api.nvim_create_autocmd({"BufEnter", "TextChanged", "TextChangedI", "InsertLeave"}, {
+        pattern = "*.md",
+        callback = function(ev)
+          apply_task_highlights(ev.buf)
         end,
       })
     end,

@@ -93,11 +93,11 @@ function M.on_checkbox_change(file_path, line_number, old_state, new_state, task
   -- デバッグ情報（必要時のみ有効化）
   -- vim.notify(string.format("DEBUG: on_checkbox_change task_id=%s, old='%s', new='%s'", task_id, old_state, new_state), vim.log.levels.DEBUG)
   
-  if new_state == '-' then
-    -- 進行中状態になった場合、タイマー開始
+  if new_state == '>' then
+    -- 実行中状態になった場合、タイマー開始
     M.start_timer(task_id, file_path, task_content)
-  elseif old_state == '-' and new_state ~= '-' then
-    -- 進行中状態から他の状態に変わった場合、タイマー停止
+  elseif old_state == '>' and new_state ~= '>' then
+    -- 実行中状態から他の状態に変わった場合、タイマー停止
     M.stop_timer(task_id)
   end
 end
@@ -228,12 +228,12 @@ function M.rescan_current_buffer()
   local active_tasks = 0
   
   for line_num, line in ipairs(lines) do
-    if line:match('-%s*%[%-%]') then
+    if line:match('-%s*%[>%]') then
       local task_id = display.generate_task_id(file_path, line)
       found_tasks = found_tasks + 1
-      
+
       if not active_timers[task_id] then
-        -- タイマーがない進行中タスクを発見した場合、タイマーを開始
+        -- タイマーがない実行中タスクを発見した場合、タイマーを開始
         M.start_timer(task_id, file_path, line)
         active_tasks = active_tasks + 1
       end
@@ -869,33 +869,33 @@ function M.remove_lost_tasks()
   end
 end
 
--- 🗑️ 現在のバッファ内の全進行中タスク[-]を中止[/]に変換
+-- 🗑️ 現在のバッファ内の全実行中タスク[>]を中断中[/]に変換
 function M.cancel_all_in_progress_tasks()
   local bufnr = vim.api.nvim_get_current_buf()
   local file_path = vim.api.nvim_buf_get_name(bufnr)
-  
+
   if vim.bo[bufnr].filetype ~= 'markdown' then
     vim.notify("📊 Markdownファイルでのみ実行できます", vim.log.levels.WARN)
     return
   end
-  
+
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
   local count = 0
   local stopped_timers = {}
-  
+
   -- 変換前にタイマーを特定して停止
   for line_num, line in ipairs(lines) do
-    if line:match('-%s*%[%-%]') then
+    if line:match('-%s*%[>%]') then
       -- タスクIDを生成（変換前の内容で）
       local task_id = display.generate_task_id(file_path, line)
-      
+
       -- タイマーが動いている場合は記録
       if active_timers[task_id] then
         table.insert(stopped_timers, task_id)
       end
-      
-      -- [-]を[/]に置換
-      local new_line = line:gsub('%[%-%]', '[/]')
+
+      -- [>]を[/]に置換
+      local new_line = line:gsub('%[>%]', '[/]')
       lines[line_num] = new_line
       count = count + 1
     end
@@ -930,12 +930,12 @@ function M.auto_restore_timers(bufnr)
   local new_timer_count = 0
   
   for line_num, line in ipairs(lines) do
-    -- 進行中タスクを検出
-    if line:match('-%s*%[%-%]') then
+    -- 実行中タスクを検出
+    if line:match('-%s*%[>%]') then
       local task_id = display.generate_task_id(file_path, line)
-      
-      -- デバッグ: 進行中タスク発見（ファイルパス付き）
-      debug_log(string.format("🔍 進行中タスク発見: %d行目 - %s", line_num, task_id:sub(1, 20)))
+
+      -- デバッグ: 実行中タスク発見（ファイルパス付き）
+      debug_log(string.format("🔍 実行中タスク発見: %d行目 - %s", line_num, task_id:sub(1, 20)))
       debug_log(string.format("🔍   → ファイル: %s", vim.fn.fnamemodify(file_path, ":t")))
       debug_log(string.format("🔍   → フルパス: %s", file_path))
       

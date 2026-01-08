@@ -1,11 +1,11 @@
 -- ~/.config/nvim/lua/user-plugins/pending-tasks.lua
--- 現在のファイル内の「- [-]」行をフローティングウィンドウに表示
+-- 現在のファイル内の「- [>]」行をフローティングウィンドウに表示
 
 local M = {}
 
 -- 設定
 M.config = {
-  pattern = "^%s*%-%s*%[%-%]", -- "- [-]" にマッチ
+  pattern = "^%s*%-%s*%[>%]", -- "- [>]" にマッチ
   max_items = 5, -- 最大表示件数
   min_height = 1, -- 最小高さ
   border = "rounded", -- ボーダースタイル
@@ -58,7 +58,7 @@ function M.collect_pending_tasks()
   for lnum, line in ipairs(lines) do
     if line:match(M.config.pattern) then
       -- チェックボックス以降のテキストを抽出
-      local text = line:gsub("^%s*%-%s*%[%-%]%s*", "")
+      local text = line:gsub("^%s*%-%s*%[>%]%s*", "")
 
       local task = {
         lnum = lnum,
@@ -128,7 +128,7 @@ function M.render_window()
 
   -- タスクがない場合はメッセージ表示して終了
   if #tasks == 0 then
-    vim.notify("進行中のタスク (- [-]) はありません", vim.log.levels.INFO)
+    vim.notify("実行中のタスク (- [>]) はありません", vim.log.levels.INFO)
     return
   end
 
@@ -208,7 +208,7 @@ function M.render_window()
     col = 0,
     style = "minimal",
     border = M.config.border,
-    title = " 進行中タスク [-] ",
+    title = " 実行中タスク [>] ",
     title_pos = "center",
   })
   M.state.win = win

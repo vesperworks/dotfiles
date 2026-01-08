@@ -186,17 +186,23 @@ function M.toggle_checkbox_state()
     local new_line
     
     if string.match(line, "^%s*[%*%-]%s*%[%s%]") then
-      -- 未完了 → 実行中 (スペースを確実にマッチ)
-      new_line = string.gsub(line, "(%[)%s(%])", "%1-%2")
-    elseif string.match(line, "^%s*[%*%-]%s*%[%-%]") then
-      -- 実行中 → 完了
-      new_line = string.gsub(line, "(%[)%-(%])", "%1x%2")
-    elseif string.match(line, "^%s*[%*%-]%s*%[x%]") then
-      -- 完了 → キャンセル
-      new_line = string.gsub(line, "(%[)x(%])", "%1/%2")
+      -- 未着手 → 実行中
+      new_line = string.gsub(line, "(%[)%s(%])", "%1>%2")
+    elseif string.match(line, "^%s*[%*%-]%s*%[>%]") then
+      -- 実行中 → 中断中
+      new_line = string.gsub(line, "(%[)>(%])", "%1/%2")
     elseif string.match(line, "^%s*[%*%-]%s*%[/%]") then
-      -- キャンセル → 未完了
-      new_line = string.gsub(line, "(%[)/(%])", "%1 %2")
+      -- 中断中 → 成功
+      new_line = string.gsub(line, "(%[)/(%])", "%1v%2")
+    elseif string.match(line, "^%s*[%*%-]%s*%[v%]") then
+      -- 成功 → 失敗
+      new_line = string.gsub(line, "(%[)v(%])", "%1x%2")
+    elseif string.match(line, "^%s*[%*%-]%s*%[x%]") then
+      -- 失敗 → 中止
+      new_line = string.gsub(line, "(%[)x(%])", "%1-%2")
+    elseif string.match(line, "^%s*[%*%-]%s*%[%-%]") then
+      -- 中止 → 未着手
+      new_line = string.gsub(line, "(%[)%-(%])", "%1 %2")
     else
       -- チェックボックスがない場合はそのまま
       new_line = line
@@ -204,8 +210,8 @@ function M.toggle_checkbox_state()
     
     -- タイマー統合: 状態変更を検出してタイマーに通知
     if old_line ~= new_line then
-      local old_state = old_line:match('%[([%s%-x])%]')
-      local new_state = new_line:match('%[([%s%-x])%]')
+      local old_state = old_line:match('%[([%s%->vx/])%]')
+      local new_state = new_line:match('%[([%s%->vx/])%]')
       
       -- デバッグ情報（必要時のみ有効化）
       -- vim.notify(string.format("DEBUG: state change line=%d, old='%s', new='%s'", line_number, old_state or "nil", new_state or "nil"), vim.log.levels.DEBUG)

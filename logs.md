@@ -2,6 +2,44 @@
 
 ## 📅 2026年1月
 
+### 2026-01-08 - タスクステータス拡張：Obsidianタスク連携対応（完了）
+
+**背景**: Obsidianタスクと連動するため、`- [ ]`のステータスを6種類に拡張したい
+
+**変更内容**:
+- トグル順序を6ステータスに拡張
+- 各ステータスに色・スタイルを適用（extmark使用）
+- タイマー連携のシンボルを`[-]`から`[>]`に変更
+
+**ステータス一覧**:
+| シンボル | 名前 | タイプ | 色 | 効果 |
+|----------|------|--------|-----|------|
+| ` ` | 未着手 | TODO | グレー | - |
+| `>` | 実行中 | IN_PROGRESS | 青 | 太字 |
+| `/` | 中断中 | IN_PROGRESS | 黄 | イタリック |
+| `v` | 成功 | DONE | 薄緑灰 | 打ち消し線 |
+| `x` | 失敗 | DONE | 薄赤灰 | 打ち消し線 |
+| `-` | 中止 | CANCELLED | 薄灰 | 打ち消し線 |
+
+**トグル順序**:
+```
+[ ] → [>] → [/] → [v] → [x] → [-] → [ ]
+```
+
+**技術的メモ**:
+- `matchadd`では`strikethrough`が効かないため、`extmark`で実装
+- `BufEnter`, `TextChanged`, `TextChangedI`, `InsertLeave`イベントでリアルタイム更新
+- ハイライトグループ名を`TaskStatus*`に統一（Callout用の`RenderMarkdown*`と分離）
+
+**関連ファイル**:
+- `lua/plugins/render-markdown.lua` - ハイライト定義・extmark適用
+- `lua/user-plugins/markdown-helper.lua` - トグル順序変更（L188-206）
+- `lua/user-plugins/pending-tasks.lua` - パターン変更（`[-]`→`[>]`）
+- `lua/user-plugins/task-timer.lua` - 実行中検出パターン変更
+- `lua/user-plugins/task-timer-display.lua` - 表示パターン変更
+
+---
+
 ### 2026-01-08 - leader m 拡張：複数セクションへの移動対応（完了）
 
 **背景**: `<leader>m`を拡張して、複数のセクション見出しへの移動に対応したい
