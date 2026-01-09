@@ -189,20 +189,17 @@ function M.toggle_checkbox_state()
       -- 未着手 → 実行中
       new_line = string.gsub(line, "(%[)%s(%])", "%1>%2")
     elseif string.match(line, "^%s*[%*%-]%s*%[>%]") then
-      -- 実行中 → 中断中
-      new_line = string.gsub(line, "(%[)>(%])", "%1/%2")
-    elseif string.match(line, "^%s*[%*%-]%s*%[/%]") then
-      -- 中断中 → 成功
-      new_line = string.gsub(line, "(%[)/(%])", "%1v%2")
+      -- 実行中 → 成功
+      new_line = string.gsub(line, "(%[)>(%])", "%1v%2")
     elseif string.match(line, "^%s*[%*%-]%s*%[v%]") then
-      -- 成功 → 失敗
-      new_line = string.gsub(line, "(%[)v(%])", "%1x%2")
+      -- 成功 → 中断中
+      new_line = string.gsub(line, "(%[)v(%])", "%1/%2")
+    elseif string.match(line, "^%s*[%*%-]%s*%[/%]") then
+      -- 中断中 → 失敗
+      new_line = string.gsub(line, "(%[)/(%])", "%1x%2")
     elseif string.match(line, "^%s*[%*%-]%s*%[x%]") then
-      -- 失敗 → 中止
-      new_line = string.gsub(line, "(%[)x(%])", "%1-%2")
-    elseif string.match(line, "^%s*[%*%-]%s*%[%-%]") then
-      -- 中止 → 未着手
-      new_line = string.gsub(line, "(%[)%-(%])", "%1 %2")
+      -- 失敗 → 未着手
+      new_line = string.gsub(line, "(%[)x(%])", "%1 %2")
     else
       -- チェックボックスがない場合はそのまま
       new_line = line
