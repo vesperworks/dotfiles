@@ -145,6 +145,14 @@ return {
               rm.setup({ heading = { backgrounds = {} } })
             end
           end
+          -- 冒頭に30行の空行を挿入（カーソル中央化のため）
+          local empty_lines = {}
+          for i = 1, 30 do
+            empty_lines[i] = ""
+          end
+          vim.api.nvim_buf_set_lines(0, 0, 0, false, empty_lines)
+          -- カーソルを31行目に移動
+          vim.api.nvim_win_set_cursor(0, { 31, 0 })
           -- Alacritty透明度を0.05に変更（ほぼ透明 + blur）
           vim.fn.system([[sed -i '' 's/^opacity = .*/opacity = 0.05/' ~/.config/alacritty/alacritty.toml]])
         end,
@@ -155,6 +163,8 @@ return {
             rm.setup({ heading = { backgrounds = saved_backgrounds } })
             saved_backgrounds = nil
           end
+          -- 冒頭の30行の空行を削除
+          vim.api.nvim_buf_set_lines(0, 0, 30, false, {})
           -- Alacritty透明度を0.8に戻す
           vim.fn.system([[sed -i '' 's/^opacity = .*/opacity = 0.8/' ~/.config/alacritty/alacritty.toml]])
         end,
@@ -163,7 +173,7 @@ return {
   },
 
   -- twilight.nvim ─ 周辺減光
-  { "folke/twilight.nvim", opts = { context = 2 } },
+  { "folke/twilight.nvim", opts = { context = 1, dimming = { alpha = 0.5 } } },
 
   -- typewriter.nvim ─ カーソル常時センター
   {
