@@ -99,9 +99,9 @@ function M.toggle_as_task()
     local new_line
     
     -- 既存のチェックボックスの状態をチェック
-    if string.match(line, "^%s*[%*%-]%s*%[[ x%-/]%]%s") then
+    if string.match(line, "^%s*[%*%-]%s*%[[ x%-/>v]%]%s") then
       -- 既にチェックボックスがある場合は削除
-      new_line = string.gsub(line, "^(%s*)[%*%-]%s*%[[ x%-/]%]%s*", "%1")
+      new_line = string.gsub(line, "^(%s*)[%*%-]%s*%[[ x%-/>v]%]%s*", "%1")
     elseif string.match(line, "^%s*-%s") then
       -- 既存の "- 項目" を "- [ ] 項目" に置き換え
       new_line = string.gsub(line, "^(%s*)-%s", "%1- [ ] ")
