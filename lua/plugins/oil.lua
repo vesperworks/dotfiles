@@ -14,11 +14,12 @@ return {
       columns = {
         "icon",
       },
-      sort = {
-        { "mtime", "desc" },  -- 更新日時の降順（上ほど最新）
-      },
       view_options = {
         show_hidden = true,
+        sort = {
+          { "type", "asc" },    -- ディレクトリ優先
+          { "mtime", "desc" },  -- 更新日時の降順（上が最新）
+        },
       },
       keymaps = {
         ["<CR>"] = "actions.select",
