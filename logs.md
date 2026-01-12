@@ -2,6 +2,27 @@
 
 ## 📅 2026年1月
 
+### 2026-01-12 - noice.nvim導入：コマンドライン・通知のモダンUI化（完了）
+
+**背景**: NeoVimの`:` コマンドバーを上部ポップアップで表示し、通知もモダンUIにしたい
+
+**変更内容**:
+- noice.nvim + 依存プラグイン（nui.nvim, nvim-notify）をインストール
+- コマンドライン → 上部ポップアップ表示
+- メッセージ/通知 → フローティング表示
+
+**設定ポイント**:
+- `presets` で起動時E21エラー回避
+- `popupmenu.backend = "nui"` で補完連携改善
+- `lsp.override` でnvim-cmpとの統合
+
+**関連ファイル**:
+- `lua/plugins/noice.lua` - 新規作成
+
+**調査レポート**: `thoughts/shared/research/2026-01-12-nvim-ui-plugins.md`
+
+---
+
 ### 2026-01-12 - heading-jump H6色をピンクに変更（完了）
 
 **背景**: `<leader>h`の見出しジャンプでH6が紫になっていた
