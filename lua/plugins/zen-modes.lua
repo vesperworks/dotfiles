@@ -109,7 +109,7 @@ return {
       require("zen-mode").setup({
         window = {
           backdrop = 0.95, -- シェード背景
-          width = 120, -- 幅
+          width = 80, -- 幅（より真ん中寄り）
           height = 1, -- 高さ (1 = 100%)
           options = {
             signcolumn = "no", -- サインカラム無効
@@ -146,11 +146,11 @@ return {
             end
           end
           -- 冒頭に30行の空行を挿入（カーソル中央化のため）
-          local empty_lines = {}
+          local padding_lines = {}
           for i = 1, 30 do
-            empty_lines[i] = ""
+            padding_lines[i] = "·"  -- 薄い記号で識別可能に
           end
-          vim.api.nvim_buf_set_lines(0, 0, 0, false, empty_lines)
+          vim.api.nvim_buf_set_lines(0, 0, 0, false, padding_lines)
           -- カーソルを31行目に移動
           vim.api.nvim_win_set_cursor(0, { 31, 0 })
           -- Alacritty透明度を0.05に変更（ほぼ透明 + blur）
@@ -163,7 +163,7 @@ return {
             rm.setup({ heading = { backgrounds = saved_backgrounds } })
             saved_backgrounds = nil
           end
-          -- 冒頭の30行の空行を削除
+          -- 冒頭の30行を削除
           vim.api.nvim_buf_set_lines(0, 0, 30, false, {})
           -- Alacritty透明度を0.8に戻す
           vim.fn.system([[sed -i '' 's/^opacity = .*/opacity = 0.8/' ~/.config/alacritty/alacritty.toml]])
