@@ -390,7 +390,7 @@ function M.setup(opts)
     "#9ece6a", -- H3: green
     "#1abc9c", -- H4: teal
     "#bb9af7", -- H5: purple
-    "#9d7cd8", -- H6: purple dark
+    "#fca7ea", -- H6: pink (tokyonight moon)
   }
   local bg_dark = "#1a1b26" -- tokyonight背景色
   for i = 1, 6 do
