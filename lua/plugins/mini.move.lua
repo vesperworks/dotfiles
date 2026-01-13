@@ -4,16 +4,16 @@ return {
     require("mini.move").setup({
       mappings = {
         -- Move visual selection in Visual mode
-        left = '<M-h>',        -- Alt+h
-        right = '<M-l>',       -- Alt+l
-        down = '<M-j>',        -- Alt+j
-        up = '<M-k>',          -- Alt+k
+        left = '<C-h>',        -- Ctrl+h
+        right = '<C-l>',       -- Ctrl+l
+        down = '<C-j>',        -- Ctrl+j
+        up = '<C-k>',          -- Ctrl+k
 
         -- Move current line in Normal mode
-        line_left = '<M-h>',
-        line_right = '<M-l>',
-        line_down = '<M-j>',
-        line_up = '<M-k>',
+        line_left = '<C-h>',
+        line_right = '<C-l>',
+        line_down = '<C-j>',
+        line_up = '<C-k>',
       }
     })
     
