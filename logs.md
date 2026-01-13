@@ -2,6 +2,38 @@
 
 ## 📅 2026年1月
 
+### 2026-01-13 - IME切り替え問題の解決：tmux内でEsc後も日本語入力が継続する問題（完了）
+
+**背景**: Insert modeで日本語入力後、Escで抜けるとシステムIMEはENに切り替わるが、次のキー入力が日本語のままになる問題が発生
+
+**原因調査プロセス**:
+1. Karabiner-Elements → 原因ではない（無効化しても再現）
+2. tmux外でテスト → 問題なし（**tmuxが原因と特定**）
+3. escape-time調整 → 効果なし
+4. macismへ切り替え → 効果なし
+5. **macOSの「書類ごとに入力ソースを自動的に切り替える」** → これが原因
+
+**根本原因**:
+- macOSの「書類ごとに入力ソースを自動的に切り替える」がオンだと、tmux内の各ペインが別の「書類」として扱われる
+- im-select/macismでシステムIMEを切り替えても、tmux内の「書類」のIME状態は別管理される
+- 結果：システムIME表示はENなのに、実際の入力はJPのまま
+
+**解決策**:
+- **システム設定 > キーボード > 入力ソース > 「書類ごとに入力ソースを自動的に切り替える」をオフ**
+
+**副次的な変更**:
+- im-select → macismへ切り替え（im-select.nvim公式推奨）
+- `async_switch_im = false` を追加（IME切り替え完了を待つ）
+
+**関連ファイル**:
+- `lua/plugins/im-select.lua` - macismへ変更、async_switch_im追加
+
+**技術的メモ**:
+- macismはSwift製でim-selectより新しく、macOS APIとの親和性が高い
+- インストール: `brew tap laishulu/homebrew && brew install macism`
+
+---
+
 ### 2026-01-12 - noice.nvim導入：コマンドライン・通知のモダンUI化（完了）
 
 **背景**: NeoVimの`:` コマンドバーを上部ポップアップで表示し、通知もモダンUIにしたい
