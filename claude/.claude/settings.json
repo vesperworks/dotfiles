@@ -100,7 +100,17 @@
       "Bash(basename:*)",
       "Bash(dirname:*)",
       "Bash(~/.claude/scripts/smart-commit.sh:*)",
-      "Bash(tmux split-window:*)"
+      "Bash(tmux split-window:*)",
+      "Bash(~/.claude/scripts/smart-commit.sh \"\")",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:neovim.io)",
+      "Skill(research-output)",
+      "WebFetch(domain:zenn.dev)",
+      "WebFetch(domain:nikitabobko.github.io)",
+      "WebFetch(domain:felixkratz.github.io)",
+      "WebFetch(domain:catppuccin.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:eu-central-1-1.aws.cloud2.influxdata.com)"
     ],
     "deny": [
       "Bash(rm -rf:*)",
@@ -132,6 +142,7 @@
       "Bash(find:*)",
       "Bash(grep:*)"
     ],
+    "ask": [],
     "defaultMode": "default",
     "includeCoAuthoredBy": false
   },
@@ -216,9 +227,10 @@
     "code-review@claude-code-plugins": true,
     "frontend-design@claude-code-plugins": true
   },
-  "alwaysThinkingEnabled": true,
+  "language": "Japanese",
   "sandbox": {
     "enabled": true,
     "autoAllowBashIfSandboxed": true
-  }
+  },
+  "alwaysThinkingEnabled": true
 }
