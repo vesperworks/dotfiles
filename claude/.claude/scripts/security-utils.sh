@@ -16,7 +16,8 @@ set -euo pipefail
 # ============================================================
 
 # Sanitize string for safe shell usage
-# Removes shell metacharacters: $ ` ; | & ( ) { } [ ] < > \ " ' newline
+# Removes shell metacharacters: $ ` ; | & ( ) { } [ ] < > \ " '
+# Preserves: alphanumeric, space, newline, common punctuation
 # Usage: safe=$(sanitize_string "$input" [max_length])
 sanitize_string() {
   local input="$1"
@@ -29,8 +30,8 @@ sanitize_string() {
     input="${input:0:$max_length}"
   fi
 
-  # Keep only safe characters
-  printf '%s' "$input" | tr -cd '[:alnum:] _.,:/@#-'
+  # Keep only safe characters (including newline for multiline content)
+  printf '%s' "$input" | tr -cd '[:alnum:] _.,:/@#\n-'
 }
 
 # Sanitize log entry (prevent log injection)
