@@ -2,7 +2,7 @@ return {
   "keaising/im-select.nvim",
   config = function()
     require("im_select").setup({
-      default_command     = "macism",
+      default_command     = "/opt/homebrew/bin/macism",
 
       -- Normalモードなどで戻すIME（英語IME）
       default_im_select   = "com.apple.keylayout.ABC",
