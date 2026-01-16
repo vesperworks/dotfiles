@@ -233,5 +233,8 @@
     "enabled": true,
     "autoAllowBashIfSandboxed": true
   },
+  "env": {
+    "ENABLE_TOOL_SEARCH": "true"
+  },
   "alwaysThinkingEnabled": true
 }
