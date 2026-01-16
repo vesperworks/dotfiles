@@ -171,6 +171,8 @@ vim.keymap.set("v", "<leader>mw", function() move_selection_to_heading("^## WANT
 vim.keymap.set("v", "<leader>md", function() move_selection_to_heading("^# DONE", true) end, { desc = "Move to # DONE (bottom)", silent = true })
 vim.keymap.set("v", "<leader>ms", function() move_selection_to_heading("^## SHOULD", false) end, { desc = "Move to ## SHOULD", silent = true })
 vim.keymap.set("v", "<leader>mm", function() move_selection_to_heading("^## MUST", false) end, { desc = "Move to ## MUST", silent = true })
+vim.keymap.set("v", "<leader>mb", function() move_selection_to_heading("^# BACKLOG", false) end, { desc = "Move to # BACKLOG", silent = true })
+vim.keymap.set("v", "<leader>mi", function() move_selection_to_heading("^# WIP", false) end, { desc = "Move to # WIP", silent = true })
 
 -- Cmd+S で保存
 vim.keymap.set('n', '<C-s>', ':w<CR>', { desc = "ファイル保存", silent = true })
@@ -183,3 +185,22 @@ vim.keymap.set('i', '<C-e>', '<End>', { desc = "行末へ移動" })
 vim.keymap.set('c', '<C-a>', '<Home>', { desc = "行頭へ移動" })
 vim.keymap.set('c', '<C-e>', '<End>', { desc = "行末へ移動" })
 vim.keymap.set('i', '<C-k>', '<C-o>D', { desc = "行末まで削除" })
+
+-- Raycast File Search: 現在のファイルをRaycastで開く
+vim.keymap.set('n', '<leader>ro', function()
+  local path = vim.fn.expand('%:p')
+  if path == '' then
+    vim.notify('No file open', vim.log.levels.WARN)
+    return
+  end
+  -- URLエンコード
+  local encoded = path:gsub(' ', '%%20'):gsub('#', '%%23')
+  vim.fn.system('open "raycast://extensions/raycast/file-search/search-files?fallbackText=' .. encoded .. '"')
+end, { desc = 'Open in Raycast' })
+
+-- ファイルパスをクリップボードにコピー
+vim.keymap.set('n', '<leader>cp', function()
+  local path = vim.fn.expand('%:p')
+  vim.fn.setreg('+', path)
+  vim.notify('Copied: ' .. path, vim.log.levels.INFO)
+end, { desc = 'Copy full path' })
