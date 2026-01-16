@@ -2,24 +2,24 @@
 # sesh session picker with fzf
 # - Select existing session: choose from list and Enter
 # - Create new session: type new name and Enter
-# - Kill session: Ctrl+k on a session
-# - Move current pane to selected session: Alt+m
+# - Kill session: Ctrl+d on a session
+# - Move current pane to selected session: Ctrl+o
 
 result=$(sesh list -t -i | fzf-tmux -p 55%,60% \
   --layout=reverse \
   --no-sort --ansi --border-label "  sesh " --prompt "  " \
-  --header "  ^a all ^t tmux ^x zoxide ^k kill M-m move" \
+  --header "  ^a all ^t tmux ^x zoxide ^d kill ^o move" \
   --print-query \
-  --expect=alt-m \
+  --expect=ctrl-o \
   --bind "tab:down,btab:up" \
   --bind "ctrl-a:change-prompt(  )+reload(sesh list -i)" \
   --bind "ctrl-t:change-prompt(  )+reload(sesh list -t -i)" \
   --bind "ctrl-x:change-prompt(  )+reload(sesh list -z -i)" \
-  --bind "ctrl-k:execute-silent(tmux kill-session -t \$(echo {} | awk '{print \$2}'))+change-prompt(  )+reload(sesh list -t -i)")
+  --bind "ctrl-d:execute-silent(tmux kill-session -t \$(echo {} | awk '{print \$2}'))+change-prompt(  )+reload(sesh list -t -i)")
 
 # --expect と --print-query の出力:
 # Line 1: query (入力テキスト)
-# Line 2: key (押されたキー: alt-m, または空)
+# Line 2: key (押されたキー: ctrl-o, または空)
 # Line 3: selection (選択された行)
 
 query=$(echo "$result" | sed -n '1p')
@@ -29,8 +29,8 @@ selection=$(echo "$result" | sed -n '3p')
 if [ -n "$selection" ]; then
   session=$(echo "$selection" | awk '{print $2}')
 
-  if [ "$key" = "alt-m" ]; then
-    # Alt+m: 現在のペインを選択したセッションに移動
+  if [ "$key" = "ctrl-o" ]; then
+    # Ctrl+o: 現在のペインを選択したセッションに移動
     tmux break-pane       # 現在のペインを新しいウィンドウに分離
     tmux move-window -t "$session:"  # そのウィンドウを移動
     tmux switch-client -t "$session"
