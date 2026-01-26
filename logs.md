@@ -2,6 +2,19 @@
 
 ## 📅 2026年1月
 
+### 2026-01-23 - Callout「Prompt」タイプ追加
+
+**変更内容**:
+- `prompt` タイプを追加（💬 Prompt、pキー）
+- `quote` のアイコンを 💬 → 🗣️ に変更
+
+**キー**: `<leader>c` → `p` = Prompt
+
+**関連ファイル**:
+- `lua/user-plugins/markdown-helper.lua` - callout_types に prompt 追加（2箇所）
+
+---
+
 ### 2026-01-16 - Raycast「Edit in Neovim」機能追加
 
 **背景**: 他のアプリで入力中のテキストをnvimで編集したい

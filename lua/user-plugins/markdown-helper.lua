@@ -416,11 +416,12 @@ function M.change_callout_type(start_row, end_row)
     { "think", "🤔 Think", "t" },
     { "idea", "💡 Idea", "i" },
     { "ai", "🤖 AI", "a" },
-    { "quote", "💬 Quote (タイトル付き)", "q" },
+    { "prompt", "💬 Prompt", "p" },
+    { "quote", "🗣️ Quote (タイトル付き)", "q" },
     { "blockquote", "📎 Blockquote (>のみ)", "b" },
     { "code", "💻 Code Block", "c" },
   }
-  
+
   M.show_callout_selection(callout_types, "Calloutの種類を選択:", function(choice)
     if not choice then return end
     
@@ -733,16 +734,17 @@ function M.create_new_callout(start_row, end_row)
     { "think", "🤔 Think", "t" },
     { "idea", "💡 Idea", "i" },
     { "ai", "🤖 AI", "a" },
-    { "quote", "💬 Quote (タイトル付き)", "q" },
+    { "prompt", "💬 Prompt", "p" },
+    { "quote", "🗣️ Quote (タイトル付き)", "q" },
     { "blockquote", "📎 Blockquote (>のみ)", "b" },
     { "code", "💻 Code Block", "c" },
   }
 
   M.show_callout_selection(callout_types, "Calloutの種類を選択:", function(choice)
     if not choice then return end
-    
+
     local callout_type = choice[1]
-    
+
     -- コードブロックの場合は専用関数を呼び出し
     if callout_type == "code" then
       M.insert_code_block()
