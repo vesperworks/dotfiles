@@ -163,6 +163,18 @@ local function move_selection_to_heading(pattern, to_bottom)
   -- Re-select and fix indentation
   local new_end = new_start + line_count
   vim.cmd(string.format("normal! %dGV%dG=", new_start + 1, new_end))
+
+  -- Return cursor to original position (one line above)
+  local return_line
+  if dest >= v_end then
+    -- Moved down: original line numbers unchanged
+    return_line = v_start - 1
+  else
+    -- Moved up: original position shifted down
+    return_line = v_start - 1 + line_count + 1
+  end
+  if return_line < 1 then return_line = 1 end
+  vim.api.nvim_win_set_cursor(0, {return_line, 0})
 end
 
 -- Move selection keymaps
