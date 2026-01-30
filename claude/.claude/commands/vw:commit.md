@@ -51,23 +51,20 @@ description: 'Smart commit: /sc (段階コミット) or /sc "message" (クイッ
 | **ユーザー名** | `{username}`, `$(whoami)` | `whoami` の結果でgrep |
 | **絶対パス** | `/Users/xxx/...`, `/home/xxx/...` | `/Users/` または `/home/` でgrep |
 
-#### 検出コマンド
+#### 検出方法（security-utils.sh を使用）
 
 ```bash
-# 変更ファイルからセンシティブ情報を検出
-USERNAME=$(whoami)
-PROJECT_ROOT=$(git rev-parse --show-toplevel)
+# security-utils.sh をsourceして使用
+source ~/.claude/scripts/security-utils.sh
 
-# ステージング予定のファイルをチェック（新規追加・変更）
-git diff --cached --name-only | xargs -I{} sh -c '
-  if [ -f "{}" ]; then
-    # ユーザー名検出
-    grep -n "$USERNAME" "{}" 2>/dev/null && echo "FILE:{}"
-    # 絶対パス検出
-    grep -nE "(/Users/|/home/)[^/]+" "{}" 2>/dev/null && echo "FILE:{}"
-  fi
-'
+# ステージング済みファイルのセンシティブ情報チェック
+check_staged_sensitive
 ```
+
+**利用可能な関数**:
+- `check_staged_sensitive` - ステージング済みファイルをチェック
+- `check_sensitive_info "file1" "file2"` - 指定ファイルをチェック
+- `get_staged_files` - ステージング済みファイル一覧を取得
 
 #### 検出時のフロー
 

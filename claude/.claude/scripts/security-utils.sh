@@ -110,3 +110,61 @@ validate_issue_type() {
   [[ -z "$type" ]] && return 0
   [[ "$type" =~ ^(task|bug|feature|epic|story|enhancement|documentation)$ ]]
 }
+
+# ============================================================
+# Sensitive Information Detection (for git commits)
+# ============================================================
+
+# Check files for sensitive information (username, absolute paths)
+# Usage: check_sensitive_info "file1" "file2" ...
+# Returns: 0 if no sensitive info found, 1 if found (prints details to stdout)
+# Output format: FILE:path:LINE:line_number:CONTENT:matched_content
+check_sensitive_info() {
+  local files=("$@")
+  local username
+  local found=0
+
+  username=$(whoami)
+
+  for file in "${files[@]}"; do
+    [[ ! -f "$file" ]] && continue
+
+    # Check for username
+    if grep -n "$username" "$file" 2>/dev/null | head -5; then
+      echo "TYPE:username:FILE:$file"
+      found=1
+    fi
+
+    # Check for absolute paths (/Users/xxx or /home/xxx)
+    if grep -nE "(/Users/|/home/)[^/]+" "$file" 2>/dev/null | head -5; then
+      echo "TYPE:absolute_path:FILE:$file"
+      found=1
+    fi
+  done
+
+  return $found
+}
+
+# Get list of staged files for commit
+# Usage: staged_files=$(get_staged_files)
+get_staged_files() {
+  git diff --cached --name-only 2>/dev/null
+}
+
+# Run sensitive check on staged files
+# Usage: result=$(check_staged_sensitive)
+# Returns: 0 if clean, 1 if sensitive info found
+check_staged_sensitive() {
+  local staged_files
+  staged_files=$(get_staged_files)
+
+  [[ -z "$staged_files" ]] && return 0
+
+  # Convert newline-separated list to array
+  local files_array=()
+  while IFS= read -r file; do
+    [[ -n "$file" ]] && files_array+=("$file")
+  done <<< "$staged_files"
+
+  check_sensitive_info "${files_array[@]}"
+}
