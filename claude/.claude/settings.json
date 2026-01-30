@@ -110,7 +110,8 @@
       "WebFetch(domain:felixkratz.github.io)",
       "WebFetch(domain:catppuccin.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "WebFetch(domain:eu-central-1-1.aws.cloud2.influxdata.com)"
+      "WebFetch(domain:eu-central-1-1.aws.cloud2.influxdata.com)",
+      "mcp__pencil"
     ],
     "deny": [
       "Bash(rm -rf:*)",
@@ -143,7 +144,7 @@
       "Bash(grep:*)"
     ],
     "ask": [],
-    "defaultMode": "default",
+    "defaultMode": "auto",
     "includeCoAuthoredBy": false
   },
   "hooks": {

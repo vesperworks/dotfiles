@@ -20,7 +20,7 @@ color: purple
 
 1. **At Phase 1 start**: Use Glob to find existing PRPs:
    ```bash
-   Glob: PRPs/**/PRP-*.md
+   Glob: .brain/PRPs/**/PRP-*.md
    ```
 
 2. **Determine next number**: Find the highest existing number and increment by 1
@@ -33,7 +33,7 @@ color: purple
    - `.brain/prp/PRP-007-{feature}-pragmatist.md`
    - `.brain/prp/PRP-007-{feature}-conformist.md`
 
-4. **Final PRP filename**: `PRPs/PRP-007-{feature-name}.md`
+4. **Final PRP filename**: `.brain/PRPs/PRP-007-{feature-name}.md`
 
 ### Context File Update
 
@@ -64,7 +64,7 @@ You are a **2-Phase Orchestrator** for PRP generation using **SubAgent→Skills 
 - Apply 5-axis evaluation criteria
 - Present comparison table
 - Get user selection
-- Save final PRP to `PRPs/`
+- Save final PRP to `.brain/PRPs/`
 - Cleanup temporary files
 
 ## Phase Detection
@@ -96,7 +96,7 @@ If no multi-mode trigger detected or user declines multi-mode:
    - Read TEMPLATES.md → Base PRP Template v2
 3. Conduct necessary research
 4. Generate PRP following Base PRP Template v2
-5. Save to PRPs/{feature-name}.md
+5. Save to .brain/PRPs/{feature-name}.md
 6. Report completion
 
 ## Multi Mode: Phase 1 (Setup)
@@ -126,7 +126,7 @@ AskUserQuestion:
 
 1. Use Glob to find existing PRPs:
    ```bash
-   Glob: PRPs/**/PRP-*.md
+   Glob: .brain/PRPs/**/PRP-*.md
    ```
 
 2. Extract highest number from results (e.g., PRP-006 → 6)
@@ -492,9 +492,9 @@ AskUserQuestion:
 
 ### Step 2.10: Save Final PRP
 
-1. Ensure `PRPs/` directory exists:
+1. Ensure `.brain/PRPs/` directory exists:
    ```bash
-   mkdir -p PRPs
+   mkdir -p .brain/PRPs
    ```
 
 2. Read selected PRP from `.brain/prp/`
@@ -531,7 +531,7 @@ AskUserQuestion:
    {Selected PRP content}
    ```
 
-4. Write to `PRPs/{PRP-00X}-{feature-name}.md`
+4. Write to `.brain/PRPs/{PRP-00X}-{feature-name}.md`
 
 ### Step 2.11: Update TodoWrite
 
@@ -572,16 +572,16 @@ Or keep them for resumability.
 ### Step 2.13: Report Completion
 
 ```markdown
-✅ **PRPを保存しました**: `PRPs/{PRP-00X}-{feature-name}.md`
+✅ **PRPを保存しました**: `.brain/PRPs/{PRP-00X}-{feature-name}.md`
 
 **PRP番号**: {PRP-00X}
 **生成方式**: マルチエージェント（{approach}アプローチ選択）
 **スコア**: {score}/50点
 
 **次のステップ**:
-1. PRPの内容を確認: `cat PRPs/{PRP-00X}-{feature-name}.md`
+1. PRPの内容を確認: `cat .brain/PRPs/{PRP-00X}-{feature-name}.md`
 2. 必要に応じて手動で調整
-3. 実装開始: `@vw-orchestrator "PRPs/{PRP-00X}-{feature-name}.md を使って実装"`
+3. 実装開始: `@vw-orchestrator ".brain/PRPs/{PRP-00X}-{feature-name}.md を使って実装"`
 
 **アーカイブ**: 他の3つの案は `.brain/prp/archive/` に保存されています（必要に応じて参照可能）
 ```
@@ -710,7 +710,7 @@ If user wants to regenerate a specific approach:
 User → /contexteng-gen-prp "feature 複数案で"
   ↓
 Phase 1: vw-prp-orchestrator (Setup)
-  ├─ Glob PRPs/**/PRP-*.md → Determine next number (PRP-007)
+  ├─ Glob .brain/PRPs/**/PRP-*.md → Determine next number (PRP-007)
   ├─ Create .brain/prp/context-{feature}.json (with prp_number)
   ├─ Setup TodoWrite (5 tasks)
   └─ Return instructions to Main Claude
@@ -733,7 +733,7 @@ Phase 2: vw-prp-orchestrator (Evaluation)
   ├─ Evaluate with 5-axis scoring
   ├─ Present comparison table
   ├─ AskUserQuestion: which approach?
-  ├─ Save to PRPs/PRP-007-{feature}.md
+  ├─ Save to .brain/PRPs/PRP-007-{feature}.md
   └─ Report completion ✅
 ```
 

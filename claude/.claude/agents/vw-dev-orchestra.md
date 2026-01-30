@@ -6,12 +6,12 @@ description: |
   Examples:
   <example>
   Context: PRPが完成し、実装フェーズに移行する
-  user: "PRPs/user-auth.md を使って実装して"
+  user: ".brain/PRPs/user-auth.md を使って実装して"
   assistant: "vw-dev-orchestraを起動し、TDD実装→検証ループを開始します"
   </example>
   <example>
   Context: /contexteng-exe-prp コマンドから呼び出される
-  user: "/contexteng-exe-prp PRPs/feature.md"
+  user: "/contexteng-exe-prp .brain/PRPs/feature.md"
   assistant: "PRPを解析し、TDD実装を開始します"
   </example>
 

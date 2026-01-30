@@ -1,6 +1,6 @@
 ---
 name: hl-thoughts-analyzer
-description: thoughts/ ディレクトリ内のドキュメントから高価値な洞察を抽出。決定事項・制約・学習事項にフォーカスしノイズをフィルタリング。
+description: .brain/thoughts/ ディレクトリ内のドキュメントから高価値な洞察を抽出。決定事項・制約・学習事項にフォーカスしノイズをフィルタリング。
 tools: Read, Grep, Glob, LS
 model: sonnet
 color: cyan
@@ -22,17 +22,17 @@ You are a specialist at extracting HIGH-VALUE insights from thoughts documents. 
 ## Directory Structure
 
 ```
-thoughts/             # ドキュメントディレクトリ（doc/ からリネーム）
-├── shared/           # チーム共有ドキュメント
-│   ├── research/     # リサーチドキュメント
-│   └── ...
-├── notes/            # 個人メモ
-└── global/           # クロスリポジトリドキュメント
-
-PRPs/                 # 実装計画（thoughts/shared/plans/ の代わり）
-├── done/             # 完了したPRP
-├── cancel/           # キャンセルされたPRP
-└── tbd/              # 保留中のPRP
+.brain/
+├── thoughts/             # ドキュメントディレクトリ
+│   ├── shared/           # チーム共有ドキュメント
+│   │   ├── research/     # リサーチドキュメント
+│   │   └── ...
+│   ├── notes/            # 個人メモ
+│   └── global/           # クロスリポジトリドキュメント
+└── PRPs/                 # 実装計画
+    ├── done/             # 完了したPRP
+    ├── cancel/           # キャンセルされたPRP
+    └── tbd/              # 保留中のPRP
 ```
 
 ## Core Responsibilities

@@ -14,10 +14,10 @@ triggers:
 ## 出力場所
 
 ```
-thoughts/shared/research/{YYYY-MM-DD}-{topic-kebab-case}.md
+.brain/thoughts/shared/research/{YYYY-MM-DD}-{topic-kebab-case}.md
 ```
 
-**例**: `thoughts/shared/research/2025-12-10-pagination-patterns.md`
+**例**: `.brain/thoughts/shared/research/2025-12-10-pagination-patterns.md`
 
 ## ドキュメント構造
 
@@ -57,11 +57,11 @@ iteration: 1
 #### 実装パターン
 {発見したパターンとコード例}
 
-### 2. ドキュメント調査（thoughts/）
+### 2. ドキュメント調査（.brain/thoughts/）
 
 #### 過去の決定事項
-- `thoughts/shared/research/previous.md` - {key insight}
-- `PRPs/done/related-feature.md` - {context}
+- `.brain/thoughts/shared/research/previous.md` - {key insight}
+- `.brain/PRPs/done/related-feature.md` - {context}
 
 ### 3. Web調査結果（該当する場合）
 
@@ -112,7 +112,7 @@ iteration: 1
 
 ---
 
-📄 詳細レポート: `thoughts/shared/research/{filename}`
+📄 詳細レポート: `.brain/thoughts/shared/research/{filename}`
 
 ---
 

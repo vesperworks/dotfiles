@@ -30,13 +30,13 @@ Use Skill tool to reference `issue-output` for Issue format and templates.
 
 ### If $ARGUMENTS is topic keyword:
 
-1. Search `thoughts/shared/research/` for related files using Glob
+1. Search `.brain/thoughts/shared/research/` for related files using Glob
 2. If multiple matches, use AskUserQuestion to let user select
 3. Proceed to Phase 2
 
 ### If NO argument provided:
 
-1. List recent research files (last 5) from `thoughts/shared/research/`
+1. List recent research files (last 5) from `.brain/thoughts/shared/research/`
 2. Use AskUserQuestion:
 
 ```yaml

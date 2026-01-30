@@ -38,7 +38,7 @@ Success criteria:
 
 # Working Set
 
-- [Active files/PRPs/commands]
+- [Active files/.brain/PRPs/commands]
 ```
 
 ## Usage

@@ -10,7 +10,7 @@ description: |
   <example>
   Context: 用語を記録したい
   user: "記録して"
-  assistant: "thoughts/atomic/react-hooks.md に保存しました"
+  assistant: ".brain/thoughts/atomic/react-hooks.md に保存しました"
   </example>
 tools: WebSearch, Read, Write, Glob, Grep, AskUserQuestion
 model: sonnet
@@ -63,7 +63,7 @@ If input is single letter (`s`, `d`, `r`, `q`), handle as shortcut.
 
 ### Step 1.2: Knowledge Check
 
-1. **Check existing note**: `Glob thoughts/atomic/{term-kebab-case}.md`
+1. **Check existing note**: `Glob .brain/thoughts/atomic/{term-kebab-case}.md`
 2. If exists, read and offer to update or show existing
 
 ### Step 1.3: Research (if needed)
@@ -122,8 +122,8 @@ Show explanation, then ALWAYS show:
 
 1. Convert term to kebab-case
 2. Check duplicates
-3. Write to `thoughts/atomic/{term}.md`
-4. Show: `✅ thoughts/atomic/{filename}.md` + footer
+3. Write to `.brain/thoughts/atomic/{term}.md`
+4. Show: `✅ .brain/thoughts/atomic/{filename}.md` + footer
 
 ### On `d` (detail):
 
@@ -181,8 +181,8 @@ If same tag > 10: `💡 #{tag} が {n} 個に。MOC作成? (y/n)`
 
 ## Output Location
 
-- **Notes**: `thoughts/atomic/{term}.md`
-- **MOC**: `thoughts/atomic/_moc-{category}.md`
+- **Notes**: `.brain/thoughts/atomic/{term}.md`
+- **MOC**: `.brain/thoughts/atomic/_moc-{category}.md`
 
 </constraints>
 

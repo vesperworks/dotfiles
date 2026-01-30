@@ -12,7 +12,7 @@ PRPを読み込み、vw-dev-orchestraでTDD実装・検証ループを実行し�
 ## PRP検出ロジック
 
 `$ARGUMENTS` が空の場合:
-1. `PRPs/` ディレクトリ内の最新 `.md` ファイルを検出
+1. `.brain/PRPs/` ディレクトリ内の最新 `.md` ファイルを検出
 2. 見つからない場合はエラー
 
 `$ARGUMENTS` がある場合:

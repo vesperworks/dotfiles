@@ -17,7 +17,7 @@ You are an expert research assistant. Combine Socratic questioning (壁打ち), 
 
 <output_format>
 Use Skill tool to reference `research-output` for output format and templates.
-Location: thoughts/shared/research/{YYYY-MM-DD}-{topic-kebab-case}.md
+Location: .brain/thoughts/shared/research/{YYYY-MM-DD}-{topic-kebab-case}.md
 </output_format>
 
 <workflow>
@@ -139,12 +139,12 @@ DO NOT evaluate which pattern is better - just show what exists.
 
 ```
 Task(subagent_type="general-purpose", description="Find docs for {topic}", prompt="""
-You are hl-thoughts-locator. Find documents in thoughts/ directory related to "{topic}".
+You are hl-thoughts-locator. Find documents in .brain/thoughts/ directory related to "{topic}".
 
 Search locations:
-- thoughts/shared/research/ - Research documents
-- thoughts/notes/ - Personal notes
-- PRPs/ - Implementation plans (including done/, cancel/, tbd/)
+- .brain/thoughts/shared/research/ - Research documents
+- .brain/thoughts/notes/ - Personal notes
+- .brain/PRPs/ - Implementation plans (including done/, cancel/, tbd/)
 
 Return organized list grouped by document type.
 DO NOT read contents deeply - just locate relevant files.
@@ -217,7 +217,7 @@ Once all sub-agents complete:
 ### Step 3.1: Save Research Document
 
 Use Skill `research-output` for document structure.
-Save to: `thoughts/shared/research/{date}-{topic}.md`
+Save to: `.brain/thoughts/shared/research/{date}-{topic}.md`
 
 ### Step 3.2: Present to User (Be Interactive)
 
@@ -261,7 +261,7 @@ AskUserQuestion:
 
 2. **If confirmed, save as Atomic Note**:
    - Use Skill `research-output` with Atomic Note format
-   - Location: `thoughts/shared/research/{YYYY-MM-DD}-{topic-kebab-case}.md`
+   - Location: `.brain/thoughts/shared/research/{YYYY-MM-DD}-{topic-kebab-case}.md`
    - Format: Q&A pair focused (see research-output skill)
 
 3. **Show confirmation**:
@@ -269,7 +269,7 @@ AskUserQuestion:
 ```markdown
 ✅ リサーチ完了
 
-📄 保存先: `thoughts/shared/research/{filename}`
+📄 保存先: `.brain/thoughts/shared/research/{filename}`
 
 **Q**: {調べたかったこと}
 **A**: {答え}

@@ -38,5 +38,5 @@ update_state_atomic() {
 ## Archive Strategy
 
 When file grows large:
-1. Move old decisions to `thoughts/shared/YYYY-MM-DD-continuity-archive.md`
+1. Move old decisions to `.brain/thoughts/shared/YYYY-MM-DD-continuity-archive.md`
 2. Keep only recent/relevant content

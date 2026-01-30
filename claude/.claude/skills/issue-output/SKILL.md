@@ -53,7 +53,7 @@ GitHub Issueを統一フォーマットで出力するためのスキル。
 
 ## リサーチファイルからの変換ルール
 
-`thoughts/shared/research/` のリサーチドキュメントをIssue化する場合：
+`.brain/thoughts/shared/research/` のリサーチドキュメントをIssue化する場合：
 
 | リサーチセクション | Issueセクション |
 |-------------------|-----------------|

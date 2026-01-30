@@ -21,7 +21,7 @@ Support rapid-fire term exploration with shortcut commands.
 
 | Shortcut | Full Form | Action |
 |----------|-----------|--------|
-| `s` | save, 記録して, 保存 | Save current term to thoughts/atomic/ |
+| `s` | save, 記録して, 保存 | Save current term to .brain/thoughts/atomic/ |
 | `d` | detail, もっと詳しく, 深掘り | Deep dive into current term |
 | `r` | related, 関連, 関連用語 | Show related terms |
 | `q` | quit, 終了, おわり | End session |
@@ -63,7 +63,7 @@ Output this welcome message, then STOP and wait for user input:
 ### If argument provided:
 
 1. Parse the term from $ARGUMENTS
-2. Check for existing note: `Glob thoughts/atomic/*{term}*.md`
+2. Check for existing note: `Glob .brain/thoughts/atomic/*{term}*.md`
 3. If exists, show existing and ask if user wants update
 4. If not exists, proceed to Phase 2
 
@@ -117,12 +117,12 @@ Show explanation, then ALWAYS show command footer:
 1. Convert term to kebab-case filename
 2. Check duplicates with Glob
 3. If duplicate, ask user (overwrite/skip/compare)
-4. Write to `thoughts/atomic/{term}.md`
+4. Write to `.brain/thoughts/atomic/{term}.md`
 5. Check MOC threshold (10+ same tag)
 6. Show save confirmation + command footer
 
 ```
-✅ `thoughts/atomic/{filename}.md`
+✅ `.brain/thoughts/atomic/{filename}.md`
 
 ─────────────────────────────────────
 `s` 保存 │ `d` 深掘り │ `r` 関連 │ 用語入力で次へ │ `q` 終了

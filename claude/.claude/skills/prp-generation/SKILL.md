@@ -46,14 +46,14 @@ This skill automatically calls the `vw-prp-orchestrator` agent to handle:
 
 **CRITICAL: All PRPs must follow `PRP-XXX-{feature-name}.md` format**
 
-1. **Check existing PRPs**: `Glob PRPs/**/PRP-*.md`
+1. **Check existing PRPs**: `Glob .brain/PRPs/**/PRP-*.md`
 2. **Determine next number**: highest existing number + 1
 3. **Format**: `PRP-XXX` (zero-padded to 3 digits)
    - Example: PRP-008 exists → next is `PRP-009-{feature-name}.md`
 
 ### File Location
 
-Generated PRPs are saved to `PRPs/PRP-XXX-{feature-name}.md` with:
+Generated PRPs are saved to `.brain/PRPs/PRP-XXX-{feature-name}.md` with:
 - Evaluation summary
 - Agent IDs (for resumability)
 - Scoring breakdown

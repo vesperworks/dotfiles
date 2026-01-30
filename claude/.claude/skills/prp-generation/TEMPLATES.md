@@ -2,10 +2,10 @@
 
 ## Naming Convention
 
-**ファイル名**: `PRPs/PRP-XXX-{feature-name}.md`
+**ファイル名**: `.brain/PRPs/PRP-XXX-{feature-name}.md`
 - XXX: ゼロパディング3桁の連番（既存の最大番号 + 1）
 - feature-name: ケバブケース（小文字、ハイフン区切り）
-- 例: `PRPs/PRP-009-user-authentication.md`
+- 例: `.brain/PRPs/PRP-009-user-authentication.md`
 
 ## Base PRP Template v2
 

@@ -40,6 +40,100 @@ description: 'Smart commit: /sc (段階コミット) or /sc "message" (クイッ
 - 同じ機能・目的に関連するファイル
 - 同じコミットタイプ（feat/fix/docs等）に該当するファイル
 
+### Step 1.5: センシティブ情報チェック（Sensitive Path Check）
+
+コミット前に、変更ファイル内のセンシティブ情報を検出し、変換を提案する。
+
+#### 検出対象
+
+| パターン | 例 | 検出方法 |
+|---------|-----|---------|
+| **ユーザー名** | `{username}`, `$(whoami)` | `whoami` の結果でgrep |
+| **絶対パス** | `/Users/xxx/...`, `/home/xxx/...` | `/Users/` または `/home/` でgrep |
+
+#### 検出コマンド
+
+```bash
+# 変更ファイルからセンシティブ情報を検出
+USERNAME=$(whoami)
+PROJECT_ROOT=$(git rev-parse --show-toplevel)
+
+# ステージング予定のファイルをチェック（新規追加・変更）
+git diff --cached --name-only | xargs -I{} sh -c '
+  if [ -f "{}" ]; then
+    # ユーザー名検出
+    grep -n "$USERNAME" "{}" 2>/dev/null && echo "FILE:{}"
+    # 絶対パス検出
+    grep -nE "(/Users/|/home/)[^/]+" "{}" 2>/dev/null && echo "FILE:{}"
+  fi
+'
+```
+
+#### 検出時のフロー
+
+**センシティブ情報が検出された場合**:
+
+1. 検出結果を表示：
+```
+## ⚠️ センシティブ情報を検出しました
+
+以下のファイルに個人情報または絶対パスが含まれています：
+
+| ファイル | 行番号 | 検出内容 |
+|---------|--------|---------|
+| `.klaude/settings.json` | L5 | `/Users/{username}/Works/...` |
+| `CLAUDE.md` | L42 | `{username}` |
+```
+
+2. AskUserQuestion で対応を選択：
+```yaml
+AskUserQuestion:
+  questions:
+    - question: "センシティブ情報が検出されました。どのように対応しますか？"
+      header: "対応"
+      multiSelect: false
+      options:
+        - label: "相対パスに変換（推奨）"
+          description: "/Users/xxx/project/src → src（プロジェクトルート基準）"
+        - label: "~/ 形式に変換"
+          description: "/Users/xxx → ~/"
+        - label: "そのままコミット"
+          description: "変換せずにコミットを続行（承認）"
+        - label: "コミットを中止"
+          description: "手動で修正してから再実行"
+```
+
+#### 変換ロジック
+
+**相対パスに変換（推奨）**:
+```bash
+PROJECT_ROOT=$(git rev-parse --show-toplevel)
+# /Users/{username}/Works/project/src/file.ts
+# → src/file.ts
+sed -i '' "s|$PROJECT_ROOT/||g" <file>
+```
+
+**~/ 形式に変換**:
+```bash
+HOME_DIR=$HOME
+# /Users/{username}/Works/...
+# → ~/Works/...
+sed -i '' "s|$HOME_DIR|~|g" <file>
+```
+
+**ユーザー名の置換**:
+```bash
+USERNAME=$(whoami)
+# {actual_username} → {username} または削除
+sed -i '' "s|$USERNAME|{username}|g" <file>
+```
+
+#### 注意事項
+
+- 変換後は必ず `git diff` で変更内容を確認表示
+- 変換により構文エラーが発生しないか注意（特にJSON、YAML）
+- 変換対象外の場所（コードロジック内のパス等）は手動確認を促す
+
 ### Step 2: グループ確認（AskUserQuestion形式）
 
 分析結果を表示した後、AskUserQuestionで確認を求める：

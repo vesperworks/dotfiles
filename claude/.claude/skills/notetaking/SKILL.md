@@ -1,6 +1,6 @@
 ---
 name: notetaking
-description: Atomic Notes形式で技術用語を記録・整理。Use when saving term explanations to thoughts/atomic/. Provides output format templates and MOC generation logic. NOT for general research (use vw:research) and NOT for code documentation (use codebase-exploration).
+description: Atomic Notes形式で技術用語を記録・整理。Use when saving term explanations to .brain/thoughts/atomic/. Provides output format templates and MOC generation logic. NOT for general research (use vw:research) and NOT for code documentation (use codebase-exploration).
 ---
 
 # Notetaking Skill
@@ -37,9 +37,9 @@ description: Atomic Notes形式で技術用語を記録・整理。Use when savi
 
 ### Save Location
 
-- **ファイルパス**: `thoughts/atomic/{term-kebab-case}.md`
+- **ファイルパス**: `.brain/thoughts/atomic/{term-kebab-case}.md`
 - **命名規則**: 小文字、スペースはハイフン、特殊文字除去
-- **例**: "React Hooks" → `thoughts/atomic/react-hooks.md`
+- **例**: "React Hooks" → `.brain/thoughts/atomic/react-hooks.md`
 
 ## MOC (Map of Content) Generation
 
@@ -72,7 +72,7 @@ description: Atomic Notes形式で技術用語を記録・整理。Use when savi
 
 ### MOC Save Location
 
-`thoughts/atomic/_moc-{category}.md`
+`.brain/thoughts/atomic/_moc-{category}.md`
 
 ## Tag Extraction Rules
 
@@ -85,7 +85,7 @@ description: Atomic Notes形式で技術用語を記録・整理。Use when savi
 ## MOC Check Workflow
 
 1. **タグ抽出**: 保存時にインラインタグを解析
-2. **カウント**: `thoughts/atomic/` 内の同タグファイル数を確認
+2. **カウント**: `.brain/thoughts/atomic/` 内の同タグファイル数を確認
 3. **閾値判定**: 10個超過でMOC提案
 4. **提案表示**:
 
@@ -99,7 +99,7 @@ MOC（Map of Content）を作成しますか？
 保存前に同名ファイルの存在を確認:
 
 ```
-⚠️ `thoughts/atomic/{filename}.md` は既に存在します。
+⚠️ `.brain/thoughts/atomic/{filename}.md` は既に存在します。
 - 上書き: 既存の内容を置き換え
 - スキップ: 保存せずに終了
 - 比較: 既存と新規を並べて表示

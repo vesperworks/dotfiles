@@ -195,7 +195,7 @@ description: |
 - **禁止**: {別のしてはいけないこと}
 - **必須**: {必ずすること}
 - **必須**: {別の必ずすること}
-- **出力**: {出力先（.brain/vw/ または PRPs/）}
+- **出力**: {出力先（.brain/vw/ または .brain/PRPs/）}
 </constraints>
 ```
 
@@ -231,5 +231,5 @@ description: |
 
 - **公式仕様**: https://code.claude.com/docs/en/sub-agents.md
 - **既存実装例**: `~/.claude/agents/vw-dev-orchestra.md`
-- **XMLタグガイド**: `thoughts/shared/ccPromptEngineering/use-xml-tags.md`
-- **プロジェクト設計**: `thoughts/shared/research/2025-12-18-skill-agent-template-design.md`
+- **XMLタグガイド**: `.brain/thoughts/shared/ccPromptEngineering/use-xml-tags.md`
+- **プロジェクト設計**: `.brain/thoughts/shared/research/2025-12-18-skill-agent-template-design.md`

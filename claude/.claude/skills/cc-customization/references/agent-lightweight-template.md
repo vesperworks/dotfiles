@@ -168,4 +168,4 @@ hl-\*エージェントは「helpful」特性による勝手な改善提案を�
 
 - **公式仕様**: https://code.claude.com/docs/en/sub-agents.md
 - **既存実装例**: `~/.claude/agents/hl-codebase-locator.md`
-- **プロジェクト設計**: `thoughts/shared/research/2025-12-18-skill-agent-template-design.md`
+- **プロジェクト設計**: `.brain/thoughts/shared/research/2025-12-18-skill-agent-template-design.md`

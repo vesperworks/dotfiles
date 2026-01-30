@@ -153,4 +153,4 @@ description: Helps with code analysis  # 曖昧すぎる、トリガー条件が
 ## 参照
 
 - **公式仕様**: https://code.claude.com/docs/en/skills.md
-- **プロジェクト設計**: `thoughts/shared/research/2025-12-18-skill-agent-template-design.md`
+- **プロジェクト設計**: `.brain/thoughts/shared/research/2025-12-18-skill-agent-template-design.md`

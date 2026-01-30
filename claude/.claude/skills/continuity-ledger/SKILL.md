@@ -135,7 +135,7 @@ Success criteria:
 
 # Working Set
 - path/to/active/file.ts
-- PRPs/PRP-XXX-name.md
+- .brain/PRPs/PRP-XXX-name.md
 ```
 
 ## Guidelines
