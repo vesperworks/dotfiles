@@ -6,12 +6,16 @@ return {
   dependencies = {
     "hrsh7th/cmp-buffer",
     "hrsh7th/cmp-path",
-    "epwalsh/obsidian.nvim",
+    "obsidian-nvim/obsidian.nvim",
   },
   config = function()
     local cmp = require("cmp")
 
     cmp.setup({
+      completion = {
+        keyword_length = 0, -- トリガー文字で即座に補完開始
+        autocomplete = { require("cmp.types").cmp.TriggerEvent.TextChanged },
+      },
       mapping = cmp.mapping.preset.insert({
         [";"] = cmp.mapping.complete(),
         ["<C-n>"] = cmp.mapping.select_next_item(),
@@ -19,13 +23,12 @@ return {
         ["<C-c>"] = cmp.mapping.abort(),
       }),
       sources = cmp.config.sources({
-        { name = "obsidian" },
-        { name = "buffer"   },
-        { name = "path"     },
+        { name = "buffer" },
+        { name = "path" },
       }),
     })
 
-    -- Markdown 用：<CR> だけ上書き
+    -- Markdown 用：obsidianソースを追加 + <CR> 上書き
     cmp.setup.filetype("markdown", {
       mapping = {
         ["<CR>"] = cmp.mapping(function(fallback)
@@ -37,6 +40,13 @@ return {
           end
         end, { "i", "s" }),
       },
+      sources = cmp.config.sources({
+        { name = "obsidian", keyword_length = 0 },      -- [[ で即座に補完
+        { name = "obsidian_new" },                       -- 新規ノート作成用
+        { name = "obsidian_tags" },                      -- # タグ補完用
+        { name = "buffer" },
+        { name = "path" },
+      }),
     })
   end,
 }

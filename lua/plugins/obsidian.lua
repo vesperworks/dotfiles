@@ -1,43 +1,63 @@
 return {
-  "epwalsh/obsidian.nvim",
-  enabled = true,  -- 再度有効化してobsidian.nvim側で問題解決
+  "obsidian-nvim/obsidian.nvim", -- community fork（キャッシュ機能あり）
   version = "*",
   lazy = true,
   ft = "markdown",
   dependencies = {
-    "nvim-lua/plenary.nvim", -- 必須依存
+    "nvim-lua/plenary.nvim",
   },
   opts = {
+    legacy_commands = false, -- 新コマンド形式を使用（Obsidian backlinks等）
+
     workspaces = {
       {
         name = "main",
-        -- 環境変数OBSIDIAN_VAULT_PATHからパスを取得、フォールバックあり
         path = vim.env.OBSIDIAN_VAULT_PATH or "~/Library/Mobile Documents/iCloud~md~obsidian/Documents/MainVault",
       },
     },
 
-    disable_frontmatter = true,
-    
-    -- UI要素を無効化してrender-markdown.nvimとの競合を回避
-    ui = {
-      enable = false,  -- Obsidian UI要素を無効化
-      checkboxes = {},  -- チェックボックスUIを無効化
+    -- キャッシュ有効化（補完高速化）
+    cache = {
+      enable = true,
     },
+
+    -- 新規ノートの保存先
+    new_notes_location = "notes_subdir",
+    notes_subdir = "Inbox",
+
+    -- UI無効化（render-markdown.nvimと独自設定を使用）
+    ui = {
+      enable = false,
+    },
+
+    -- チェックボックス無効化（独自タスクステータスを使用）
+    checkbox = {
+      enabled = false,
+    },
+
+    -- 補完設定
     completion = {
       nvim_cmp = true,
-      min_chars = 1,  -- @一文字で補完開始
+      min_chars = 0, -- [[だけで補完開始
+      create_new = false, -- 補完から新規ノート作成を無効化
     },
 
-    mappings = {
-      -- [[リンク]]ジャンプをgfで使えるように
-      ["gf"] = {
-        action = function()
-          return require("obsidian").util.gf_passthrough()
-        end,
-        opts = { noremap = true, expr = true, buffer = true },
-      },
+    -- キーマップ（enter_noteコールバックで設定）
+    callbacks = {
+      enter_note = function(note)
+        -- gfでリンクジャンプ
+        vim.keymap.set("n", "gf", require("obsidian.api").smart_action, {
+          buffer = true,
+          desc = "Follow link",
+        })
+        -- <CR>を独自タスクステータスに再設定（obsidianのマッピングを上書き）
+        vim.keymap.set("n", "<CR>", function()
+          require("user-plugins.markdown-helper").toggle_checkbox_state()
+        end, { buffer = true, desc = "Toggle task checkbox" })
+        vim.keymap.set("v", "<CR>", function()
+          require("user-plugins.markdown-helper").toggle_checkbox_state()
+        end, { buffer = true, desc = "Toggle task checkbox" })
+      end,
     },
-
-    use_advanced_uri = false, -- Obsidian URI連携（不要ならfalseでOK）
   },
 }

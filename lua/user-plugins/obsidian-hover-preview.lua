@@ -44,17 +44,12 @@ local function resolve_link_path(link_text)
     return nil
   end
 
-  local client_ok, client = pcall(obsidian.get_client)
-  if not client_ok or not client then
-    return nil
-  end
-
-  -- obsidian.nvimのresolve_note機能を使用（エラーハンドリング付き）
-  local resolve_ok, note = pcall(function()
-    return client:resolve_note(link_text)
+  -- community fork: search.resolve_note を使用（配列を返す）
+  local resolve_ok, notes = pcall(function()
+    return obsidian.search.resolve_note(link_text)
   end)
-  if resolve_ok and note then
-    return tostring(note.path)
+  if resolve_ok and notes and notes[1] then
+    return notes[1].path.filename
   end
   return nil
 end
@@ -111,6 +106,16 @@ local function setup_preview_keymaps(buf)
     M.close_preview()
     if file_path then
       vim.cmd("edit " .. vim.fn.fnameescape(file_path))
+    end
+  end, opts)
+
+  -- r でリネーム（Vault内のwikilinkも自動更新）
+  vim.keymap.set("n", "r", function()
+    local file_path = M.state.preview_file_path
+    M.close_preview()
+    if file_path then
+      vim.cmd("edit " .. vim.fn.fnameescape(file_path))
+      vim.cmd("Obsidian rename")
     end
   end, opts)
 end
@@ -170,7 +175,7 @@ function M.show_preview(file_path)
     col = 0,
     style = "minimal",
     border = M.config.border,
-    title = " " .. vim.fn.fnamemodify(file_path, ":t") .. " [ZZ/q to close, gf to open] ",
+    title = " " .. vim.fn.fnamemodify(file_path, ":t") .. " [q:close gf:open r:rename] ",
     title_pos = "center",
   })
 
