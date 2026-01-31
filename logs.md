@@ -2,6 +2,47 @@
 
 ## 📅 2026年1月
 
+### 2026-01-31 - obsidian.nvim community fork補完調査（結論：;手動補完で運用）
+
+**調査結果**:
+- community forkは`[[`だけでは自動補完が発動しない（1文字以上入力が必要）
+- 原因: `can_complete`関数が`search == ""`で`false`を返す仕様
+- `trigger_characters`追加は逆効果だった（競合発生）
+- obsidianソース自体は正常に登録されている（`vim.b.obsidian_buffer = true`）
+
+**運用方法**:
+| 操作 | 動作 |
+|------|------|
+| `[[test;` | ノート補完 |
+| `#tag;` | タグ補完 |
+| `./` | パス補完（自動） |
+
+**関連ファイル**:
+- `lua/plugins/cmp.lua` - markdown用にobsidian/obsidian_tags/obsidian_newソースを明示的に追加
+
+---
+
+### 2026-01-30 - obsidian.nvim community fork移行・wikilink機能強化
+
+**変更内容**:
+- `epwalsh/obsidian.nvim` → `obsidian-nvim/obsidian.nvim` (community fork)に移行
+- キャッシュ有効化で補完高速化
+- プレビューウィンドウで`r`キー → `:Obsidian rename`を実行
+- UI/checkbox無効化（render-markdown.nvim・独自タスクステータスを使用）
+
+**API変更対応**:
+- `client:resolve_note()` → `obsidian.search.resolve_note()`（配列を返す）
+- パス: `note.path` → `note.path.filename`
+- コマンド: `ObsidianRename` → `Obsidian rename`
+- キーマップ: mappings → callbacks.enter_note
+
+**関連ファイル**:
+- `lua/plugins/obsidian.lua` - community fork、cache、ui/checkbox無効化、callbacks設定
+- `lua/plugins/cmp.lua` - markdown用ソース追加
+- `lua/user-plugins/obsidian-hover-preview.lua` - API対応、rキーマップ追加
+
+---
+
 ### 2026-01-26 - leader m 移動後のカーソル復帰
 
 **変更内容**:
