@@ -153,4 +153,17 @@ else
     osascript -e "display notification \"$SHORT_MSG\" with title \"🤖 Claude Code\" subtitle \"$STATUS_EMOJI $PROJECT_NAME\" sound name \"Glass\""
 fi
 
+# Moshi通知（スマホ）- 環境変数MOSHI_TOKENが設定されている場合のみ
+if [ -n "${MOSHI_TOKEN:-}" ]; then
+  # 改行をスペースに変換してJSON安全な文字列に
+  MOSHI_MSG=$(echo "$NOTIFICATION_MESSAGE" | tr '\n' ' ' | sed 's/"/\\"/g')
+  curl -sS -X POST https://api.getmoshi.app/api/webhook \
+    -H "Content-Type: application/json" \
+    -d "{
+      \"token\": \"${MOSHI_TOKEN}\",
+      \"title\": \"🤖 ${PROJECT_NAME}\",
+      \"message\": \"${MOSHI_MSG}\"
+    }" > /dev/null 2>&1 &
+fi
+
 exit 0
