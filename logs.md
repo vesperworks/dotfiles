@@ -1,5 +1,18 @@
 # Neovim Development Logs
 
+## 📅 2026年2月
+
+### 2026-02-01 - obsidian.nvim frontmatter・footer無効化
+
+**変更内容**:
+- frontmatter自動追加を無効化（`frontmatter = { enabled = false }`）
+- footer表示を無効化（`footer = { enabled = false }`）
+
+**関連ファイル**:
+- `lua/plugins/obsidian.lua` - frontmatter/footer設定追加
+
+---
+
 ## 📅 2026年1月
 
 ### 2026-01-31 - obsidian.nvim community fork補完調査（結論：;手動補完で運用）

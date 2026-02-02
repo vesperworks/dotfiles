@@ -21,6 +21,14 @@ return {
       enable = true,
     },
 
+    -- frontmatter自動追加を無効化
+    frontmatter = {
+      enabled = false,
+    },
+
+    -- footer無効化
+    footer = { enabled = false },
+
     -- 新規ノートの保存先
     new_notes_location = "notes_subdir",
     notes_subdir = "Inbox",
