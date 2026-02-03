@@ -6,7 +6,7 @@ local M = {}
 -- 設定
 M.config = {
   pattern = "^(#+)%s+(.+)", -- 見出しにマッチ
-  max_items = 50,           -- 最大表示件数
+  max_items = 100,          -- 最大表示件数
   min_height = 1,           -- 最小高さ
   border = "rounded",       -- ボーダースタイル
 }
