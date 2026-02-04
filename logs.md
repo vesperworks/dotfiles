@@ -2,6 +2,33 @@
 
 ## 📅 2026年2月
 
+### 2026-02-04 - flash.nvim リファクタリング + cmigemo統合
+
+**変更内容**:
+- s/S/gr/gR/`<C-s>`/`<leader>s` のキーマップを削除（s/Sはvimネイティブ動作に復帰）
+- modes.char を無効化、treesitter/treesitter_search/remote モードを削除
+- f/t に単語境界ラベルジャンプを統合（2文字ラベル自動拡張つき）
+- F/T に cmigemo対応文字検索を新規実装（ローマ字入力で日本語検索可能）
+- `lua/user-plugins/migemo-bridge.lua` を新規作成（cmigemoプロセス常駐・キャッシュ・フォールバック）
+
+**キーマップ**:
+| キー | 機能 |
+|------|------|
+| `f` | 単語境界ラベルジャンプ（マッチ位置に着地） |
+| `t` | 単語境界ラベルジャンプ（1文字手前に着地） |
+| `F` | cmigemo検索（マッチ位置に着地） |
+| `T` | cmigemo検索（1文字手前に着地） |
+
+**削除したキー**: `s`, `S`, `gr`, `gR`, `<C-s>`, `<leader>s`
+
+**関連ファイル**:
+- `lua/plugins/flash.lua` - キーバインド整理 + F/T migemo統合
+- `lua/user-plugins/migemo-bridge.lua` - 新規作成（cmigemoプロセス管理）
+
+**依存**: `brew install cmigemo`（未インストール時は英語のみのフォールバック）
+
+---
+
 ### 2026-02-04 - Cmd+V CSI u変換の撤去・pペースト運用に変更
 
 **背景**: 2/4に実装したCmd+V → CSI u変換が、Alacritty上のnvim外（bash/zsh）でCmd+Vによるシステムペーストを使えなくした
