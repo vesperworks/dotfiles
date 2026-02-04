@@ -2,19 +2,20 @@
 
 ## 📅 2026年2月
 
-### 2026-02-04 - Cmd+V Bracketed Paste問題の回避
+### 2026-02-04 - Cmd+V CSI u変換の撤去・pペースト運用に変更
 
-**背景**: ブラウザからCmd+VでNeovim(tmux内)にペーストすると `^[[200~` / `^[[201~` が文字として挿入される
+**背景**: 2/4に実装したCmd+V → CSI u変換が、Alacritty上のnvim外（bash/zsh）でCmd+Vによるシステムペーストを使えなくした
 
-**根本原因**: tmuxの `extended-keys on` がBracketed Pasteシーケンスの処理と干渉する既知バグ（[tmux#4663](https://github.com/tmux/tmux/issues/4663)）。tmux 3.5a時点で未修正。
+**原因**: Alacrittyのキーバインドはグローバルで、nvim起動中かどうかの条件分岐ができない。Cmd+Vを横取りしてCSI uシーケンスに変換していたため、nvim外ではペーストとして認識されなかった
 
-**解決策**: Bracketed Pasteを使わず、CSI u形式のキーシーケンス経由でペースト
-1. Alacritty: Cmd+V → `\e[86;6u`（CSI u形式のCtrl+Shift+V）を送信
-2. Neovim: `<C-S-v>` をクリップボードペースト（`"+p` / `<C-r><C-p>+`）にマッピング
+**解決策**: CSI u変換を撤去し、nvim内ではpでペーストする運用に変更
+- `vim.opt.clipboard:append("unnamedplus")`により、pはシステムクリップボードから貼り付ける
+- nvim内: `p`でペースト（システムクリップボード）
+- nvim外: `Cmd+V`でシステムペースト（Alacrittyデフォルト動作）
 
-**関連ファイル**:
-- `~/.config/alacritty/alacritty.toml` - Cmd+Vキーバインド追加
-- `init.lua` - `<C-S-v>` ペーストマッピング追加（L194-199）
+**削除したファイル/設定**:
+- `~/.config/alacritty/alacritty.toml` - Cmd+V → CSI u変換キーバインド削除
+- `init.lua` - `<C-S-v>` ペーストマッピング4行削除
 
 ---
 
