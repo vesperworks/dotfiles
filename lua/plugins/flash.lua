@@ -73,51 +73,7 @@ return {
         jump = { history = true, register = true, nohlsearch = true },
         search = {},
       },
-      char = {
-        enabled = true,
-        config = function(opts)
-          opts.autohide = opts.autohide or (vim.fn.mode(true):find("no") and vim.v.operator == "y")
-          opts.jump_labels = opts.jump_labels
-            and vim.v.count == 0
-            and vim.fn.mode(true):find("no")
-            and vim.v.operator ~= "y"
-        end,
-        autohide = false,
-        jump_labels = false,
-        multi_line = true,
-        label = { exclude = "hjkliardc" },
-        keys = { "t", "T", ";", "," },
-        char_actions = function(motion)
-          return {
-            [";"] = "next",
-            [","] = "prev",
-            [motion:lower()] = "next",
-            [motion:upper()] = "prev",
-          }
-        end,
-        search = { wrap = false },
-        highlight = { backdrop = true },
-        jump = { register = false },
-      },
-      treesitter = {
-        labels = "asdfghjklqwertyuiopzxcvbnm",
-        jump = { pos = "range" },
-        search = { incremental = false },
-        label = { before = true, after = true, style = "inline" },
-        highlight = {
-          backdrop = false,
-          matches = false,
-        },
-      },
-      treesitter_search = {
-        jump = { pos = "range" },
-        search = { multi_window = true, wrap = true, incremental = false },
-        remote_op = { restore = true },
-        label = { before = true, after = true, style = "inline" },
-      },
-      remote = {
-        remote_op = { restore = true, motion = true },
-      },
+      char = { enabled = false },
     },
     prompt = {
       enabled = true,
@@ -131,189 +87,184 @@ return {
         zindex = 1000,
       },
     },
-    remote_op = {
-      restore = false,
-      motion = false,
-    },
   },
-  keys = {
-    {
-      "s",
-      mode = { "n", "x", "o" },
-      function()
-        require("flash").jump()
-      end,
-      desc = "Flash",
-    },
-    {
-      "S",
-      mode = { "n", "x", "o" },
-      function()
-        require("flash").treesitter()
-      end,
-      desc = "Flash Treesitter",
-    },
-    {
-      "f",
-      mode = { "n", "x", "o" },
-      function()
-        local flash = require("flash")
-        
-        flash.jump({
-          -- ラベル数を大幅増加
-          labels = "asdfghjklqwertyuiopzxcvbnm",
-          matcher = function(win)
-            local buf = vim.api.nvim_win_get_buf(win)
-            local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-            local matches = {}
-            
-            for lnum, line in ipairs(lines) do
-              local col = 1
-              while col <= #line do
-                local char = line:sub(col, col)
-                local prev_char = col > 1 and line:sub(col-1, col-1) or ""
-                local should_match = false
-                
-                -- 基本的な英数字単語境界
-                if char:match("%w") and not prev_char:match("%w") then
-                  should_match = true
-                end
-                
-                -- CamelCase境界
-                if char:match("%u") and prev_char:match("%l") then
-                  should_match = true
-                end
-                
-                -- 数字境界
-                if char:match("%d") and not prev_char:match("%d") then
-                  should_match = true
-                elseif not char:match("%d") and prev_char:match("%d") and char:match("%w") then
-                  should_match = true
-                end
-                
-                -- 日本語文字境界（UTF-8対応）
-                local char_byte = char:byte()
-                local prev_char_byte = prev_char:byte() or 0
-                
-                -- ASCII文字から日本語文字への境界
-                if char_byte and char_byte > 127 and prev_char_byte <= 127 then
-                  should_match = true
-                end
-                
-                -- 日本語文字からASCII文字への境界
-                if char_byte and char_byte <= 127 and prev_char_byte > 127 and char:match("%w") then
-                  should_match = true
-                end
-                
-                if should_match then
-                  table.insert(matches, {
-                    win = win,
-                    pos = { lnum, col - 1 },  -- (1,0)-indexed
-                    end_pos = { lnum, col - 1 },
-                  })
-                end
-                
-                col = col + 1
-              end
-            end
-            
-            return matches
-          end,
-        })
-      end,
-      desc = "Flash Multi-language Word Motion",
-    },
-    {
-      "gr",
-      mode = { "n", "x", "o" },
-      function()
-        require("flash").remote()
-      end,
-      desc = "Remote Flash",
-    },
-    {
-      "gR",
-      mode = { "n", "x", "o" },
-      function()
-        require("flash").treesitter_search()
-      end,
-      desc = "Treesitter Search",
-    },
-    {
-      "<c-s>",
-      mode = { "c" },
-      function()
-        require("flash").toggle()
-      end,
-      desc = "Toggle Flash Search",
-    },
-    -- 真の2文字ラベル機能
-    {
-      "<leader>s",
-      mode = { "n", "x", "o" },
-      function()
+  keys = (function()
+    -- 単語境界matcher（CamelCase・日本語境界検出）
+    local function word_boundary_matcher(win)
+      local buf = vim.api.nvim_win_get_buf(win)
+      local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+      local matches = {}
+
+      for lnum, line in ipairs(lines) do
+        local col = 1
+        while col <= #line do
+          local char = line:sub(col, col)
+          local prev_char = col > 1 and line:sub(col - 1, col - 1) or ""
+          local should_match = false
+
+          -- 基本的な英数字単語境界
+          if char:match("%w") and not prev_char:match("%w") then
+            should_match = true
+          end
+
+          -- CamelCase境界
+          if char:match("%u") and prev_char:match("%l") then
+            should_match = true
+          end
+
+          -- 数字境界
+          if char:match("%d") and not prev_char:match("%d") then
+            should_match = true
+          elseif not char:match("%d") and prev_char:match("%d") and char:match("%w") then
+            should_match = true
+          end
+
+          -- 日本語文字境界（UTF-8対応）
+          local char_byte = char:byte()
+          local prev_char_byte = prev_char:byte() or 0
+
+          -- ASCII文字から日本語文字への境界
+          if char_byte and char_byte > 127 and prev_char_byte <= 127 then
+            should_match = true
+          end
+
+          -- 日本語文字からASCII文字への境界
+          if char_byte and char_byte <= 127 and prev_char_byte > 127 and char:match("%w") then
+            should_match = true
+          end
+
+          if should_match then
+            table.insert(matches, {
+              win = win,
+              pos = { lnum, col - 1 },
+              end_pos = { lnum, col - 1 },
+            })
+          end
+
+          col = col + 1
+        end
+      end
+
+      return matches
+    end
+
+    -- 2文字ラベル: 1段階目（1文字目を強調）
+    local function format_first(opts)
+      return {
+        { opts.match.label1, "FlashLabelInactive" },
+        { opts.match.label2, "FlashLabelActive" },
+      }
+    end
+
+    -- 2文字ラベル: 2段階目（2文字目を強調）
+    local function format_second(opts)
+      return {
+        { opts.match.label1, "FlashLabelActive" },
+        { opts.match.label2, "FlashLabelInactive" },
+      }
+    end
+
+    -- 2文字ラベルlabeler（マッチ数がラベル数を超えたら自動拡張）
+    local function two_char_labeler(matches, state)
+      local labels = state:labels()
+      for m, match in ipairs(matches) do
+        match.label1 = labels[math.floor((m - 1) / #labels) + 1]
+        match.label2 = labels[(m - 1) % #labels + 1]
+        match.label = match.label1
+      end
+    end
+
+    -- F/T 共通のmigemo検索ジャンプ関数
+    local function migemo_search_jump(offset)
+      return function()
         local Flash = require("flash")
 
-        -- 強調（次に押すキー）: ピンク背景 + 白文字
-        vim.api.nvim_set_hl(0, "FlashLabelActive", { fg = "#ffffff", bg = "#ff007c", bold = true })
-        -- 非強調: 白背景 + ピンク文字
-        vim.api.nvim_set_hl(0, "FlashLabelInactive", { fg = "#ff007c", bg = "#ffffff", bold = true })
+        Flash.jump({
+          search = {
+            mode = function(input)
+              if not input or input == "" then return input end
+              local migemo = require("user-plugins.migemo-bridge")
+              if not migemo.is_available() then return input end
+              local pattern = migemo.query(input)
+              if pattern and pattern ~= input then
+                return input .. "\\|" .. pattern
+              end
+              return input
+            end,
+          },
+          jump = { pos = "start", offset = offset },
+        })
+      end
+    end
 
-        -- 1段階目用: 1文字目を強調（白背景で目立たせる）
-        local function formatFirst(opts)
-          return {
-            { opts.match.label1, "FlashLabelInactive" },  -- 白背景（押すキー）
-            { opts.match.label2, "FlashLabelActive" },    -- ピンク背景
-          }
-        end
+    -- f/t 共通のジャンプ関数
+    local function word_boundary_jump(offset)
+      return function()
+        local Flash = require("flash")
 
-        -- 2段階目用: 2文字目を強調（色反転）
-        local function formatSecond(opts)
-          return {
-            { opts.match.label1, "FlashLabelActive" },    -- ピンク背景
-            { opts.match.label2, "FlashLabelInactive" },  -- 白背景（押すキー）
-          }
-        end
+        -- ハイライト設定
+        vim.api.nvim_set_hl(0, "FlashLabelActive", { fg = "#ff007c", bg = "#3b2940", bold = true })
+        vim.api.nvim_set_hl(0, "FlashLabelInactive", { fg = "#b05070", bg = "#2a2030" })
 
         Flash.jump({
-          search = { mode = "search" },
-          highlight = { backdrop = true },
+          labels = "asdfghjklqwertyuiopzxcvbnm",
+          matcher = word_boundary_matcher,
           label = {
             after = false,
             before = { 0, 0 },
             uppercase = false,
-            format = formatFirst
+            format = format_first,
           },
-          pattern = [[\<]],
           action = function(match, state)
             state:hide()
             Flash.jump({
               search = { max_length = 0 },
               highlight = { backdrop = true, matches = false },
-              label = { format = formatSecond },
+              label = { format = format_second },
               matcher = function(win)
                 return vim.tbl_filter(function(m)
                   return m.label == match.label and m.win == win
                 end, state.results)
               end,
-              labeler = function(matches)
-                for _, m in ipairs(matches) do
+              labeler = function(inner_matches)
+                for _, m in ipairs(inner_matches) do
                   m.label = m.label2
                 end
               end,
+              jump = { pos = "start", offset = offset },
             })
           end,
-          labeler = function(matches, state)
-            local labels = state:labels()
-            for m, match in ipairs(matches) do
-              match.label1 = labels[math.floor((m - 1) / #labels) + 1]
-              match.label2 = labels[(m - 1) % #labels + 1]
-              match.label = match.label1
-            end
-          end,
+          labeler = two_char_labeler,
+          jump = { pos = "start", offset = offset },
         })
-      end,
-      desc = "Flash 2-char Labels",
-    },
-  },
+      end
+    end
+
+    return {
+      {
+        "f",
+        mode = { "n", "x", "o" },
+        word_boundary_jump(0),
+        desc = "Flash Word Boundary Jump",
+      },
+      {
+        "t",
+        mode = { "n", "x", "o" },
+        word_boundary_jump(-1),
+        desc = "Flash Word Boundary Jump (before)",
+      },
+      {
+        "F",
+        mode = { "n", "x", "o" },
+        migemo_search_jump(0),
+        desc = "Flash Migemo Search",
+      },
+      {
+        "T",
+        mode = { "n", "x", "o" },
+        migemo_search_jump(-1),
+        desc = "Flash Migemo Search (before)",
+      },
+    }
+  end)(),
 }
