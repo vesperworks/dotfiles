@@ -25,7 +25,7 @@ extract_last_message() {
 
     # JSONL: {"type":"assistant","message":{"content":[{"type":"text","text":"..."}]}}
     local last_msg
-    last_msg=$(tail -50 "$transcript" 2>/dev/null | \
+    last_msg=$(tail -500 "$transcript" 2>/dev/null | \
         jq -r 'select(.type == "assistant") | .message.content[]? | select(.type == "text") | .text // empty' 2>/dev/null | \
         grep -v '^$' | \
         tail -1 | \
