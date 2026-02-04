@@ -191,6 +191,13 @@ vim.keymap.set('n', '<C-s>', ':w<CR>', { desc = "ファイル保存", silent = t
 vim.keymap.set('i', '<leader>s', '<Esc>:w<CR>a', { desc = "ファイル保存（挿入モード）", silent = true })
 vim.keymap.set('v', '<leader>s', '<Esc>:w<CR>gv', { desc = "ファイル保存（ビジュアルモード）", silent = true })
 
+-- Cmd+V ペースト（Bracketed Paste回避）
+-- AlacrittyからCSI u形式で送信されたCtrl+Shift+Vをペーストに変換
+vim.keymap.set('n', '<C-S-v>', '"+p', { noremap = true, silent = true, desc = "システムクリップボードからペースト" })
+vim.keymap.set('i', '<C-S-v>', '<C-r><C-p>+', { noremap = true, silent = true, desc = "システムクリップボードからペースト" })
+vim.keymap.set('c', '<C-S-v>', '<C-r>+', { noremap = true, silent = true, desc = "システムクリップボードからペースト" })
+vim.keymap.set('v', '<C-S-v>', '"+p', { noremap = true, silent = true, desc = "システムクリップボードからペースト" })
+
 -- Emacs風キーバインド（インサート/コマンドラインモード）
 vim.keymap.set('i', '<C-a>', '<Home>', { desc = "行頭へ移動" })
 vim.keymap.set('i', '<C-e>', '<End>', { desc = "行末へ移動" })
