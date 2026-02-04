@@ -2,6 +2,32 @@
 
 ## 📅 2026年2月
 
+### 2026-02-04 - Cmd+V Bracketed Paste問題の回避
+
+**背景**: ブラウザからCmd+VでNeovim(tmux内)にペーストすると `^[[200~` / `^[[201~` が文字として挿入される
+
+**根本原因**: tmuxの `extended-keys on` がBracketed Pasteシーケンスの処理と干渉する既知バグ（[tmux#4663](https://github.com/tmux/tmux/issues/4663)）。tmux 3.5a時点で未修正。
+
+**解決策**: Bracketed Pasteを使わず、CSI u形式のキーシーケンス経由でペースト
+1. Alacritty: Cmd+V → `\e[86;6u`（CSI u形式のCtrl+Shift+V）を送信
+2. Neovim: `<C-S-v>` をクリップボードペースト（`"+p` / `<C-r><C-p>+`）にマッピング
+
+**関連ファイル**:
+- `~/.config/alacritty/alacritty.toml` - Cmd+Vキーバインド追加
+- `init.lua` - `<C-S-v>` ペーストマッピング追加（L194-199）
+
+---
+
+### 2026-02-03 - heading-jump max_items拡張（50→100）
+
+**変更内容**:
+- `max_items`を50から100に変更（50では見出し数が足りないケースに対応）
+
+**関連ファイル**:
+- `lua/user-plugins/heading-jump.lua` - max_items変更（L9）
+
+---
+
 ### 2026-02-01 - obsidian.nvim frontmatter・footer無効化
 
 **変更内容**:
