@@ -110,7 +110,6 @@
       "Bash(fdisk:*)",
       "Bash(sudo:*)",
       "Bash(chmod 777:*)",
-      "Bash(git push:*)",
       "Bash(git reset:*)",
       "Bash(git rebase:*)",
       "Bash(git force:*)",
@@ -139,6 +138,7 @@
       "Bash(grep:*)"
     ],
     "ask": [
+      "Bash(git push:*)",
       "Bash(git commit:*)",
       "Bash(git branch:*)",
       "Bash(cp:*)",
