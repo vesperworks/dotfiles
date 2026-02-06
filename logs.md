@@ -2,6 +2,20 @@
 
 ## 📅 2026年2月
 
+### 2026-02-04 - Callout「Plan」タイプ追加
+
+**変更内容**:
+- `plan` タイプを追加（📋 Plan、lキー、青緑色 `#89dceb`）
+
+**キー**: `<leader>c` → `l` = Plan
+
+**関連ファイル**:
+- `lua/plugins/render-markdown.lua` - calloutテーブル + ハイライト定義に plan 追加
+- `lua/user-plugins/markdown-helper.lua` - callout_types に plan 追加（2箇所）
+- `lua/user-plugins/markdown-fold.lua` - callout_icons に plan 追加
+
+---
+
 ### 2026-02-04 - flash.nvim リファクタリング + cmigemo統合
 
 **変更内容**:
