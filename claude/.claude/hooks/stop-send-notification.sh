@@ -48,14 +48,16 @@ fi
 
 TITLE="🤖CC｜${PROJECT_NAME}"
 
+# tmuxセッション名を取得（Alacrittyウィンドウ特定用）
+TMUX_SESSION=$(tmux display-message -p '#S' 2>/dev/null || echo "")
+
 if command -v terminal-notifier &> /dev/null; then
     terminal-notifier \
         -title "$TITLE" \
         -message "$LAST_MESSAGE" \
         -sound Glass \
         -timeout 10 \
-        -activate "com.microsoft.VSCode" \
-        -execute "open -a 'Visual Studio Code' '${PROJECT_DIR}'"
+        -execute "~/.claude/hooks/focus-alacritty.sh '${TMUX_SESSION}'"
 else
     SHORT_MSG=$(echo "$LAST_MESSAGE" | head -c 100)
     osascript -e "display notification \"$SHORT_MSG\" with title \"$TITLE\" sound name \"Glass\""
