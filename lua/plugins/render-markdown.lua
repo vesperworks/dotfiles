@@ -26,6 +26,7 @@ return {
           idea = { raw = '[!idea]', rendered = '💡 Idea', highlight = 'RenderMarkdownIdea' },
           quote = { raw = '[!quote]', rendered = '💬 Quote', highlight = 'RenderMarkdownQuote' },
           ai = { raw = '[!ai]', rendered = '🤖 AI', highlight = 'RenderMarkdownAI' },
+          plan = { raw = '[!plan]', rendered = '📋 Plan', highlight = 'RenderMarkdownPlan' },
         },
       }
       
@@ -75,6 +76,7 @@ return {
       vim.api.nvim_set_hl(0, 'RenderMarkdownIdea', { fg = '#f9e2af', bold = true })   -- 黄色
       vim.api.nvim_set_hl(0, 'RenderMarkdownQuote', { fg = '#b4befe', bold = true })
       vim.api.nvim_set_hl(0, 'RenderMarkdownAI', { fg = '#94e2d5', bold = true })     -- ティール色
+      vim.api.nvim_set_hl(0, 'RenderMarkdownPlan', { fg = '#89dceb', bold = true })   -- 青緑色
       
       -- タスクステータスのextmarkハイライト用namespace
       local ns_id = vim.api.nvim_create_namespace('task_status_highlight')
