@@ -17,7 +17,7 @@ return {
         autocomplete = { require("cmp.types").cmp.TriggerEvent.TextChanged },
       },
       mapping = cmp.mapping.preset.insert({
-        [";"] = cmp.mapping.complete(),
+        ["<C-;>"] = cmp.mapping.complete(),
         ["<C-n>"] = cmp.mapping.select_next_item(),
         ["<C-p>"] = cmp.mapping.select_prev_item(),
         ["<C-c>"] = cmp.mapping.abort(),
