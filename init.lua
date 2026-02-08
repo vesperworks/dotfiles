@@ -49,6 +49,31 @@ vim.opt.clipboard:append("unnamedplus")
 -- 次の飛び先も記録
 vim.opt.jumpoptions:append("stack")
 
+-- 音声入力で挿入される壊れたCSI uシーケンスを改行に置換
+vim.api.nvim_create_autocmd({ "TextChangedI", "TextChanged" }, {
+  pattern = "*",
+  callback = function()
+    local line = vim.api.nvim_get_current_line()
+    local seq = "\27[27;5;106~"
+    if line:find(seq, 1, true) then
+      local row = vim.api.nvim_win_get_cursor(0)[1] - 1
+      -- シーケンスの位置で行を分割（改行に置換）
+      local parts = {}
+      local rest = line
+      while true do
+        local s, e = rest:find(seq, 1, true)
+        if not s then
+          table.insert(parts, rest)
+          break
+        end
+        table.insert(parts, rest:sub(1, s - 1))
+        rest = rest:sub(e + 1)
+      end
+      vim.api.nvim_buf_set_lines(0, row, row + 1, false, parts)
+    end
+  end,
+})
+
 -- User plugins (markdown helper etc.)
 require('user-plugins.markdown-helper').setup_keymaps()
 
