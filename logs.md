@@ -2,6 +2,16 @@
 
 ## 📅 2026年2月
 
+### 2026-02-06 - 補完トリガーキー変更
+
+**変更内容**:
+- 補完トリガーキーを `;` → `<C-;>` に変更（セミコロン単体入力を可能に）
+
+**関連ファイル**:
+- `lua/plugins/cmp.lua` - mapping変更（L20）
+
+---
+
 ### 2026-02-04 - Callout「Plan」タイプ追加
 
 **変更内容**:
@@ -23,7 +33,7 @@
 - modes.char を無効化、treesitter/treesitter_search/remote モードを削除
 - f/t に単語境界ラベルジャンプを統合（2文字ラベル自動拡張つき）
 - F/T に cmigemo対応文字検索を新規実装（ローマ字入力で日本語検索可能）
-- `lua/user-plugins/migemo-bridge.lua` を新規作成（cmigemoプロセス常駐・キャッシュ・フォールバック）
+- `lua/user-plugins/migemo-bridge.lua` を新規作成（都度起動+Luaキャッシュ・フォールバック）
 
 **キーマップ**:
 | キー | 機能 |
