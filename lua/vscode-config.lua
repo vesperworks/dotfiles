@@ -100,9 +100,12 @@ require("lazy").setup({
     end,
   },
   {
-    "ggandor/leap.nvim",
+    url = "https://codeberg.org/andyg/leap.nvim",
     config = function()
-      require("leap").create_default_mappings()
+      -- mini.surroundとの競合を避けるため、sの代わりにgsを使用
+      vim.keymap.set({'n', 'x', 'o'}, 'gs', '<Plug>(leap-forward)')
+      vim.keymap.set({'n', 'x', 'o'}, 'gS', '<Plug>(leap-backward)')
+      vim.keymap.set({'n', 'x', 'o'}, 'gss', '<Plug>(leap-from-window)')
     end,
   },
 })
