@@ -19,6 +19,7 @@ local callout_icons = {
   think = "🤔",
   idea = "💡",
   plan = "📋",
+  journaling = "📓",
 }
 
 -- calloutパターン判定

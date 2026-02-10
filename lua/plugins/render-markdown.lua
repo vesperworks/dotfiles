@@ -27,6 +27,7 @@ return {
           quote = { raw = '[!quote]', rendered = '💬 Quote', highlight = 'RenderMarkdownQuote' },
           ai = { raw = '[!ai]', rendered = '🤖 AI', highlight = 'RenderMarkdownAI' },
           plan = { raw = '[!plan]', rendered = '📋 Plan', highlight = 'RenderMarkdownPlan' },
+          journaling = { raw = '[!journaling]', rendered = '📓 Journaling', highlight = 'RenderMarkdownJournaling' },
         },
       }
       
@@ -77,6 +78,14 @@ return {
       vim.api.nvim_set_hl(0, 'RenderMarkdownQuote', { fg = '#b4befe', bold = true })
       vim.api.nvim_set_hl(0, 'RenderMarkdownAI', { fg = '#94e2d5', bold = true })     -- ティール色
       vim.api.nvim_set_hl(0, 'RenderMarkdownPlan', { fg = '#89dceb', bold = true })   -- 青緑色
+      vim.api.nvim_set_hl(0, 'RenderMarkdownJournaling', { fg = '#cba6f7', bold = true })  -- 紫色
+
+      -- タグハイライト（反転スタイル: 背景=目立つ色、文字=暗い色）
+      vim.api.nvim_set_hl(0, 'TagHighlightTeco', {
+        fg = '#1a1b26',
+        bg = '#eba0ac',
+        bold = true,
+      })
       
       -- タスクステータスのextmarkハイライト用namespace
       local ns_id = vim.api.nvim_create_namespace('task_status_highlight')
@@ -110,6 +119,19 @@ return {
               hl_mode = 'replace',  -- 既存のハイライトを完全に置き換え
               priority = 10000,
             })
+          end
+
+          -- タグハイライト: #teco 部分のみ反転ハイライト
+          local search_pos = 1
+          while true do
+            local s, e = line:find('#teco', search_pos, true)
+            if not s then break end
+            vim.api.nvim_buf_set_extmark(bufnr, ns_id, lnum - 1, s - 1, {
+              end_col = e,
+              hl_group = 'TagHighlightTeco',
+              priority = 9000,
+            })
+            search_pos = e + 1
           end
         end
       end

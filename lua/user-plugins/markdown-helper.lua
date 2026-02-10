@@ -412,12 +412,13 @@ function M.change_callout_type(start_row, end_row)
     { "info", "ℹ️ Info", "f" },
     { "tip", "💡 Tip", "g" },
     { "success", "✅ Success", "h" },
-    { "question", "❓ Question", "j" },
+    { "question", "❓ Question", "r" },
     { "think", "🤔 Think", "t" },
     { "idea", "💡 Idea", "i" },
     { "ai", "🤖 AI", "a" },
     { "prompt", "💬 Prompt", "p" },
     { "plan", "📋 Plan", "l" },
+    { "journaling", "📓 Journaling", "j" },
     { "quote", "🗣️ Quote (タイトル付き)", "q" },
     { "blockquote", "📎 Blockquote (>のみ)", "b" },
     { "code", "💻 Code Block", "c" },
@@ -427,16 +428,16 @@ function M.change_callout_type(start_row, end_row)
     if not choice then return end
 
     local callout_type = choice[1]
-    
+
     -- コードブロックの場合は専用関数を呼び出し
     if callout_type == "code" then
       M.insert_code_block()
       return
     end
-    
+
     local lines = vim.api.nvim_buf_get_lines(0, start_row - 1, end_row, false)
     local new_lines = {}
-    
+
     if callout_type == "blockquote" then
       -- blockquoteの場合はCalloutヘッダーを削除
       for _, line in ipairs(lines) do
@@ -459,6 +460,8 @@ function M.change_callout_type(start_row, end_row)
             callout_header = indent .. "> [!" .. callout_type .. "] #idea"
           elseif callout_type == "ai" then
             callout_header = indent .. "> [!" .. callout_type .. "] #ai"
+          elseif callout_type == "journaling" then
+            callout_header = indent .. "> [!" .. callout_type .. "] #journaling"
           else
             callout_header = indent .. "> [!" .. callout_type .. "]"
           end
@@ -731,12 +734,13 @@ function M.create_new_callout(start_row, end_row)
     { "info", "ℹ️ Info", "f" },
     { "tip", "💡 Tip", "g" },
     { "success", "✅ Success", "h" },
-    { "question", "❓ Question", "j" },
+    { "question", "❓ Question", "r" },
     { "think", "🤔 Think", "t" },
     { "idea", "💡 Idea", "i" },
     { "ai", "🤖 AI", "a" },
     { "prompt", "💬 Prompt", "p" },
     { "plan", "📋 Plan", "l" },
+    { "journaling", "📓 Journaling", "j" },
     { "quote", "🗣️ Quote (タイトル付き)", "q" },
     { "blockquote", "📎 Blockquote (>のみ)", "b" },
     { "code", "💻 Code Block", "c" },
@@ -754,7 +758,7 @@ function M.create_new_callout(start_row, end_row)
     end
     local lines = vim.api.nvim_buf_get_lines(0, start_row - 1, end_row, false)
     local new_lines = {}
-    
+
     -- 共通のインデントを検出
     local common_indent = ""
     for _, line in ipairs(lines) do
@@ -765,7 +769,7 @@ function M.create_new_callout(start_row, end_row)
         end
       end
     end
-    
+
     -- blockquoteの場合は特別処理（Calloutヘッダーなし、>のみ）
     if callout_type == "blockquote" then
       for _, line in ipairs(lines) do
@@ -787,6 +791,8 @@ function M.create_new_callout(start_row, end_row)
         callout_header = common_indent .. "> [!" .. callout_type .. "] #idea"
       elseif callout_type == "ai" then
         callout_header = common_indent .. "> [!" .. callout_type .. "] #ai"
+      elseif callout_type == "journaling" then
+        callout_header = common_indent .. "> [!" .. callout_type .. "] #journaling"
       else
         callout_header = common_indent .. "> [!" .. callout_type .. "]"
       end
