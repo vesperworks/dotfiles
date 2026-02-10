@@ -2,6 +2,36 @@
 
 ## 📅 2026年2月
 
+### 2026-02-10 - タグ `#teco` 行の反転ハイライト追加
+
+**変更内容**:
+- `#teco` を含む行に反転ハイライト（背景サーモン `#eba0ac`、文字 `#1a1b26`）を適用
+- タスクステータスのextmarkと同じ仕組み（autocmd + extmark）で実装
+
+**技術的メモ**:
+- priority `9000`（タスクステータスの `10000` より低い）で共存
+- heading-jumpと同じ反転パターン（bg=目立つ色、fg=暗い背景色）
+
+**関連ファイル**:
+- `lua/plugins/render-markdown.lua` - `TagHighlightTeco` ハイライト定義 + apply_task_highlights内にタグ検出追加
+
+---
+
+### 2026-02-10 - Callout「Journaling」タイプ追加・Questionキー入れ替え
+
+**変更内容**:
+- `journaling` タイプを追加（📓 Journaling、jキー、紫色 `#cba6f7`）
+- `question` のキーを `j` → `r` に変更
+
+**キー**: `<leader>c` → `j` = Journaling、`r` = Question
+
+**関連ファイル**:
+- `lua/plugins/render-markdown.lua` - calloutテーブル + ハイライト定義に journaling 追加
+- `lua/user-plugins/markdown-helper.lua` - callout_types に journaling 追加（2箇所）、question キー変更（2箇所）
+- `lua/user-plugins/markdown-fold.lua` - callout_icons に journaling 追加
+
+---
+
 ### 2026-02-08 - 音声入力時のCSI uシーケンス文字化け修正
 
 **変更内容**:
