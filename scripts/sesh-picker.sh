@@ -5,17 +5,19 @@
 # - Kill session: Ctrl+d on a session
 # - Move current pane to selected session: Ctrl+o
 
-result=$(sesh list -t -i | fzf-tmux -p 55%,60% \
+SESH_SESSIONS=~/.config/tmux/scripts/sesh-sessions.sh
+
+result=$($SESH_SESSIONS -t | fzf-tmux -p 55%,60% \
   --layout=reverse \
   --no-sort --ansi --border-label "  sesh " --prompt "  " \
   --header "  ^a all ^t tmux ^x zoxide ^d kill ^o move" \
   --print-query \
   --expect=ctrl-o \
   --bind "tab:down,btab:up" \
-  --bind "ctrl-a:change-prompt(  )+reload(sesh list -i)" \
-  --bind "ctrl-t:change-prompt(  )+reload(sesh list -t -i)" \
+  --bind "ctrl-a:change-prompt(  )+reload($SESH_SESSIONS)" \
+  --bind "ctrl-t:change-prompt(  )+reload($SESH_SESSIONS -t)" \
   --bind "ctrl-x:change-prompt(  )+reload(sesh list -z -i)" \
-  --bind "ctrl-d:execute-silent(tmux kill-session -t \$(echo {} | awk '{print \$2}'))+change-prompt(  )+reload(sesh list -t -i)")
+  --bind "ctrl-d:execute-silent(tmux kill-session -t \$(echo {} | awk '{print \$2}'))+change-prompt(  )+reload($SESH_SESSIONS -t)")
 
 # --expect と --print-query の出力:
 # Line 1: query (入力テキスト)
