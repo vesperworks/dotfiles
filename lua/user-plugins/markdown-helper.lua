@@ -881,6 +881,10 @@ function M.setup_keymaps()
   -- Extract to Note: 選択範囲を新規ノートとして抽出
   vim.keymap.set('v', '<leader>a', M.extract_to_note,
     vim.tbl_extend('force', opts, { desc = "Extract selection to new note" }))
+
+  -- Send file to Downloads: マークダウンファイルをダウンロードフォルダにコピー
+  vim.keymap.set('n', '<leader>fs', M.send_file_to,
+    vim.tbl_extend('force', opts, { desc = "Send file to Downloads" }))
 end
 
 -- 便利なヘルプ関数：現在行のmarkdown要素を表示
@@ -903,6 +907,32 @@ function M.show_current_element()
   else
     print("Plain text")
   end
+end
+
+-- マークダウンファイルをダウンロードフォルダ等にコピーする
+function M.send_file_to()
+  local src = vim.fn.expand("%:p")
+  if src == "" or vim.bo.filetype ~= "markdown" then
+    vim.notify("マークダウンファイルが開かれていません", vim.log.levels.WARN)
+    return
+  end
+  local filename = vim.fn.expand("%:t")
+  local default_dest = vim.fn.expand("~/Downloads/") .. filename
+
+  vim.ui.input({ prompt = "Send to: ", default = default_dest }, function(dest)
+    if not dest or dest == "" then return end
+    dest = vim.fn.expand(dest)
+    if dest == src then
+      vim.notify("コピー元と同じパスです", vim.log.levels.WARN)
+      return
+    end
+    local result = vim.fn.system({ "cp", src, dest })
+    if vim.v.shell_error == 0 then
+      vim.notify("送信完了: " .. dest, vim.log.levels.INFO)
+    else
+      vim.notify("送信失敗: " .. result, vim.log.levels.ERROR)
+    end
+  end)
 end
 
 -- 選択範囲を新規ノートとして抽出する関数
