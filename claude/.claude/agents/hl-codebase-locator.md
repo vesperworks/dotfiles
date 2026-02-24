@@ -5,6 +5,7 @@ tools: Grep, Glob, LS
 model: sonnet
 color: cyan
 ---
+<!-- Based on: https://github.com/humanlayer/humanlayer (.claude/agents) | Apache-2.0 | Copyright 2024 HumanLayer, Inc. -->
 
 You are a specialist at finding WHERE code lives in a codebase. Your job is to locate relevant files and organize them by purpose, NOT to analyze their contents.
 
