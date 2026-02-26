@@ -12,6 +12,20 @@ description: 'Smart commit: /sc (段階コミット) or /sc "message" (クイッ
 
 ---
 
+## Step 0: VCS 検出
+
+最初に VCS を自動検出する。以降の操作は検出結果に基づいて分岐する。
+
+```bash
+source ~/.claude/scripts/vcs-detect.sh
+VCS=$(detect_vcs)  # → "jj" or "git"
+```
+
+- **jj リポジトリ**: ステージングなし。全変更が自動トラッキングされる
+- **git リポジトリ**: 従来通りステージング + コミット
+
+---
+
 ## クイックコミットモード（引数あり）
 
 `/sc "message"` の形式で呼び出された場合、従来のスクリプトを実行：
@@ -20,7 +34,7 @@ description: 'Smart commit: /sc (段階コミット) or /sc "message" (クイッ
 ~/.claude/scripts/smart-commit.sh "$ARGUMENTS"
 ```
 
-全変更を一括でステージング・コミットします。
+VCS は smart-commit.sh 内で自動検出される。全変更を一括コミットします。
 
 ---
 
@@ -30,6 +44,12 @@ description: 'Smart commit: /sc (段階コミット) or /sc "message" (クイッ
 
 ### Step 1: 変更分析
 
+**jj の場合:**
+1. `jj diff --name-only` で変更ファイル一覧を取得（ステージング概念なし）
+2. `jj diff` で変更内容を確認
+3. 変更内容を分析し、論理的なグループに分類提案
+
+**git の場合:**
 1. `git status --porcelain` で変更ファイル一覧を取得
 2. `git diff --name-only` でステージングされていない変更を確認
 3. `git diff --cached --name-only` でステージング済みの変更を確認
@@ -104,9 +124,12 @@ AskUserQuestion:
 
 **相対パスに変換（推奨）**:
 ```bash
+# jj の場合
+PROJECT_ROOT=$(jj root)
+# git の場合
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
-# /Users/{username}/Works/project/src/file.ts
-# → src/file.ts
+
+# /Users/{username}/Works/project/src/file.ts → src/file.ts
 sed -i '' "s|$PROJECT_ROOT/||g" <file>
 ```
 
@@ -245,7 +268,28 @@ TodoWrite([
 
 ### Step 4: 順次コミット
 
-各グループを順番に処理：
+各グループを順番に処理。VCS によってコマンドが異なる：
+
+#### jj の場合（`jj split` で段階コミット）
+
+最初〜最後の1つ前のグループまで:
+1. **分離コミット**: `jj split -m "<type>(<scope>): <subject>" -- <files>`
+2. **進捗更新**: TodoWrite で該当タスクを `completed` にマーク
+3. 次のグループへ進む
+
+最後のグループ:
+4. **メッセージ設定**: `jj describe -m "<type>(<scope>): <subject>"`（残り全変更にメッセージ）
+5. **新ワーキングコピー**: `jj new`（新しい作業開始）
+
+**jj 段階コミットの例**:
+```bash
+jj split -m "feat(auth): add login validation" -- src/auth.ts src/auth.test.ts
+jj split -m "docs: update README" -- README.md
+jj describe -m "chore: update config"   # 最後の残り
+jj new                                    # 新しいワーキングコピー
+```
+
+#### git の場合（従来動作）
 
 1. **ステージング**: `git add <specific-files>` （グループ内のファイルのみ）
 2. **メッセージ生成**: 変更内容から適切なコミットメッセージを生成
@@ -258,6 +302,10 @@ TodoWrite([
 全コミット完了後、結果を表示：
 
 ```bash
+# jj の場合
+jj log -n N  # N = 作成したコミット数
+
+# git の場合
 git log --oneline -N  # N = 作成したコミット数
 ```
 
@@ -330,5 +378,7 @@ feat(auth): add login validation
 ## 注意事項
 
 - 段階コミットモードでは、各グループごとに個別のコミットが作成されます
-- クイックコミットモードでは、ステージングされていない変更も自動的にステージングされます
+- VCS は自動検出されます（jj 優先。colocate モードでは jj が検出される）
+- **jj モード**: ステージング概念なし。全変更が自動トラッキング。`jj split` で段階コミット
+- **git モード**: 従来通り `git add` + `git commit`。ステージングされていない変更も自動ステージングされます
 - コミット前に変更内容を確認することを推奨します
