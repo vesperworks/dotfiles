@@ -222,7 +222,8 @@
   "language": "Japanese",
   "sandbox": {
     "enabled": true,
-    "autoAllowBashIfSandboxed": true
+    "autoAllowBashIfSandboxed": true,
+    "excludedCommands": ["gh"]
   },
   "alwaysThinkingEnabled": true,
   "skipDangerousModePermissionPrompt": true

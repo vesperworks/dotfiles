@@ -17,6 +17,7 @@ zsh/.secrets.zsh
 *.bak.*
 
 # Claude Code local
+.claude/settings.local.json
 claude/.claude/settings.local.json
 claude/.claude/projects/
 claude/.claude/todos/
