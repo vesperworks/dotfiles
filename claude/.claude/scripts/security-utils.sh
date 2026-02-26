@@ -145,10 +145,16 @@ check_sensitive_info() {
   return $found
 }
 
-# Get list of staged files for commit
+# Get list of files to be committed
+# jj: all changed files (no staging concept — everything is committed)
+# git: staged files only
 # Usage: staged_files=$(get_staged_files)
 get_staged_files() {
-  git diff --cached --name-only 2>/dev/null
+  if jj root &>/dev/null; then
+    jj diff --name-only 2>/dev/null
+  else
+    git diff --cached --name-only 2>/dev/null
+  fi
 }
 
 # Run sensitive check on staged files
