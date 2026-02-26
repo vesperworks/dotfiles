@@ -2,9 +2,37 @@ local M = {}
 
 local ns_id = vim.api.nvim_create_namespace('markdown_countdown')
 local countdown_timer = nil
+local start_times = {} -- { [bufnr] = { [line_content] = timestamp } }
 
-local function parse_target_time(line)
-  local h_str, m_str = line:match('(%d+):(%d+)')
+-- 相対時間パターン: Nh, Nm, Ns（組み合わせ可: 1h30m, 2m30s 等）
+local function parse_duration_seconds(line)
+  local hours = line:match('(%d+)h%f[%A]')
+  local mins = line:match('(%d+)m%f[%A]')
+  local secs = line:match('(%d+)s%f[%A]')
+
+  if not hours and not mins and not secs then
+    return nil
+  end
+
+  local total = 0
+  if hours then total = total + tonumber(hours) * 3600 end
+  if mins then total = total + tonumber(mins) * 60 end
+  if secs then total = total + tonumber(secs) end
+
+  return total > 0 and total or nil
+end
+
+-- URLを除去した行を返す
+local function strip_urls(line)
+  return line:gsub('https?://[%S]+', '')
+end
+
+-- 行から目標時刻（UNIX time）を取得
+local function parse_target_time(line, bufnr)
+  local clean = strip_urls(line)
+
+  -- パターン1: HH:MM 絶対時刻（優先）
+  local h_str, m_str = clean:match('(%d+):(%d+)')
   if h_str then
     local h, m = tonumber(h_str), tonumber(m_str)
     if h >= 0 and h <= 23 and m >= 0 and m <= 59 then
@@ -14,37 +42,62 @@ local function parse_target_time(line)
     end
   end
 
-  local hour_str = line:match('(%d+)h%f[%A]')
-  if hour_str then
-    local h = tonumber(hour_str)
-    if h >= 0 and h <= 23 then
-      local t = os.date("*t")
-      t.hour, t.min, t.sec = h, 0, 0
-      return os.time(t)
+  -- パターン2: 相対時間（Nh, Nm, Ns）- 初回検出時刻からカウントダウン
+  local duration = parse_duration_seconds(clean)
+  if duration then
+    if not start_times[bufnr] then start_times[bufnr] = {} end
+    if not start_times[bufnr][line] then
+      start_times[bufnr][line] = os.time()
     end
+    return start_times[bufnr][line] + duration
   end
 
   return nil
 end
 
+-- 残り時間を表示用テキストに変換
+-- @return (text, state) state: "limit" / "warn" / "active"
 local function format_remaining(target_time)
   local diff = target_time - os.time()
   if diff <= 0 then
-    return nil, true
+    return nil, "limit"
   end
 
   local h = math.floor(diff / 3600)
   local m = math.floor((diff % 3600) / 60)
   local s = diff % 60
 
+  local text
   if h > 0 then
-    return string.format(" ⏳%dh%dm ", h, m), false
+    text = string.format(" ⏳%dh%dm ", h, m)
   elseif m > 0 then
-    return string.format(" ⏳%dm%ds ", m, s), false
+    text = string.format(" ⏳%dm%ds ", m, s)
   else
-    return string.format(" ⏳%ds ", s), false
+    text = string.format(" ⏳%ds ", s)
   end
+
+  if diff < 3600 then
+    return text, "warn"
+  end
+  return text, "active"
 end
+
+-- ハイライトグループとextmarkの設定マップ
+local state_config = {
+  limit = {
+    line_hl = 'MarkdownCountdownLimit',
+    virt_hl = 'MarkdownCountdownLimit',
+    virt_text = ' LIMIT ',
+  },
+  warn = {
+    line_hl = 'MarkdownCountdownWarnLine',
+    virt_hl = 'MarkdownCountdownWarn',
+  },
+  active = {
+    line_hl = 'MarkdownCountdownActiveLine',
+    virt_hl = 'MarkdownCountdownActive',
+  },
+}
 
 function M.update_buffer(bufnr)
   if not vim.api.nvim_buf_is_valid(bufnr) then return end
@@ -53,30 +106,33 @@ function M.update_buffer(bufnr)
   vim.api.nvim_buf_clear_namespace(bufnr, ns_id, 0, -1)
 
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  local seen_lines = {}
+
   for lnum, line in ipairs(lines) do
-    local target_time = parse_target_time(line)
+    seen_lines[line] = true
+    local target_time = parse_target_time(line, bufnr)
     if target_time then
-      local text, is_limit = format_remaining(target_time)
-      if is_limit then
+      local text, state = format_remaining(target_time)
+      local cfg = state_config[state]
+      if cfg then
         pcall(vim.api.nvim_buf_set_extmark, bufnr, ns_id, lnum - 1, 0, {
-          line_hl_group = 'MarkdownCountdownLimit',
+          line_hl_group = cfg.line_hl,
           priority = 8000,
         })
         pcall(vim.api.nvim_buf_set_extmark, bufnr, ns_id, lnum - 1, 0, {
-          virt_text = { { ' LIMIT ', 'MarkdownCountdownLimit' } },
+          virt_text = { { cfg.virt_text or text, cfg.virt_hl } },
           virt_text_pos = 'eol',
           priority = 8000,
         })
-      elseif text then
-        pcall(vim.api.nvim_buf_set_extmark, bufnr, ns_id, lnum - 1, 0, {
-          line_hl_group = 'MarkdownCountdownActiveLine',
-          priority = 8000,
-        })
-        pcall(vim.api.nvim_buf_set_extmark, bufnr, ns_id, lnum - 1, 0, {
-          virt_text = { { text, 'MarkdownCountdownActive' } },
-          virt_text_pos = 'eol',
-          priority = 8000,
-        })
+      end
+    end
+  end
+
+  -- 消えた行のstart_timesをクリーンアップ
+  if start_times[bufnr] then
+    for content in pairs(start_times[bufnr]) do
+      if not seen_lines[content] then
+        start_times[bufnr][content] = nil
       end
     end
   end
@@ -115,6 +171,14 @@ function M.setup()
       vim.schedule(function()
         M.update_buffer(ev.buf)
       end)
+    end,
+  })
+
+  -- バッファ削除時のクリーンアップ
+  vim.api.nvim_create_autocmd('BufDelete', {
+    group = group,
+    callback = function(ev)
+      start_times[ev.buf] = nil
     end,
   })
 

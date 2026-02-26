@@ -97,6 +97,15 @@ return {
         bg = '#a6e3a1',
         fg = '#1e1e2e',
       })
+      vim.api.nvim_set_hl(0, 'MarkdownCountdownWarn', {
+        fg = '#1e1e2e',
+        bg = '#f9e2af',
+        bold = true,
+      })
+      vim.api.nvim_set_hl(0, 'MarkdownCountdownWarnLine', {
+        bg = '#f9e2af',
+        fg = '#1e1e2e',
+      })
       vim.api.nvim_set_hl(0, 'MarkdownCountdownLimit', {
         fg = '#1e1e2e',
         bg = '#f38ba8',
