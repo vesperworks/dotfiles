@@ -55,3 +55,5 @@
 ## commit規則
 
 - authorを書かない（settings.jsonで設定済み）
+- **git push、PRマージなどリモートに影響する不可逆な操作は、実行前に必ずユーザーに確認する**
+- **PRマージ時はマージ方法（squash / merge / rebase）を必ずユーザーに確認する**

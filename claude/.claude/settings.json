@@ -145,6 +145,8 @@
       "Bash(git push:*)",
       "Bash(git commit:*)",
       "Bash(git branch:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(jj git push:*)",
       "Bash(cp:*)",
       "Bash(mv:*)",
       "Bash(sed:*)",
