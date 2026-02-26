@@ -88,12 +88,43 @@ stow -t ~ -D <package>
 shellcheck install.sh scripts/*.sh
 ```
 
+## .gitignore ルール
+
+### .brain/
+
+- ルートに1つだけ存在（`dotfiles/.brain/`）
+- サブディレクトリでプロジェクト別管理: `.brain/dotfiles/`, `.brain/tmux/` 等
+- パッケージ内に `.brain/` を作らない（ルートに集約）
+
+### .claude/
+
+- `claude/.claude/` = stow パッケージ本体 → **バージョン管理対象**
+- 各パッケージ内に生まれる `.claude/` → **gitignore 対象**（`**/.claude/` + `!claude/.claude/`）
+- `settings.local.json`, `projects/`, `todos/`, `plans/` → gitignore 対象
+
+### plugins/
+
+- TPM 等のプラグインマネージャが管理するディレクトリ → gitignore 対象
+- 例: `tmux/.config/tmux/plugins/`
+
 ## セキュリティ（公開リポ前提）
 
 - **機密情報は絶対にコミットしない**
-- APIキー・トークン → `~/.secrets.zsh` に分離（.gitignore 対象）
+- APIキー・トークン → 1Password Environments（`~/.secrets.env`）で管理
 - `settings.local.json` → .gitignore 対象
 - `.brain/` → .gitignore 対象
+
+## octopus merge（独自 git リポの取り込み）
+
+独自 git リポジトリを持つパッケージは `git subtree add` で履歴ごと取り込む。
+
+```bash
+git subtree add --prefix=<package>/.config/<app> <source-repo> <branch>
+```
+
+- 履歴が dotfiles の main に合流する
+- subtree add 後、jj が自動検出（colocate モード）
+- plugins/ 等の外部依存は gitignore で除外し、プラグインマネージャに任せる
 
 ## 進捗状況
 
@@ -102,11 +133,13 @@ shellcheck install.sh scripts/*.sh
 | 0 | jj 初期化 + claude 移植（226コミット履歴付き） | 完了 |
 | 1 | .gitignore + install.sh + GitHub 登録 | 完了 |
 | 1.5 | vw:commit の jj 対応（PRP-017 Part 1） | アクティブ |
-| 2 | zsh パッケージ（APIキー→~/.secrets.zsh 分離必須） | 未着手 |
-| 3 | git パッケージ（include 方式、http.sslverify=false 削除） | 未着手 |
-| 4 | brew パッケージ（.Brewfile 手動記載） | 未着手 |
-| 5 | アプリ設定（codex, ghostty, aerospace, sketchybar, tmux） | 未着手 |
-| 5.8 | nvim パッケージ（独自 git リポから octopus merge） | 未着手 |
+| 2 | zsh パッケージ（APIキー→1Password Environments 移行） | 完了 |
+| 2.5 | ghostty / alacritty パッケージ | 完了 |
+| 3 | tmux パッケージ（独自 git リポから subtree merge） | アクティブ |
+| 4 | git パッケージ（include 方式、http.sslverify=false 削除） | 未着手 |
+| 5 | brew パッケージ（.Brewfile 手動記載） | 未着手 |
+| 6 | アプリ設定（codex, aerospace, sketchybar） | 未着手 |
+| 6.8 | nvim パッケージ（独自 git リポから subtree merge） | 未着手 |
 | 5.9 | non-colocate 移行（PRP-017 Part 2、Phase 5.8 後） | 未着手 |
 | 6 | ドキュメント + クリーンアップ（LICENSE, README） | 未着手 |
 
