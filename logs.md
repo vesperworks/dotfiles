@@ -2,6 +2,34 @@
 
 ## 📅 2026年2月
 
+### 2026-02-26 - Markdownカウントダウンタイマー機能
+
+**変更内容**:
+- Markdown内の時間表記（`16:30`, `16h` 等）を自動検出し、残り時間をvirtual text（eol）でカウントダウン表示
+- 期限超過時は行全体の背景色を赤に変更 + eolに「LIMIT」テキスト表示
+- 1秒間隔で自動更新（`vim.uv.new_timer()`使用）
+
+**対応パターン**:
+| パターン | 例 | 解釈 |
+|---------|-----|------|
+| `HH:MM` | `16:30` | 当日の16時30分 |
+| `Nh` | `16h` | 当日の16時00分 |
+
+**技術的メモ**:
+- 独立namespace `markdown_countdown`（既存`task_timer`と干渉しない）
+- priority 8000（TaskStatus 10000 > teco 9000 > Countdown 8000）
+- `%f[%A]` フロンティアパターンで `height` 等の誤検出を防止
+- `pcall` ラップでextmarkエラーを安全に処理
+- augroup `MarkdownCountdown` でライフサイクル管理
+- `VimLeavePre` で `stop()` + `close()`（libuv公式要件）
+
+**関連ファイル**:
+- `lua/user-plugins/markdown-countdown.lua` - 新規作成（メインモジュール）
+- `lua/plugins/render-markdown.lua` - `MarkdownCountdownActive`/`MarkdownCountdownLimit` ハイライト定義追加
+- `init.lua` - setup呼び出し追加
+
+---
+
 ### 2026-02-12 - マークダウンファイルをダウンロードフォルダにコピーする機能
 
 **変更内容**:

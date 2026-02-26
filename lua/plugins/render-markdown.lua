@@ -87,6 +87,22 @@ return {
         bold = true,
       })
       
+      -- カウントダウンタイマー用ハイライト
+      vim.api.nvim_set_hl(0, 'MarkdownCountdownActive', {
+        fg = '#1e1e2e',
+        bg = '#a6e3a1',
+        bold = true,
+      })
+      vim.api.nvim_set_hl(0, 'MarkdownCountdownActiveLine', {
+        bg = '#a6e3a1',
+        fg = '#1e1e2e',
+      })
+      vim.api.nvim_set_hl(0, 'MarkdownCountdownLimit', {
+        fg = '#1e1e2e',
+        bg = '#f38ba8',
+        bold = true,
+      })
+
       -- タスクステータスのextmarkハイライト用namespace
       local ns_id = vim.api.nvim_create_namespace('task_status_highlight')
 

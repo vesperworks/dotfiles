@@ -105,6 +105,12 @@ if ok_zoom then
   markdown_zoom.setup()
 end
 
+-- Markdownカウントダウンタイマー
+local ok_countdown, markdown_countdown = pcall(require, 'user-plugins.markdown-countdown')
+if ok_countdown then
+  markdown_countdown.setup()
+end
+
 -- タスクタイマーシステムを初期化
 local ok, task_timer = pcall(require, 'user-plugins.task-timer')
 if ok then
