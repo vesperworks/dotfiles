@@ -1,6 +1,5 @@
-# TPMで管理されるプラグイン（tpm以外）
-plugins/*
-!plugins/tpm/
+# TPMで管理されるプラグイン
+plugins/
 
 # Claude Code ローカル設定
 .claude/settings.local.json
