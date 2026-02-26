@@ -101,11 +101,13 @@ shellcheck install.sh scripts/*.sh
 |-------|------|------|
 | 0 | jj 初期化 + claude 移植（226コミット履歴付き） | 完了 |
 | 1 | .gitignore + install.sh + GitHub 登録 | 完了 |
+| 1.5 | vw:commit の jj 対応（PRP-017 Part 1） | アクティブ |
 | 2 | zsh パッケージ（APIキー→~/.secrets.zsh 分離必須） | 未着手 |
 | 3 | git パッケージ（include 方式、http.sslverify=false 削除） | 未着手 |
 | 4 | brew パッケージ（.Brewfile 手動記載） | 未着手 |
 | 5 | アプリ設定（codex, ghostty, aerospace, sketchybar, tmux） | 未着手 |
 | 5.8 | nvim パッケージ（独自 git リポから octopus merge） | 未着手 |
+| 5.9 | non-colocate 移行（PRP-017 Part 2、Phase 5.8 後） | 未着手 |
 | 6 | ドキュメント + クリーンアップ（LICENSE, README） | 未着手 |
 
 詳細は `.brain/dotfiles/prp/PRP-001-dotfiles-setup.md` 参照。
@@ -125,3 +127,4 @@ shellcheck install.sh scripts/*.sh
 |-----|------|------|
 | PRP-001 | dotfiles プロジェクト構築（マスタープラン） | アクティブ |
 | PRP-002 | GitHub リモートリポジトリ登録 | done |
+| PRP-017 | vw:commit git/jj 両対応 + non-colocate 移行 | アクティブ（Part 1） |

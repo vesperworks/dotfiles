@@ -1,0 +1,44 @@
+# Ghostty configuration (migrated from Alacritty)
+
+# ======================
+# Window appearance
+# ======================
+background-opacity = 0.8
+background-blur = true
+window-padding-x = 20
+window-padding-y = 20
+# Use macos-titlebar-style instead of window-decoration for better compatibility
+# This hides titlebar but keeps native window frame (Moom, drag works)
+macos-titlebar-style = hidden
+
+# ======================
+# Font
+# ======================
+font-family = "JetBrainsMono Nerd Font"
+font-size = 14
+font-thicken = true
+
+# ======================
+# Colors (Catppuccin Mocha)
+# ======================
+background = 1e1e2e
+foreground = cdd6f4
+
+# ======================
+# macOS: Option key as Alt
+# ======================
+macos-option-as-alt = true
+
+# ======================
+# Clipboard
+# ======================
+copy-on-select = clipboard
+
+# ======================
+# Key bindings
+# ======================
+# Cmd+Shift+Return: New window
+keybind = super+shift+enter=new_window
+
+# Ctrl+Shift+T: Send CSI u format (for tmux)
+keybind = ctrl+shift+t=text:\x1b[84;5u
