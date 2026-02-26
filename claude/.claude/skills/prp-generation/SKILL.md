@@ -1,13 +1,13 @@
 ---
 name: prp-generation
-description: Generate Project Requirement Plans (PRPs) with multi-approach design evaluation. Use when the user needs to define requirements, plan features, or create implementation specifications. Supports single-mode (fast) and multi-mode (4 parallel approaches comparison using SubAgent→Skills pattern).
+description: Generate Project Requirement Prompts (PRPs) with multi-approach design evaluation. Use when the user needs to define requirements, plan features, or create implementation specifications. Supports single-mode (fast) and multi-mode (4 parallel approaches comparison using SubAgent→Skills pattern).
 ---
 
 # PRP Generation Skill
 
 ## Overview
 
-This skill helps generate comprehensive Project Requirement Plans (PRPs) with:
+This skill helps generate comprehensive Project Requirement Prompts (PRPs) with:
 - Automatic detection when PRP is needed
 - Single-mode: Fast PRP generation
 - Multi-mode: 4 parallel approaches (Minimalist/Architect/Pragmatist/Conformist)

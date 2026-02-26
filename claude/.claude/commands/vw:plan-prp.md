@@ -1,5 +1,5 @@
 ---
-description: Generate PRP (Project Requirement Plan) with optional multi-approach evaluation using SubAgent→Skills pattern
+description: Generate PRP (Project Requirement Prompt) with optional multi-approach evaluation using SubAgent→Skills pattern
 argument-hint: [feature-name]
 allowed-tools: Task, AskUserQuestion
 ---
