@@ -2,6 +2,22 @@
 
 ## 📅 2026年2月
 
+### 2026-02-27 - flash.nvim 2段階ラベル選択時のキーリーク修正
+
+**変更内容**:
+- `f`キーの2段階ラベル選択（2-char label）で、ラベル以外のキー（数字・記号等）がnormal modeにリークする問題を修正
+- 修正前：`search = { max_length = 0 }` により非ラベルキーが `vim.api.nvim_input(c)` でvimに渡されていた
+- 修正後：`max_length` 制限を削除し、非ラベルキーはパターンに吸収されてループ継続（Escまたは有効ラベルのみ受付）
+
+**技術的メモ**:
+- `state.lua:409` の `vim.api.nvim_input(c)` がキーリークの原因
+- matcherの `m.label` を `m.label1` に変更（labelerが `m.label` を書き換えるため、再update時にmatcherフィルタが壊れる問題も修正）
+
+**関連ファイル**:
+- `lua/plugins/flash.lua` - 2段階目のFlash.jumpから `max_length=0` 削除 + matcher安定化
+
+---
+
 ### 2026-02-26 - Markdownカウントダウンタイマー機能
 
 **変更内容**:
