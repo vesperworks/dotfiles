@@ -94,6 +94,14 @@
       "Bash(dirname:*)",
       "Bash(~/.claude/scripts/smart-commit.sh:*)",
       "Bash(~/.claude/scripts/smart-commit.sh \"\")",
+      "Bash(jj status:*)",
+      "Bash(jj diff:*)",
+      "Bash(jj log:*)",
+      "Bash(jj root:*)",
+      "Bash(jj bookmark:*)",
+      "Bash(jj git remote:*)",
+      "Bash(shellcheck:*)",
+      "Bash(bash -n:*)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:neovim.io)",
       "Skill(research-output)",
@@ -147,6 +155,12 @@
       "Bash(git branch:*)",
       "Bash(gh pr merge:*)",
       "Bash(jj git push:*)",
+      "Bash(jj commit:*)",
+      "Bash(jj split:*)",
+      "Bash(jj describe:*)",
+      "Bash(jj new:*)",
+      "Bash(jj new)",
+      "Bash(rm -f */index.lock)",
       "Bash(cp:*)",
       "Bash(mv:*)",
       "Bash(sed:*)",
@@ -225,7 +239,7 @@
   "sandbox": {
     "enabled": true,
     "autoAllowBashIfSandboxed": true,
-    "excludedCommands": ["gh"]
+    "excludedCommands": ["gh", "jj"]
   },
   "alwaysThinkingEnabled": true,
   "skipDangerousModePermissionPrompt": true
