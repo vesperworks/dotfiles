@@ -132,7 +132,7 @@ git subtree add --prefix=<package>/.config/<app> <source-repo> <branch>
 |-------|------|------|
 | 0 | jj 初期化 + claude 移植（226コミット履歴付き） | 完了 |
 | 1 | .gitignore + install.sh + GitHub 登録 | 完了 |
-| 1.5 | vw:commit の jj 対応（PRP-017 Part 1） | アクティブ |
+| 1.5 | vw:commit の jj 対応（PRP-017 Part 1） | 完了 |
 | 2 | zsh パッケージ（APIキー→1Password Environments 移行） | 完了 |
 | 2.5 | ghostty / alacritty パッケージ | 完了 |
 | 3 | tmux パッケージ（独自 git リポから subtree merge） | アクティブ |
@@ -160,4 +160,4 @@ git subtree add --prefix=<package>/.config/<app> <source-repo> <branch>
 |-----|------|------|
 | PRP-001 | dotfiles プロジェクト構築（マスタープラン） | アクティブ |
 | PRP-002 | GitHub リモートリポジトリ登録 | done |
-| PRP-017 | vw:commit git/jj 両対応 + non-colocate 移行 | アクティブ（Part 1） |
+| PRP-017 | vw:commit git/jj 両対応 + non-colocate 移行 | Part 1 完了 / Part 2 待機 |
