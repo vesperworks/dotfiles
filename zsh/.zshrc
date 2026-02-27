@@ -26,10 +26,10 @@ export CCMANAGER_MULTI_PROJECT_ROOT="$HOME/Works"
 
 # Tools
 eval "$(zoxide init zsh)"
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 eval "$(atuin init zsh --disable-up-arrow)"
 export ATUIN_FZF_OPTS='--preview "echo {}" --preview-window=down:3:wrap'
 [ -f "$HOME/.local/bin/env" ] && . "$HOME/.local/bin/env"
-[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
 # NVM
 export NVM_DIR="$HOME/.nvm"
