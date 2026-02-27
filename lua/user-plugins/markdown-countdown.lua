@@ -22,14 +22,14 @@ local function parse_duration_seconds(line)
   return total > 0 and total or nil
 end
 
--- URLを除去した行を返す
-local function strip_urls(line)
-  return line:gsub('https?://[%S]+', '')
+-- パース対象外のパターンを除去（URL、太字）
+local function clean_line(line)
+  return line:gsub('https?://[%S]+', ''):gsub('%*%*[^*]+%*%*', '')
 end
 
 -- 行から目標時刻（UNIX time）を取得
 local function parse_target_time(line, bufnr)
-  local clean = strip_urls(line)
+  local clean = clean_line(line)
 
   -- パターン1: HH:MM 絶対時刻（優先）
   local h_str, m_str = clean:match('(%d+):(%d+)')
