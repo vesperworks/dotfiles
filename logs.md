@@ -2,6 +2,31 @@
 
 ## 📅 2026年2月
 
+### 2026-02-27 - F/T migemo検索のローマ字ラベル実装（N段階絞り込み）
+
+**変更内容**:
+- F/T（cmigemo検索）のラベルをローマ字の続き文字に変更し、N段階で絞り込み可能に
+- 例: `F` → `y` → `a`(ya系に絞り込み) → `b`(yab系) → `a`(ヤバイに着地)
+- label重複時は再帰的にFlash.jumpを呼び、さらに次のローマ字文字で絞り込み
+- マッチが1つになった時点でautojump
+- 漢字マッチは通常ラベル（a,b,c...）にフォールバック
+
+**技術的メモ**:
+- `romaji-label.lua`: 仮名→ローマ字テーブル（kunrei式 = cmigemo互換）+ 拗音・促音対応
+- `compute_suffix(text, search_input)`: テキストのローマ字を計算し、検索入力分をスキップして残りを返す
+- 拗音（きゃ等）: 2文字先読みでyouonテーブル参照
+- 促音（っ）: 次の文字の子音を重ねる（例: ヤッター → yattaa）
+- `do_jump_stage(accumulated, prev_matches)`: 再帰パターンで無制限段階の絞り込み
+  - 1段階目: cmigemo検索 → ローマ字ラベル表示
+  - 2段階目以降: 前段の結果をmatcherでフィルタ → 新ラベル計算 → 重複なら再帰
+- ハイライト: `accumulated`(dim) + `next_char`(bright) の2色表示
+
+**関連ファイル**:
+- `lua/user-plugins/romaji-label.lua` - 新規作成（仮名→ローマ字変換 + ラベル計算）
+- `lua/plugins/flash.lua` - `migemo_search_jump`を再帰的N段階絞り込みに全面改修
+
+---
+
 ### 2026-02-27 - flash.nvim 2段階ラベル選択時のキーリーク修正
 
 **変更内容**:
