@@ -218,12 +218,11 @@ return {
           action = function(match, state)
             state:hide()
             Flash.jump({
-              search = { max_length = 0 },
               highlight = { backdrop = true, matches = false },
               label = { format = format_second },
               matcher = function(win)
                 return vim.tbl_filter(function(m)
-                  return m.label == match.label and m.win == win
+                  return m.label1 == match.label and m.win == win
                 end, state.results)
               end,
               labeler = function(inner_matches)
