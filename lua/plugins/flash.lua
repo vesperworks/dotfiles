@@ -174,26 +174,114 @@ return {
       end
     end
 
-    -- F/T 共通のmigemo検索ジャンプ関数
+    -- F/T migemoローマ字ラベル: accumulated(dim) + next_char(bright)
+    local function migemo_format_label(opts)
+      local accumulated = opts.match._accumulated or ""
+      local label = opts.match.label or ""
+      if accumulated == "" then
+        return { { label, opts.hl_group } }
+      end
+      return {
+        { accumulated, "FlashLabelInactive" },
+        { label, "FlashLabelActive" },
+      }
+    end
+
+    -- F/T 共通のmigemo検索ジャンプ関数（ローマ字ラベル N段階絞り込み）
     local function migemo_search_jump(offset)
       return function()
         local Flash = require("flash")
+        local romaji_label = require("user-plugins.romaji-label")
 
-        Flash.jump({
-          search = {
-            mode = function(input)
-              if not input or input == "" then return input end
-              local migemo = require("user-plugins.migemo-bridge")
-              if not migemo.is_available() then return input end
-              local pattern = migemo.query(input)
-              if pattern and pattern ~= input then
-                return input .. "\\|" .. pattern
-              end
-              return input
+        -- ハイライト設定（f/tと共通）
+        vim.api.nvim_set_hl(0, "FlashLabelActive", { fg = "#ff007c", bg = "#3b2940", bold = true })
+        vim.api.nvim_set_hl(0, "FlashLabelInactive", { fg = "#b05070", bg = "#2a2030" })
+
+        -- 1段階目の検索入力を保持
+        local current_search = ""
+
+        -- ローマ字ラベル計算（全段階共通）
+        local function assign_romaji_labels(matches, state, accumulated)
+          local labels = state:labels()
+          local fallback_idx = 0
+          for _, match in ipairs(matches) do
+            local buf = vim.api.nvim_win_get_buf(match.win)
+            local line = vim.api.nvim_buf_get_lines(buf, match.pos[1] - 1, match.pos[1], false)[1] or ""
+            local col = match.pos[2] + 1
+            local text = line:sub(col)
+
+            local suffix = romaji_label.compute_suffix(text, accumulated)
+            if suffix and #suffix >= 1 then
+              match.label = suffix:sub(1, 1)
+              match._accumulated = accumulated
+            else
+              -- 漢字等/ローマ字の余りなし: 通常ラベルにフォールバック
+              fallback_idx = fallback_idx + 1
+              match.label = labels[fallback_idx] or "?"
+              match._accumulated = ""
+            end
+          end
+        end
+
+        -- 再帰的ジャンプ: label重複時はさらに絞り込み
+        local function do_jump_stage(accumulated, prev_matches)
+          local jump_opts = {
+            highlight = { backdrop = true, matches = prev_matches and false or nil },
+            label = {
+              after = false,
+              before = { 0, 0 },
+              uppercase = false,
+              format = migemo_format_label,
+            },
+            labeler = function(matches, state)
+              local acc = prev_matches and accumulated or current_search
+              assign_romaji_labels(matches, state, acc)
             end,
-          },
-          jump = { pos = "start", offset = offset },
-        })
+            action = function(match, state)
+              local same_label = vim.tbl_filter(function(m)
+                return m.label == match.label
+              end, state.results)
+
+              if #same_label == 1 then
+                -- 一意 → 即ジャンプ
+                vim.api.nvim_win_set_cursor(match.win, { match.pos[1], match.pos[2] + (offset or 0) })
+                return
+              end
+
+              -- 重複 → さらに絞り込み
+              state:hide()
+              local new_acc = (match._accumulated ~= "" and match._accumulated or current_search) .. match.label
+              do_jump_stage(new_acc, same_label)
+            end,
+            jump = { pos = "start", offset = offset, autojump = true },
+          }
+
+          if prev_matches then
+            -- 2段階目以降: 前段の結果からフィルタ
+            jump_opts.matcher = function(win)
+              return vim.tbl_filter(function(m) return m.win == win end, prev_matches)
+            end
+          else
+            -- 1段階目: cmigemo検索
+            jump_opts.search = {
+              mode = function(input)
+                if not input or input == "" then return input end
+                current_search = input
+                local migemo = require("user-plugins.migemo-bridge")
+                if not migemo.is_available() then return input end
+                local pattern = migemo.query(input)
+                if pattern and pattern ~= input then
+                  return input .. "\\|" .. pattern
+                end
+                return input
+              end,
+            }
+          end
+
+          Flash.jump(jump_opts)
+        end
+
+        do_jump_stage("", nil)
       end
     end
 
