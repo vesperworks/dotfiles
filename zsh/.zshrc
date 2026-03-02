@@ -65,7 +65,6 @@ alias ls='eza --color=always --icons'
 alias ll='eza -la --color=always --icons'
 alias la='eza -a --color=always --icons'
 alias lt='eza --tree --color=always --icons --level=2'
-alias claude="$HOME/.claude/local/claude"
 alias ccm='ccmanager --multi-project'
 
 # nv: Obsidian notes
