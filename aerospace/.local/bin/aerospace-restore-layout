@@ -1,0 +1,131 @@
+#!/bin/bash
+# aerospace-restore-layout - Restore AeroSpace window layout from layouts.json
+#
+# Usage:
+#   aerospace-restore-layout [options]
+#
+# Options:
+#   -i, --input FILE    Input file (default: ~/.config/aerospace/layouts.json)
+#   -l, --layout NAME   Specific layout to restore (default: all)
+#   --dry-run           Show what would be done without executing
+#   -h, --help          Show this help message
+#
+# Note: This script moves existing windows to their saved workspaces.
+#       It does NOT launch applications or restore window order.
+
+set -euo pipefail
+
+# Default values
+INPUT="$HOME/.config/aerospace/layouts.json"
+LAYOUT_NAME=""
+DRY_RUN=false
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -i|--input)
+      INPUT="$2"
+      shift 2
+      ;;
+    -l|--layout)
+      LAYOUT_NAME="$2"
+      shift 2
+      ;;
+    --dry-run)
+      DRY_RUN=true
+      shift
+      ;;
+    -h|--help)
+      head -18 "$0" | tail -16 | sed 's/^# //' | sed 's/^#//'
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      exit 1
+      ;;
+  esac
+done
+
+# Check if aerospace is running
+if ! aerospace list-workspaces --all &>/dev/null; then
+  echo "Error: AeroSpace is not running" >&2
+  exit 1
+fi
+
+# Check if jq is available
+if ! command -v jq &>/dev/null; then
+  echo "Error: jq is required but not installed" >&2
+  exit 1
+fi
+
+# Check if input file exists
+if [[ ! -f "$INPUT" ]]; then
+  echo "Error: Layout file not found: $INPUT" >&2
+  exit 1
+fi
+
+# Get current windows as JSON-like format (including window title for matching)
+CURRENT_WINDOWS=$(aerospace list-windows --all --format '%{window-id}|%{app-bundle-id}|%{workspace}|%{window-title}')
+
+# Read saved layouts
+SAVED_LAYOUTS=$(cat "$INPUT")
+
+# Build mapping as a simple list: bundleId|windowTitle|workspace
+if [[ -n "$LAYOUT_NAME" ]]; then
+  # Single layout mode
+  WORKSPACE=$(echo "$SAVED_LAYOUTS" | jq -r ".layouts[\"$LAYOUT_NAME\"].workspace // empty")
+  if [[ -z "$WORKSPACE" ]]; then
+    echo "Error: Layout '$LAYOUT_NAME' not found" >&2
+    exit 1
+  fi
+  APP_MAPPING=$(echo "$SAVED_LAYOUTS" | jq -r ".layouts[\"$LAYOUT_NAME\"].windows[] | \"\(.bundleId)|\(.windowTitle // \"\")|\($WORKSPACE)\"")
+else
+  # All layouts mode
+  APP_MAPPING=$(echo "$SAVED_LAYOUTS" | jq -r '
+    .layouts | to_entries[] |
+    .value.workspace as $ws |
+    .value.windows[] |
+    "\(.bundleId)|\(.windowTitle // "")|\($ws)"
+  ')
+fi
+
+# Function to get target workspace for a bundleId + windowTitle
+# First tries exact match (bundleId + title), then falls back to bundleId only
+get_target_workspace() {
+  local bid="$1"
+  local title="$2"
+  local result=""
+
+  # Try exact match with title first
+  if [[ -n "$title" ]]; then
+    result=$(echo "$APP_MAPPING" | grep "^${bid}|${title}|" | head -1 | cut -d'|' -f3)
+  fi
+
+  # Fallback to bundleId only if no title match
+  if [[ -z "$result" ]]; then
+    result=$(echo "$APP_MAPPING" | grep "^${bid}|" | head -1 | cut -d'|' -f3)
+  fi
+
+  echo "$result"
+}
+
+# Move windows to their saved workspaces
+MOVED=0
+while IFS='|' read -r windowId bundleId currentWs windowTitle; do
+  targetWs=$(get_target_workspace "$bundleId" "$windowTitle")
+
+  if [[ -n "$targetWs" && "$currentWs" != "$targetWs" ]]; then
+    if [[ "$DRY_RUN" == true ]]; then
+      echo "[dry-run] Would move window $windowId ($bundleId: $windowTitle) from $currentWs to $targetWs"
+    else
+      aerospace move-node-to-workspace --window-id "$windowId" "$targetWs" 2>/dev/null || true
+      MOVED=$((MOVED + 1))
+    fi
+  fi
+done <<< "$CURRENT_WINDOWS"
+
+if [[ "$DRY_RUN" == true ]]; then
+  echo "[dry-run] Would move $MOVED window(s)"
+else
+  echo "Restored: $MOVED window(s) moved" >&2
+fi

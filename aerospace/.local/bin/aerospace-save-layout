@@ -1,0 +1,172 @@
+#!/bin/bash
+# aerospace-save-layout - Save current AeroSpace window layout to aerospace-layout-manager format
+#
+# Usage:
+#   aerospace-save-layout [options]
+#
+# Options:
+#   -n, --name NAME     Layout name (default: "saved")
+#   -w, --workspace WS  Specific workspace (default: all workspaces)
+#   -o, --output FILE   Output file (default: ~/.config/aerospace/layouts.json)
+#   -s, --stash WS      Stash workspace name (default: "S")
+#   --stdout            Output to stdout instead of file
+#   -h, --help          Show this help message
+#
+# Examples:
+#   aerospace-save-layout                           # Save all workspaces to layouts.json
+#   aerospace-save-layout -w 1 -n "dev"             # Save workspace 1 as "dev"
+#   aerospace-save-layout --stdout                  # Output to stdout
+
+set -euo pipefail
+
+# Default values
+LAYOUT_NAME="saved"
+WORKSPACE=""
+OUTPUT="$HOME/.config/aerospace/layouts.json"
+STASH_WORKSPACE="S"
+USE_STDOUT=false
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -n|--name)
+      LAYOUT_NAME="$2"
+      shift 2
+      ;;
+    -w|--workspace)
+      WORKSPACE="$2"
+      shift 2
+      ;;
+    -o|--output)
+      OUTPUT="$2"
+      shift 2
+      ;;
+    -s|--stash)
+      STASH_WORKSPACE="$2"
+      shift 2
+      ;;
+    --stdout)
+      USE_STDOUT=true
+      shift
+      ;;
+    -h|--help)
+      head -22 "$0" | tail -20 | sed 's/^# //' | sed 's/^#//'
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      exit 1
+      ;;
+  esac
+done
+
+# Check if aerospace is running
+if ! aerospace list-workspaces --all &>/dev/null; then
+  echo "Error: AeroSpace is not running" >&2
+  exit 1
+fi
+
+# Check if jq is available
+if ! command -v jq &>/dev/null; then
+  echo "Error: jq is required but not installed" >&2
+  exit 1
+fi
+
+# Get windows data with required fields
+# Note: --json alone doesn't include all fields, so we use --format
+FORMAT='%{app-bundle-id}|%{workspace}|%{app-name}|%{window-title}'
+
+if [[ -n "$WORKSPACE" ]]; then
+  RAW_DATA=$(aerospace list-windows --workspace "$WORKSPACE" --format "$FORMAT" 2>/dev/null || echo "")
+else
+  RAW_DATA=$(aerospace list-windows --all --format "$FORMAT" 2>/dev/null || echo "")
+fi
+
+# Convert pipe-separated data to JSON
+WINDOWS_JSON=$(echo "$RAW_DATA" | awk -F'|' 'NF>=3 {
+  gsub(/"/, "\\\"", $1);
+  gsub(/"/, "\\\"", $2);
+  gsub(/"/, "\\\"", $3);
+  gsub(/"/, "\\\"", $4);
+  printf "{\"app-bundle-id\":\"%s\",\"workspace\":\"%s\",\"app-name\":\"%s\",\"window-title\":\"%s\"}\n", $1, $2, $3, $4
+}' | jq -s '.')
+
+# Check if we got any windows
+if [[ "$WINDOWS_JSON" == "[]" ]]; then
+  echo "Warning: No windows found" >&2
+  exit 0
+fi
+
+# Check if all windows are in a single workspace (likely just after AeroSpace restart)
+WORKSPACE_COUNT=$(echo "$WINDOWS_JSON" | jq '[.[].workspace] | unique | length')
+if [[ "$WORKSPACE_COUNT" -eq 1 && -z "$WORKSPACE" ]]; then
+  SINGLE_WS=$(echo "$WINDOWS_JSON" | jq -r '.[0].workspace')
+  echo "Warning: All windows are in workspace $SINGLE_WS (likely just restarted). Skipping save." >&2
+  exit 0
+fi
+
+# Generate layouts.json
+generate_layout() {
+  local workspace_filter="$1"
+  local layout_name="$2"
+
+  if [[ -n "$workspace_filter" ]]; then
+    # Single workspace mode
+    jq -n --arg stash "$STASH_WORKSPACE" --arg name "$layout_name" --arg ws "$workspace_filter" --argjson windows "$WINDOWS_JSON" '
+    {
+      stashWorkspace: $stash,
+      layouts: {
+        ($name): {
+          workspace: $ws,
+          orientation: "horizontal",
+          windows: ($windows | map({bundleId: ."app-bundle-id", windowTitle: ."window-title"}))
+        }
+      }
+    }'
+  else
+    # All workspaces mode
+    jq -n --arg stash "$STASH_WORKSPACE" --argjson windows "$WINDOWS_JSON" '
+    {
+      stashWorkspace: $stash,
+      layouts: (
+        $windows
+        | group_by(.workspace)
+        | map({
+            key: .[0].workspace,
+            value: {
+              workspace: .[0].workspace,
+              orientation: "horizontal",
+              windows: (. | map({bundleId: ."app-bundle-id", windowTitle: ."window-title"}))
+            }
+          })
+        | from_entries
+      )
+    }'
+  fi
+}
+
+# Rotate snapshot files (keep up to MAX_GENERATIONS generations)
+MAX_GENERATIONS=10
+rotate_layouts() {
+  local base="$1"
+  local prefix="${base%.json}"
+  # Remove oldest
+  [[ -f "${prefix}.$((MAX_GENERATIONS - 1)).json" ]] && rm -f "${prefix}.$((MAX_GENERATIONS - 1)).json"
+  # Shift each generation up by 1
+  for (( i = MAX_GENERATIONS - 2; i >= 1; i-- )); do
+    [[ -f "${prefix}.${i}.json" ]] && mv "${prefix}.${i}.json" "${prefix}.$((i + 1)).json"
+  done
+  # Current → .1
+  [[ -f "$base" ]] && cp -p "$base" "${prefix}.1.json"
+}
+
+# Output
+RESULT=$(generate_layout "$WORKSPACE" "$LAYOUT_NAME")
+
+if [[ "$USE_STDOUT" == true ]]; then
+  echo "$RESULT"
+else
+  rotate_layouts "$OUTPUT"
+  echo "$RESULT" > "$OUTPUT"
+  echo "Saved to: $OUTPUT" >&2
+fi
