@@ -7,8 +7,8 @@ source "$CONFIG_DIR/colors.sh"
 
 LAYOUTS_FILE="$HOME/.config/aerospace/layouts.json"
 RESTORE_CMD="$HOME/.local/bin/aerospace-restore-layout"
-MAX_POPUP_ROWS=7
-MAX_SNAPSHOTS=3
+MAX_POPUP_ROWS=12
+MAX_SNAPSHOTS=10
 
 # Calculate relative time from a file's modification time
 get_file_relative_time() {

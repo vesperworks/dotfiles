@@ -256,7 +256,7 @@ sketchybar --add item aerospace_session right \
                                    script="$PLUGIN_DIR/aerospace_session.sh" \
            --subscribe aerospace_session mouse.clicked mouse.exited.global
 
-for i in $(seq 1 7); do
+for i in $(seq 1 12); do
   sketchybar --add item "aerospace_session.$i" popup.aerospace_session \
              --set "aerospace_session.$i" \
                    icon.font="Hack Nerd Font:Bold:13.0" \
