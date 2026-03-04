@@ -155,7 +155,6 @@
       "Bash(cp:*)",
       "Bash(mv:*)",
       "Bash(sed:*)",
-      "Bash(source:*)",
       "Bash(export:*)",
       "Bash(tmux split-window:*)",
       "mcp__puppeteer__*",
