@@ -92,6 +92,7 @@
       "Bash(:*date +%Y%m%d-%H%M%S:*)",
       "Bash(basename:*)",
       "Bash(dirname:*)",
+      "Bash(source ~/.claude/scripts/:*)",
       "Bash(~/.claude/scripts/smart-commit.sh:*)",
       "Bash(~/.claude/scripts/smart-commit.sh \"\")",
       "Bash(jj *)",
