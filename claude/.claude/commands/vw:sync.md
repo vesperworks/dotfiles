@@ -1,22 +1,67 @@
 ---
 name: sync
-description: Memory↔TaskList同期（完了タスク→メモリー反映、メモリー→タスク生成）
-allowed-tools: Read, Edit, Write, Glob, TaskCreate, TaskList, TaskGet, TaskUpdate, AskUserQuestion
+description: Memory↔TaskList同期 + PRP・会話履歴からのコンテキスト把握
+allowed-tools: Read, Edit, Write, Glob, Bash(ls -lt:*), Bash(tail:*), TaskCreate, TaskList, TaskGet, TaskUpdate, AskUserQuestion
 ---
 
-# Memory ↔ TaskList Sync
+# Memory ↔ TaskList Sync + Context Discovery
 
 ## Core Purpose
 
-Claude の auto-memory（MEMORY.md）と TaskList（TaskCreate/TaskList/TaskUpdate）間の整合性を保つ。完了タスクをメモリーに反映し、メモリーの残項目から新規タスクを生成する自動同期スキル。
+Claude の auto-memory（MEMORY.md）と TaskList 間の整合性を保ちつつ、PRP の進捗状況と直近の会話履歴から「プロジェクトの流れ」を把握する。セッション開始時に実行することで、前回の作業文脈を素早く復元する。
 
 ## Quick Checklist (初期応答で必ず確認)
 
 - [ ] MEMORY.md のパスを特定（プロジェクト別 memory ディレクトリ）
+- [ ] プロジェクトスラッグを特定（MEMORY.md パスから逆算）
 - [ ] 現在の TaskList 状態を取得
 - [ ] MEMORY.md の現在の内容を読み取り
 
 ## Basic Workflow
+
+### Step 0: Context Discovery（並列実行）
+
+同期の前に、プロジェクトの「流れ」を把握する。以下を**同時に**実行する：
+
+#### 0-A: PRP スキャン
+
+```
+PRP パス: .brain/*/prp/
+
+1. Glob(".brain/*/prp/*.md") → アクティブ PRP 一覧
+2. Glob(".brain/*/prp/done/*.md") → 完了 PRP（ファイル名のみ）
+3. Glob(".brain/*/prp/cancel/*.md") → キャンセル PRP（ファイル名のみ）
+4. Glob(".brain/*/prp/tbd/*.md") → 保留 PRP（ファイル名のみ）
+5. アクティブ PRP のみ Read で全文読み取り
+   → メタデータ（PRP番号、更新日）を抽出
+   → 進捗状況テーブルを抽出
+   → Success Criteria のチェック状況を集計
+```
+
+#### 0-B: 会話履歴の読み取り
+
+```
+会話履歴パス: ~/.claude/projects/{project-slug}/
+（project-slug は MEMORY.md パスから逆算）
+
+1. Bash: ls -lt ~/.claude/projects/{slug}/*.jsonl | head -5
+   → 更新日時順でスレッドファイルを特定
+2. 最新1つ（= 現在のセッション）を除外
+3. 2番目・3番目のファイルを対象に:
+   Bash: tail -n 50 <file>
+4. 各行から type: "user" / "assistant" のメッセージのみ抽出
+   - file-history-snapshot, system, progress 等は無視
+   - assistant の content が配列の場合、type: "text" のみ（tool_use は無視）
+5. 各スレッドから最後の user + assistant 1往復を要約
+   - content が長い場合は先頭500文字に切り詰め
+```
+
+#### 0-C: wip-*.md スキャン
+
+```
+WIP パス: ~/.claude/projects/{project-slug}/memory/wip-*.md
+→ Glob で検出し、各ファイルの概要を把握
+```
 
 ### Step 1: 現状収集（並列実行）
 
@@ -24,16 +69,14 @@ Claude の auto-memory（MEMORY.md）と TaskList（TaskCreate/TaskList/TaskUpda
 
 1. **TaskList を取得** → 全タスクの status/subject/owner を収集
 2. **MEMORY.md を読み取り** → 現在のセクション構造と内容を把握
-3. **wip-*.md ファイルを確認** → WIP メモの有無
 
 ```
 Memory パス: ~/.claude/projects/{project-slug}/memory/MEMORY.md
-WIP パス:    ~/.claude/projects/{project-slug}/memory/wip-*.md
 ```
 
 ### Step 2: 差分検出
 
-以下の3カテゴリで差分を分析：
+以下の5カテゴリで差分を分析：
 
 #### A. Task → Memory 反映（完了タスク）
 
@@ -60,9 +103,34 @@ IF memory の状態と task の状態が矛盾:
   例: Memory では「完了」だが Task は「pending」
 ```
 
+#### D. PRP ↔ Memory/Task 照合
+
+```
+IF アクティブ PRP の Phase 進捗と MEMORY.md の Phase テーブルに差異:
+  → Memory 更新候補として記録
+
+IF アクティブ PRP 内の未完了タスクで TaskList にエントリがない:
+  → Task 生成候補として記録
+
+IF 完了候補の PRP（Success Criteria 80%以上チェック済み）:
+  → done/ への移動を提案
+```
+
+#### E. 会話履歴からの洞察
+
+```
+直近2スレッドの末尾から以下を抽出:
+- 最後の作業内容: 何をしていたか
+- 未完了の指示: ユーザーが依頼したが完了していない可能性があるもの
+- 次のアクション示唆: 「次は〜」「後で〜」等の記載
+
+→ 残タスク候補として Memory/TaskList と照合
+→ **提案のみ**（自動タスク生成はしない → AskUserQuestion で確認）
+```
+
 ### Step 3: 自動同期の実行
 
-差分に基づいて以下を**自動実行**（コンフリクト時のみユーザー確認）：
+差分に基づいて以下を**自動実行**（コンフリクト時・会話履歴由来はユーザー確認）：
 
 1. **MEMORY.md 更新**: Edit ツールで該当セクションを更新
 2. **TaskList 更新**: TaskCreate / TaskUpdate で反映
@@ -73,11 +141,38 @@ IF memory の状態と task の状態が矛盾:
 ```markdown
 ## Sync Report
 
+### Context Overview
+
+#### PRP 状態サマリー
+| PRP | タイトル | 状態 | 進捗 |
+|-----|---------|------|------|
+| PRP-NNN | {title} | アクティブ/完了/保留 | {Phase X/Y 完了} |
+
+#### 直近の会話
+- **スレッド {uuid先頭8文字}**（{date}）:
+  - User: 「{content-snippet}」
+  - Assistant: {content-snippet}
+- **スレッド {uuid先頭8文字}**（{date}）:
+  - User: 「{content-snippet}」
+  - Assistant: {content-snippet}
+
+#### WIP メモ
+- {filename}: {概要}
+
+---
+
 ### Memory → Task（新規タスク生成）
 - [TaskID] {subject} ← MEMORY.md#{section}
 
 ### Task → Memory（メモリー更新）
 - MEMORY.md#進捗 ← [TaskID] {subject} (completed)
+
+### PRP → Task/Memory（PRP 由来の同期）
+- [TaskID] {subject} ← PRP-{NNN}#{task}
+- MEMORY.md#Phase管理 ← PRP-{NNN} Phase {N} 完了反映
+
+### 会話履歴 → 提案（未完了指示の検出）
+- 「{content-snippet}」← スレッド {id}（要確認）
 
 ### Conflicts（要確認）
 - {description of conflict}
@@ -85,6 +180,8 @@ IF memory の状態と task の状態が矛盾:
 ### Summary
 - Tasks created: N
 - Memory sections updated: N
+- PRP-derived actions: N
+- Conversation insights: N
 - Conflicts: N
 ```
 
@@ -94,8 +191,8 @@ IF memory の状態と task の状態が矛盾:
 
 | MEMORY.md セクション | 更新トリガー |
 |---------------------|-------------|
-| プロジェクト進捗（Phase 管理） | Phase に関連するタスク完了時 |
-| 残タスク | タスク完了/新規作成時 |
+| プロジェクト進捗（Phase 管理） | Phase に関連するタスク完了時 / PRP Phase 照合時 |
+| 残タスク | タスク完了/新規作成時 / 会話履歴から未完了指示検出時 |
 | 直近の変更メモ | 任意のタスク完了時（最新5件を保持） |
 | VCS 注意事項 | VCS 関連の学びがあった時 |
 | 完了済みパッケージ | パッケージ関連タスク完了時 |
@@ -107,6 +204,8 @@ IF memory の状態と task の状態が矛盾:
 | MEMORY.md に `未着手` の Phase がある | Phase 開始用タスクを生成 |
 | 残タスクに Issue 番号の記載あり | Issue リンク付きタスクを生成 |
 | `次` マークのある項目 | 優先タスクとして生成 |
+| PRP 内の未完了タスクが TaskList にない | PRP リンク付きタスクを生成 |
+| 会話履歴に未完了指示がある | **提案のみ**（AskUserQuestion で確認後に生成） |
 
 ### コンフリクト解決
 
@@ -137,6 +236,7 @@ AskUserQuestion:
 ### 冪等性
 - 同じ状態で複数回実行しても結果が変わらないこと
 - 既に同期済みの項目は再処理しない
+- 会話履歴からの提案は、既に TaskList に存在する場合はスキップ
 
 ### 最小変更
 - 必要なセクションのみ更新（ファイル全体の書き換えを避ける）
@@ -145,3 +245,11 @@ AskUserQuestion:
 ### 透明性
 - 同期レポートで全変更を可視化
 - サイレント変更はしない
+- 会話履歴のスレッド UUID 先頭8文字を表示し、正しいスレッドか確認可能にする
+
+### パフォーマンス
+- PRP は Glob でファイル一覧 → アクティブ PRP のみ Read（done/cancel/tbd はファイル名のみ）
+- JSONL は tail で末尾50行のみ読み取り（全ファイル読み込みを避ける）
+- type: user/assistant 以外のメッセージは無視
+- assistant メッセージの tool_use 部分は無視（テキスト部分のみ抽出）
+- content が長い場合は先頭500文字に切り詰め
