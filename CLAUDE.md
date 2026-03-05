@@ -136,12 +136,13 @@ git subtree add --prefix=<package>/.config/<app> <source-repo> <branch>
 | 2 | zsh パッケージ（APIキー→1Password Environments 移行） | 完了 |
 | 2.5 | ghostty / alacritty パッケージ | 完了 |
 | 3 | tmux パッケージ（独自 git リポから subtree merge） | 完了 |
-| 4 | git パッケージ（include 方式、http.sslverify=false 削除） | 未着手 |
-| 5 | brew パッケージ（.Brewfile 手動記載） | 未着手 |
-| 6 | アプリ設定（codex, aerospace, sketchybar） | 未着手 |
+| 4 | git パッケージ（丸ごと stow） | 完了 |
+| 5 | brew パッケージ（.Brewfile 手動記載） | 完了 |
+| 6 | アプリ設定（aerospace, sketchybar） | 完了 |
+| 6a | codex パッケージ | 後回し |
 | 6.8 | nvim パッケージ（独自 git リポから subtree merge） | 未着手 |
-| 5.9 | non-colocate 移行（PRP-017 Part 2、Phase 5.8 後） | 未着手 |
-| 6 | ドキュメント + クリーンアップ（LICENSE, README） | 未着手 |
+| 5.9 | non-colocate 移行（PRP-017 Part 2） | 未着手 |
+| 7 | ドキュメント + クリーンアップ（LICENSE, README） | 未着手 |
 
 詳細は `.brain/dotfiles/prp/PRP-001-dotfiles-setup.md` 参照。
 
