@@ -4,7 +4,7 @@ set -euo pipefail
 DOTFILES_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DOTFILES_DIR"
 
-STOW_PACKAGES=(zsh git brew claude codex ghostty alacritty aerospace borders sketchybar tmux nvim)
+STOW_PACKAGES=(zsh git brew claude codex ghostty alacritty aerospace borders sketchybar tmux nvim yazi)
 
 log() { printf '\033[0;32m[✓]\033[0m %s\n' "$*"; }
 warn() { printf '\033[0;33m[!]\033[0m %s\n' "$*"; }

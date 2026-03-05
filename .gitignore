@@ -26,6 +26,7 @@ claude/.claude/plans/
 
 # Plugins (managed by plugin managers)
 tmux/.config/tmux/plugins/
+yazi/.config/yazi/plugins/
 
 # aerospace layouts (contain window titles with personal info)
 aerospace/.config/aerospace/layouts*.json

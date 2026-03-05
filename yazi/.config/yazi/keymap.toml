@@ -1,0 +1,24 @@
+[[mgr.prepend_keymap]]
+on = ["m", "w"]
+run = 'shell --confirm "mv \"$@\" ~/Downloads/_Work/"'
+desc = "Move to _Work"
+
+[[mgr.prepend_keymap]]
+on = ["m", "p"]
+run = 'shell --confirm "mv \"$@\" ~/Downloads/_Private/"'
+desc = "Move to _Private"
+
+[[mgr.prepend_keymap]]
+on = ["m", "r"]
+run = 'shell --confirm "mv \"$@\" ~/Downloads/_Review/"'
+desc = "Move to _Review"
+
+[[mgr.prepend_keymap]]
+on = ["m", "t"]
+run = 'shell --confirm "mv \"$@\" ~/Downloads/_Trash/"'
+desc = "Move to _Trash"
+
+[[mgr.prepend_keymap]]
+on = ["M", "s"]
+run = "plugin sshfs -- menu"
+desc = "SSHFS menu"

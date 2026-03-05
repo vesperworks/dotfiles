@@ -1,0 +1,61 @@
+# ~/.config/yazi/yazi.toml
+# テキスト以外はQuick Lookで開く設定
+
+[search]
+engine = "rg"
+
+[mgr]
+sort_by = "mtime"
+sort_reverse = true
+sort_dir_first = false
+linemode = "mtime"
+
+[opener]
+edit = [
+  { run = '${EDITOR:-nvim} %s', desc = "$EDITOR", for = "unix", block = true },
+]
+quicklook = [
+  { run = 'qlmanage -p %s', desc = "Quick Look", for = "macos", orphan = true },
+]
+# テキスト系 → エディタ
+[[open.prepend_rules]]
+mime = "text/*"
+use = ["edit"]
+
+[[open.prepend_rules]]
+mime = "application/json"
+use = ["edit"]
+
+[[open.prepend_rules]]
+mime = "application/xml"
+use = ["edit"]
+
+[[open.prepend_rules]]
+mime = "application/*+xml"
+use = ["edit"]
+
+[[open.prepend_rules]]
+mime = "application/x-yaml"
+use = ["edit"]
+
+[[open.prepend_rules]]
+mime = "application/toml"
+use = ["edit"]
+
+[[open.prepend_rules]]
+mime = "application/javascript"
+use = ["edit"]
+
+[[open.prepend_rules]]
+mime = "application/typescript"
+use = ["edit"]
+
+# 動画 → Quick Look
+[[open.prepend_rules]]
+mime = "video/*"
+use = ["quicklook", "open"]
+
+# その他すべて → Quick Look（デフォルトアプリも選択肢に）
+[[open.prepend_rules]]
+url = "*"
+use = ["quicklook", "open"]
