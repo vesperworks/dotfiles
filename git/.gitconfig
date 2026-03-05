@@ -1,0 +1,16 @@
+[user]
+	name = mur41
+	email = 202233+vesperworks@users.noreply.github.com
+[core]
+	pager = delta
+	excludesfile = ~/.config/git/ignore
+[filter "lfs"]
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true
+[delta]
+	side-by-side = true
+	navigate = true
+[extensions]
+	worktreeConfig = true

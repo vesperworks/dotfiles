@@ -1,0 +1,9 @@
+# macOS
+.DS_Store
+*~
+
+# Xcode
+xcschememanagement.plist
+
+# Claude Code
+**/.claude/settings.local.json
