@@ -15,7 +15,6 @@ export PATH="$HOME/go/bin:$PATH"
 
 # 1Password
 [[ -f ~/.secrets.env ]] && source ~/.secrets.env
-alias gh="op plugin run -- gh"
 command -v op >/dev/null 2>&1 && eval "$(op completion zsh)"
 
 # Environment
