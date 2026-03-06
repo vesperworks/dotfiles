@@ -66,6 +66,7 @@
       "Bash(nu:*)",
       "Bash(bun:*)",
       "Bash(deno:*)",
+      "Bash(pnpm:*)",
       "Bash(mkdir:*)",
       "Bash(touch:*)",
       "Bash(rmdir:*)",
@@ -157,6 +158,10 @@
       "Bash(sed:*)",
       "Bash(export:*)",
       "Bash(tmux split-window:*)",
+      "Bash(bun remove:*)",
+      "Bash(deno uninstall:*)",
+      "Bash(pnpm remove:*)",
+      "Bash(pnpm rm:*)",
       "mcp__puppeteer__*",
       "mcp__playwright__*",
       "mcp__playwright-server__*"
