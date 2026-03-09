@@ -14,3 +14,8 @@
 	navigate = true
 [extensions]
 	worktreeConfig = true
+[alias]
+	lg = log --graph --pretty=format:'%C(bold magenta)%h%Creset %C(yellow)%an%Creset %C(cyan)%ci%Creset%n  %s%C(auto)%d%Creset' --abbrev-commit
+	lga = lg --all
+[pager]
+	log = less
