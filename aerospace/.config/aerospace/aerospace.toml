@@ -111,6 +111,9 @@ alt-comma = 'layout accordion horizontal vertical'
 alt-enter = 'fullscreen'
 alt-shift-space = 'layout floating tiling'
 
+# Open new Alacritty adjacent to focused window
+alt-shift-enter = 'exec-and-forget open -n -a Alacritty'
+
 # Resize mode
 alt-semicolon = 'mode resize'
 
