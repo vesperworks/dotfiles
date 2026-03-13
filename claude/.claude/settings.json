@@ -234,7 +234,10 @@
   "sandbox": {
     "enabled": true,
     "autoAllowBashIfSandboxed": true,
-    "excludedCommands": ["gh", "jj"]
+    "excludedCommands": [
+      "gh",
+      "jj"
+    ]
   },
   "alwaysThinkingEnabled": true,
   "skipDangerousModePermissionPrompt": true
