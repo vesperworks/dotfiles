@@ -166,7 +166,7 @@
       "mcp__playwright__*",
       "mcp__playwright-server__*"
     ],
-    "defaultMode": "dontAsk",
+    "defaultMode": "auto",
     "includeCoAuthoredBy": false
   },
   "hooks": {
