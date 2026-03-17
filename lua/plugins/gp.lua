@@ -4,6 +4,33 @@
 return {
   "robitx/gp.nvim",
   config = function()
+    -- マーカー挿入＋削除の共通ヘルパー
+    local function with_gp_marker(gp_mod, params, template, marker_emoji)
+      local buf = vim.api.nvim_get_current_buf()
+      local end_line = vim.fn.line("'>")
+      local marker_id = "gp-marker-" .. os.time() .. "-" .. math.random(1000, 9999)
+      local marker_text = marker_emoji .. " <!-- " .. marker_id .. " -->"
+
+      vim.api.nvim_buf_set_lines(buf, end_line, end_line, false, { "", marker_text })
+
+      vim.api.nvim_create_autocmd("User", {
+        pattern = "GpDone",
+        callback = function()
+          local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+          for i, line in ipairs(lines) do
+            if line:find(marker_id, 1, true) then
+              vim.api.nvim_buf_set_lines(buf, i - 1, i, false, {})
+              break
+            end
+          end
+        end,
+        once = true,
+      })
+
+      local agent = gp_mod.get_command_agent()
+      gp_mod.Prompt(params, gp_mod.Target.append, agent, template)
+    end
+
     require("gp").setup({
       -- 新しいproviders設定形式
       providers = {
@@ -62,40 +89,9 @@ return {
 ```
 </output_format>]]
 
-          -- 選択範囲の終了位置に絵文字マーカーを即座に挿入
-          local buf = vim.api.nvim_get_current_buf()
-          local end_line = vim.fn.line("'>")
-          
-          -- 一意なIDを生成
-          local marker_id = "gp-marker-" .. os.time() .. "-" .. math.random(1000, 9999)
-          local marker_text = "✨📝 <!-- " .. marker_id .. " -->"
-          
-          vim.api.nvim_buf_set_lines(buf, end_line, end_line, false, {
-            "",
-            marker_text
-          })
-          
-          -- 処理完了時にマーカーを削除
-          local function remove_marker()
-            local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-            for i, line in ipairs(lines) do
-              if line:find(marker_id, 1, true) then
-                vim.api.nvim_buf_set_lines(buf, i-1, i, false, {})
-                break
-              end
-            end
-          end
-          
-          vim.api.nvim_create_autocmd("User", {
-            pattern = "GpDone",
-            callback = remove_marker,
-            once = true
-          })
-
-          local agent = gp.get_command_agent()
-          gp.Prompt(params, gp.Target.append, agent, template)
+          with_gp_marker(gp, params, template, "✨📝")
         end,
-        
+
         -- ToDo抽出: 音声文字起こしから実行可能なToDoを抽出（追加）
         ExtractTodo = function(gp, params)
           local template = [[<role>
@@ -139,40 +135,9 @@ return {
 - [ ] タスク内容 ⚠️
 </output_format>]]
 
-          -- 選択範囲の終了位置に絵文字マーカーを即座に挿入
-          local buf = vim.api.nvim_get_current_buf()
-          local end_line = vim.fn.line("'>")
-          
-          -- 一意なIDを生成
-          local marker_id = "gp-marker-" .. os.time() .. "-" .. math.random(1000, 9999)
-          local marker_text = "✅📋 <!-- " .. marker_id .. " -->"
-          
-          vim.api.nvim_buf_set_lines(buf, end_line, end_line, false, {
-            "",
-            marker_text
-          })
-          
-          -- 処理完了時にマーカーを削除
-          local function remove_marker()
-            local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-            for i, line in ipairs(lines) do
-              if line:find(marker_id, 1, true) then
-                vim.api.nvim_buf_set_lines(buf, i-1, i, false, {})
-                break
-              end
-            end
-          end
-          
-          vim.api.nvim_create_autocmd("User", {
-            pattern = "GpDone",
-            callback = remove_marker,
-            once = true
-          })
-
-          local agent = gp.get_command_agent()
-          gp.Prompt(params, gp.Target.append, agent, template)
+          with_gp_marker(gp, params, template, "✅📋")
         end,
-        
+
         -- タスク分解: GTDメソッドに基づき25分以内のタスクに分解（追加）
         BreakdownTask = function(gp, params)
           local template = [[<role>
@@ -217,40 +182,9 @@ return {
 - [ ] ⚪️ タスク内容 ⚠️
 </output_format>]]
 
-          -- 選択範囲の終了位置に絵文字マーカーを即座に挿入
-          local buf = vim.api.nvim_get_current_buf()
-          local end_line = vim.fn.line("'>")
-          
-          -- 一意なIDを生成
-          local marker_id = "gp-marker-" .. os.time() .. "-" .. math.random(1000, 9999)
-          local marker_text = "🎯✅ <!-- " .. marker_id .. " -->"
-          
-          vim.api.nvim_buf_set_lines(buf, end_line, end_line, false, {
-            "",
-            marker_text
-          })
-          
-          -- 処理完了時にマーカーを削除
-          local function remove_marker()
-            local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-            for i, line in ipairs(lines) do
-              if line:find(marker_id, 1, true) then
-                vim.api.nvim_buf_set_lines(buf, i-1, i, false, {})
-                break
-              end
-            end
-          end
-          
-          vim.api.nvim_create_autocmd("User", {
-            pattern = "GpDone",
-            callback = remove_marker,
-            once = true
-          })
-
-          local agent = gp.get_command_agent()
-          gp.Prompt(params, gp.Target.append, agent, template)
+          with_gp_marker(gp, params, template, "🎯✅")
         end,
-        
+
         -- ツリー化: 文章を階層的に分解・整理（追加）
         TreeStructure = function(gp, params)
           local template = [[<role>
@@ -290,40 +224,9 @@ return {
 ```
 </output_format>]]
 
-          -- 選択範囲の終了位置に絵文字マーカーを即座に挿入
-          local buf = vim.api.nvim_get_current_buf()
-          local end_line = vim.fn.line("'>")
-          
-          -- 一意なIDを生成
-          local marker_id = "gp-marker-" .. os.time() .. "-" .. math.random(1000, 9999)
-          local marker_text = "🌳📋 <!-- " .. marker_id .. " -->"
-          
-          vim.api.nvim_buf_set_lines(buf, end_line, end_line, false, {
-            "",
-            marker_text
-          })
-          
-          -- 処理完了時にマーカーを削除
-          local function remove_marker()
-            local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-            for i, line in ipairs(lines) do
-              if line:find(marker_id, 1, true) then
-                vim.api.nvim_buf_set_lines(buf, i-1, i, false, {})
-                break
-              end
-            end
-          end
-          
-          vim.api.nvim_create_autocmd("User", {
-            pattern = "GpDone",
-            callback = remove_marker,
-            once = true
-          })
-
-          local agent = gp.get_command_agent()
-          gp.Prompt(params, gp.Target.append, agent, template)
+          with_gp_marker(gp, params, template, "🌳📋")
         end,
-        
+
         -- シンプル化: 要約と用語精査（追加）
         SimplifyText = function(gp, params)
           local template = [[<role>
@@ -396,38 +299,7 @@ return {
 [このケースで最短で意思決定/回答に到達する"単一の質問"を、Yes/No か択一で1行提示（必要なら3～5択の選択肢を続けて記載：A) … / B) … / C) …）。十分な情報が揃っている場合は「（追加質問は不要）」と記す]
 </output_format>]]
 
-          -- 選択範囲の終了位置に絵文字マーカーを即座に挿入
-          local buf = vim.api.nvim_get_current_buf()
-          local end_line = vim.fn.line("'>")
-          
-          -- 一意なIDを生成
-          local marker_id = "gp-marker-" .. os.time() .. "-" .. math.random(1000, 9999)
-          local marker_text = "🔍📄 <!-- " .. marker_id .. " -->"
-          
-          vim.api.nvim_buf_set_lines(buf, end_line, end_line, false, {
-            "",
-            marker_text
-          })
-          
-          -- 処理完了時にマーカーを削除
-          local function remove_marker()
-            local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-            for i, line in ipairs(lines) do
-              if line:find(marker_id, 1, true) then
-                vim.api.nvim_buf_set_lines(buf, i-1, i, false, {})
-                break
-              end
-            end
-          end
-          
-          vim.api.nvim_create_autocmd("User", {
-            pattern = "GpDone",
-            callback = remove_marker,
-            once = true
-          })
-
-          local agent = gp.get_command_agent()
-          gp.Prompt(params, gp.Target.append, agent, template)
+          with_gp_marker(gp, params, template, "🔍📄")
         end,
       },
     })

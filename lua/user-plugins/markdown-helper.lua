@@ -2,6 +2,70 @@
 
 local M = {}
 
+-- Visual mode の選択範囲を取得する共通ヘルパー
+-- Visual mode: 選択範囲の start_row, end_row を返す
+-- Normal mode: カーソル行を start_row, end_row として返す
+-- 無効な範囲の場合は nil, nil を返す
+local function get_visual_range()
+  local start_row, end_row
+  local mode = vim.fn.mode()
+
+  if mode == 'v' or mode == 'V' or mode == '\022' then
+    local visual_start = vim.fn.getpos("v")
+    local cursor_pos = vim.api.nvim_win_get_cursor(0)
+    start_row = visual_start[2]
+    end_row = cursor_pos[1]
+    if start_row > end_row then
+      start_row, end_row = end_row, start_row
+    end
+    vim.cmd('normal! \\<Esc>')
+    if start_row == 0 or end_row == 0 then
+      local fallback = vim.api.nvim_win_get_cursor(0)
+      start_row, end_row = fallback[1], fallback[1]
+    end
+  else
+    local cursor_pos = vim.api.nvim_win_get_cursor(0)
+    start_row, end_row = cursor_pos[1], cursor_pos[1]
+  end
+
+  local total_lines = vim.api.nvim_buf_line_count(0)
+  if start_row < 1 or end_row > total_lines or start_row > end_row then
+    return nil, nil
+  end
+  return start_row, end_row
+end
+
+-- Callout 種類定義（一元管理）
+local CALLOUT_TYPES = {
+  { "note", "📝 Note", "n" },
+  { "warning", "⚠️ Warning", "s" },
+  { "error", "❌ Error", "d" },
+  { "info", "ℹ️ Info", "f" },
+  { "tip", "💡 Tip", "g" },
+  { "success", "✅ Success", "h" },
+  { "question", "❓ Question", "r" },
+  { "think", "🤔 Think", "t" },
+  { "idea", "💡 Idea", "i" },
+  { "ai", "🤖 AI", "a" },
+  { "prompt", "💬 Prompt", "p" },
+  { "plan", "📋 Plan", "l" },
+  { "journaling", "📓 Journaling", "j" },
+  { "quote", "🗣️ Quote (タイトル付き)", "q" },
+  { "blockquote", "📎 Blockquote (>のみ)", "b" },
+  { "code", "💻 Code Block", "c" },
+}
+
+-- Callout ヘッダー生成（tag 付与ロジックの一元化）
+local CALLOUT_TAGS = { think = "#think", idea = "#idea", ai = "#ai", journaling = "#journaling" }
+
+local function build_callout_header(indent, callout_type)
+  local tag = CALLOUT_TAGS[callout_type]
+  if tag then
+    return indent .. "> [!" .. callout_type .. "] " .. tag
+  end
+  return indent .. "> [!" .. callout_type .. "]"
+end
+
 -- markdownヘッダーを挿入する関数
 function M.insert_markdown_header(level)
   local current_line = vim.api.nvim_get_current_line()
@@ -48,48 +112,9 @@ end
 
 -- チェックボックスを挿入または切り替える関数（複数行対応）
 function M.toggle_as_task()
-  local start_row, end_row
-  
-  -- Visual modeの判定と範囲取得
-  local mode = vim.fn.mode()
-  
-  if mode == 'v' or mode == 'V' or mode == '\022' then
-    -- Visual mode中の現在の選択範囲を直接取得
-    local visual_start = vim.fn.getpos("v")
-    local cursor_pos = vim.api.nvim_win_get_cursor(0)
-    
-    start_row = visual_start[2]
-    end_row = cursor_pos[1]
-    
-    -- 選択方向によって開始と終了を整理
-    if start_row > end_row then
-      start_row, end_row = end_row, start_row
-    end
-    
-    -- Visual modeを終了
-    vim.cmd('normal! \\<Esc>')
-    
-    -- 範囲が無効な場合のフォールバック
-    if start_row == 0 or end_row == 0 then
-      local cursor_pos_fallback = vim.api.nvim_win_get_cursor(0)
-      start_row = cursor_pos_fallback[1]
-      end_row = cursor_pos_fallback[1]
-    end
-  else
-    -- Normal mode: 現在の行のみ
-    local cursor_pos = vim.api.nvim_win_get_cursor(0)
-    start_row = cursor_pos[1]
-    end_row = cursor_pos[1]
-  end
-  
-  -- 総行数チェック
-  local total_lines = vim.api.nvim_buf_line_count(0)
-  
-  -- 行番号の有効性をチェック
-  if start_row < 1 or end_row > total_lines or start_row > end_row then
-    return
-  end
-  
+  local start_row, end_row = get_visual_range()
+  if not start_row then return end
+
   -- 選択範囲の行を取得
   local lines = vim.api.nvim_buf_get_lines(0, start_row - 1, end_row, false)
   local new_lines = {}
@@ -130,48 +155,9 @@ end
 
 -- チェックボックスの完了状態を切り替える関数（未完了 → 実行中 → 完了 → 未完了）
 function M.toggle_checkbox_state()
-  local start_row, end_row
-  
-  -- Visual modeの判定と範囲取得
-  local mode = vim.fn.mode()
-  
-  if mode == 'v' or mode == 'V' or mode == '\022' then
-    -- Visual mode中の現在の選択範囲を直接取得
-    local visual_start = vim.fn.getpos("v")
-    local cursor_pos = vim.api.nvim_win_get_cursor(0)
-    
-    start_row = visual_start[2]
-    end_row = cursor_pos[1]
-    
-    -- 選択方向によって開始と終了を整理
-    if start_row > end_row then
-      start_row, end_row = end_row, start_row
-    end
-    
-    -- Visual modeを終了
-    vim.cmd('normal! \\<Esc>')
-    
-    -- 範囲が無効な場合のフォールバック
-    if start_row == 0 or end_row == 0 then
-      local cursor_pos_fallback = vim.api.nvim_win_get_cursor(0)
-      start_row = cursor_pos_fallback[1]
-      end_row = cursor_pos_fallback[1]
-    end
-  else
-    -- Normal mode: 現在の行のみ
-    local cursor_pos = vim.api.nvim_win_get_cursor(0)
-    start_row = cursor_pos[1]
-    end_row = cursor_pos[1]
-  end
-  
-  -- 総行数チェック
-  local total_lines = vim.api.nvim_buf_line_count(0)
-  
-  -- 行番号の有効性をチェック
-  if start_row < 1 or end_row > total_lines or start_row > end_row then
-    return
-  end
-  
+  local start_row, end_row = get_visual_range()
+  if not start_row then return end
+
   -- ファイルパスを取得
   local file_path = vim.api.nvim_buf_get_name(0)
   
@@ -239,48 +225,9 @@ end
 -- リストアイテムを追加する関数（複数行対応）
 function M.insert_list_item(marker)
   marker = marker or "*"
-  local start_row, end_row
-  
-  -- Visual modeの判定と範囲取得
-  local mode = vim.fn.mode()
-  
-  if mode == 'v' or mode == 'V' or mode == '\022' then
-    -- Visual mode中の現在の選択範囲を直接取得
-    local visual_start = vim.fn.getpos("v")
-    local cursor_pos = vim.api.nvim_win_get_cursor(0)
-    
-    start_row = visual_start[2]
-    end_row = cursor_pos[1]
-    
-    -- 選択方向によって開始と終了を整理
-    if start_row > end_row then
-      start_row, end_row = end_row, start_row
-    end
-    
-    -- Visual modeを終了
-    vim.cmd('normal! \\<Esc>')
-    
-    -- 範囲が無効な場合のフォールバック
-    if start_row == 0 or end_row == 0 then
-      local cursor_pos_fallback = vim.api.nvim_win_get_cursor(0)
-      start_row = cursor_pos_fallback[1]
-      end_row = cursor_pos_fallback[1]
-    end
-  else
-    -- Normal mode: 現在の行のみ
-    local cursor_pos = vim.api.nvim_win_get_cursor(0)
-    start_row = cursor_pos[1]
-    end_row = cursor_pos[1]
-  end
-  
-  -- 総行数チェック
-  local total_lines = vim.api.nvim_buf_line_count(0)
-  
-  -- 行番号の有効性をチェック
-  if start_row < 1 or end_row > total_lines or start_row > end_row then
-    return
-  end
-  
+  local start_row, end_row = get_visual_range()
+  if not start_row then return end
+
   -- 選択範囲の行を取得
   local lines = vim.api.nvim_buf_get_lines(0, start_row - 1, end_row, false)
   local new_lines = {}
@@ -316,47 +263,9 @@ end
 
 -- Calloutメイン関数
 function M.insert_callout()
-  local start_row, end_row
-  
-  -- Visual modeの判定と範囲取得
-  local mode = vim.fn.mode()
-  if mode == 'v' or mode == 'V' or mode == '\022' then
-    -- Visual mode中の現在の選択範囲を直接取得
-    local visual_start = vim.fn.getpos("v")
-    local cursor_pos = vim.api.nvim_win_get_cursor(0)
-    
-    start_row = visual_start[2]
-    end_row = cursor_pos[1]
-    
-    -- 選択方向によって開始と終了を整理
-    if start_row > end_row then
-      start_row, end_row = end_row, start_row
-    end
-    
-    -- Visual modeを終了
-    vim.cmd('normal! \\<Esc>')
-    
-    -- マークが無効な場合のフォールバック
-    if start_row == 0 or end_row == 0 then
-      local cursor_pos_fallback = vim.api.nvim_win_get_cursor(0)
-      start_row = cursor_pos_fallback[1]
-      end_row = cursor_pos_fallback[1]
-    end
-  else
-    -- Normal mode: 現在の行のみ
-    local cursor_pos = vim.api.nvim_win_get_cursor(0)
-    start_row = cursor_pos[1]
-    end_row = cursor_pos[1]
-  end
-  
-  -- 総行数チェック
-  local total_lines = vim.api.nvim_buf_line_count(0)
-  
-  -- 行番号の有効性をチェック
-  if start_row < 1 or end_row > total_lines or start_row > end_row then
-    return
-  end
-  
+  local start_row, end_row = get_visual_range()
+  if not start_row then return end
+
   -- 選択範囲の行を取得
   local lines = vim.api.nvim_buf_get_lines(0, start_row - 1, end_row, false)
   
@@ -405,26 +314,7 @@ end
 
 -- Calloutの種類を変更する関数
 function M.change_callout_type(start_row, end_row)
-  local callout_types = {
-    { "note", "📝 Note", "n" },
-    { "warning", "⚠️ Warning", "s" },
-    { "error", "❌ Error", "d" },
-    { "info", "ℹ️ Info", "f" },
-    { "tip", "💡 Tip", "g" },
-    { "success", "✅ Success", "h" },
-    { "question", "❓ Question", "r" },
-    { "think", "🤔 Think", "t" },
-    { "idea", "💡 Idea", "i" },
-    { "ai", "🤖 AI", "a" },
-    { "prompt", "💬 Prompt", "p" },
-    { "plan", "📋 Plan", "l" },
-    { "journaling", "📓 Journaling", "j" },
-    { "quote", "🗣️ Quote (タイトル付き)", "q" },
-    { "blockquote", "📎 Blockquote (>のみ)", "b" },
-    { "code", "💻 Code Block", "c" },
-  }
-
-  M.show_callout_selection(callout_types, "Calloutの種類を選択:", function(choice)
+  M.show_callout_selection(CALLOUT_TYPES, "Calloutの種類を選択:", function(choice)
     if not choice then return end
 
     local callout_type = choice[1]
@@ -453,19 +343,7 @@ function M.change_callout_type(start_row, end_row)
         if string.match(line, "^%s*>%s*%[!") then
           -- Calloutヘッダーを置き換え
           local indent = string.match(line, "^(%s*)")
-          local callout_header
-          if callout_type == "think" then
-            callout_header = indent .. "> [!" .. callout_type .. "] #think"
-          elseif callout_type == "idea" then
-            callout_header = indent .. "> [!" .. callout_type .. "] #idea"
-          elseif callout_type == "ai" then
-            callout_header = indent .. "> [!" .. callout_type .. "] #ai"
-          elseif callout_type == "journaling" then
-            callout_header = indent .. "> [!" .. callout_type .. "] #journaling"
-          else
-            callout_header = indent .. "> [!" .. callout_type .. "]"
-          end
-          table.insert(new_lines, callout_header)
+          table.insert(new_lines, build_callout_header(indent, callout_type))
         else
           table.insert(new_lines, line)
         end
@@ -478,39 +356,9 @@ end
 
 -- コードブロックを挿入する関数
 function M.insert_code_block()
-  local start_row, end_row
-  
-  -- Visual modeの判定と範囲取得
-  local mode = vim.fn.mode()
-  if mode == 'v' or mode == 'V' or mode == '\022' then
-    -- Visual mode中の現在の選択範囲を直接取得
-    local visual_start = vim.fn.getpos("v")
-    local cursor_pos = vim.api.nvim_win_get_cursor(0)
-    
-    start_row = visual_start[2]
-    end_row = cursor_pos[1]
-    
-    -- 選択方向によって開始と終了を整理
-    if start_row > end_row then
-      start_row, end_row = end_row, start_row
-    end
-    
-    -- Visual modeを終了
-    vim.cmd('normal! \\<Esc>')
-    
-    -- マークが無効な場合のフォールバック
-    if start_row == 0 or end_row == 0 then
-      local cursor_pos_fallback = vim.api.nvim_win_get_cursor(0)
-      start_row = cursor_pos_fallback[1]
-      end_row = cursor_pos_fallback[1]
-    end
-  else
-    -- Normal mode: 現在の行のみ
-    local cursor_pos = vim.api.nvim_win_get_cursor(0)
-    start_row = cursor_pos[1]
-    end_row = cursor_pos[1]
-  end
-  
+  local start_row, end_row = get_visual_range()
+  if not start_row then return end
+
   -- 選択した内容を取得
   local lines = vim.api.nvim_buf_get_lines(0, start_row - 1, end_row, false)
   local content = table.concat(lines, "\n")
@@ -727,26 +575,7 @@ function M.create_new_callout(start_row, end_row)
     return
   end
   
-  local callout_types = {
-    { "note", "📝 Note", "n" },
-    { "warning", "⚠️ Warning", "s" },
-    { "error", "❌ Error", "d" },
-    { "info", "ℹ️ Info", "f" },
-    { "tip", "💡 Tip", "g" },
-    { "success", "✅ Success", "h" },
-    { "question", "❓ Question", "r" },
-    { "think", "🤔 Think", "t" },
-    { "idea", "💡 Idea", "i" },
-    { "ai", "🤖 AI", "a" },
-    { "prompt", "💬 Prompt", "p" },
-    { "plan", "📋 Plan", "l" },
-    { "journaling", "📓 Journaling", "j" },
-    { "quote", "🗣️ Quote (タイトル付き)", "q" },
-    { "blockquote", "📎 Blockquote (>のみ)", "b" },
-    { "code", "💻 Code Block", "c" },
-  }
-
-  M.show_callout_selection(callout_types, "Calloutの種類を選択:", function(choice)
+  M.show_callout_selection(CALLOUT_TYPES, "Calloutの種類を選択:", function(choice)
     if not choice then return end
 
     local callout_type = choice[1]
@@ -784,19 +613,7 @@ function M.create_new_callout(start_row, end_row)
       end
     else
       -- 通常のCalloutの場合
-      local callout_header
-      if callout_type == "think" then
-        callout_header = common_indent .. "> [!" .. callout_type .. "] #think"
-      elseif callout_type == "idea" then
-        callout_header = common_indent .. "> [!" .. callout_type .. "] #idea"
-      elseif callout_type == "ai" then
-        callout_header = common_indent .. "> [!" .. callout_type .. "] #ai"
-      elseif callout_type == "journaling" then
-        callout_header = common_indent .. "> [!" .. callout_type .. "] #journaling"
-      else
-        callout_header = common_indent .. "> [!" .. callout_type .. "]"
-      end
-      table.insert(new_lines, callout_header)
+      table.insert(new_lines, build_callout_header(common_indent, callout_type))
 
       for _, line in ipairs(lines) do
         if line == "" then
@@ -937,32 +754,15 @@ end
 
 -- 選択範囲を新規ノートとして抽出する関数
 function M.extract_to_note()
-  local start_row, end_row
-
-  -- Visual modeの判定と範囲取得
+  -- Visual mode 必須
   local mode = vim.fn.mode()
-  if mode == 'v' or mode == 'V' or mode == '\022' then
-    local visual_start = vim.fn.getpos("v")
-    local cursor_pos = vim.api.nvim_win_get_cursor(0)
-
-    start_row = visual_start[2]
-    end_row = cursor_pos[1]
-
-    if start_row > end_row then
-      start_row, end_row = end_row, start_row
-    end
-
-    vim.cmd('normal! \\<Esc>')
-
-    if start_row == 0 or end_row == 0 then
-      local cursor_pos_fallback = vim.api.nvim_win_get_cursor(0)
-      start_row = cursor_pos_fallback[1]
-      end_row = cursor_pos_fallback[1]
-    end
-  else
+  if mode ~= 'v' and mode ~= 'V' and mode ~= '\022' then
     vim.notify("Visual modeで範囲を選択してください", vim.log.levels.WARN)
     return
   end
+
+  local start_row, end_row = get_visual_range()
+  if not start_row then return end
 
   -- 選択範囲の行を取得
   local lines = vim.api.nvim_buf_get_lines(0, start_row - 1, end_row, false)
