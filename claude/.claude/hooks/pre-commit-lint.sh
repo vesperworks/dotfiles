@@ -23,7 +23,7 @@ fi
 debug_log "Command: $COMMAND"
 
 # commit コマンド以外はスキップ
-if ! echo "$COMMAND" | grep -qE '(jj commit|git commit)'; then
+if ! echo "$COMMAND" | grep -qE '(jj (commit|split|describe)|git commit)'; then
   exit 0
 fi
 
