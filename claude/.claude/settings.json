@@ -21,38 +21,69 @@
       "LS",
       "Grep",
       "Glob",
+
       "TodoRead",
       "TodoWrite",
       "NotebookRead",
       "NotebookEdit",
+      "Task",
+      "ExitPlanMode",
+
+      "Skill(*)",
+      "SlashCommand(*)",
+
       "WebSearch",
       "WebFetch(domain:docs.anthropic.com)",
+      "WebFetch(domain:www.anthropic.com)",
       "WebFetch(domain:docs.github.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
       "WebFetch(domain:developer.mozilla.org)",
       "WebFetch(domain:docs.python.org)",
       "WebFetch(domain:nodejs.org)",
       "WebFetch(domain:docs.npmjs.com)",
+      "WebFetch(domain:registry.npmjs.org)",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:typescriptlang.org)",
       "WebFetch(domain:stackoverflow.com)",
       "WebFetch(domain:qiita.com)",
-      "WebFetch(domain:tauri.app)",
-      "WebFetch(domain:mastra.ai)",
+      "WebFetch(domain:zenn.dev)",
       "WebFetch(domain:nextjs.org)",
-      "WebFetch(domain:dify.ai)",
-      "WebFetch(domain:n8n.io)",
       "WebFetch(domain:tailwindcss.com)",
       "WebFetch(domain:biomejs.dev)",
       "WebFetch(domain:vitest.dev)",
       "WebFetch(domain:bun.sh)",
+      "WebFetch(domain:tauri.app)",
+      "WebFetch(domain:mastra.ai)",
+      "WebFetch(domain:dify.ai)",
+      "WebFetch(domain:n8n.io)",
       "WebFetch(domain:code.visualstudio.com)",
-      "WebFetch(domain:typescriptlang.org)",
-      "Task",
-      "ExitPlanMode",
-      "Skill(*)",
-      "SlashCommand(*)",
+      "WebFetch(domain:neovim.io)",
+      "WebFetch(domain:nikitabobko.github.io)",
+      "WebFetch(domain:felixkratz.github.io)",
+      "WebFetch(domain:catppuccin.com)",
+      "WebFetch(domain:eu-central-1-1.aws.cloud2.influxdata.com)",
+
       "mcp__ide__*",
       "mcp__context7__*",
+      "mcp__pencil",
+      "mcp__chrome-devtools__take_screenshot",
+      "mcp__chrome-devtools__take_snapshot",
+      "mcp__chrome-devtools__navigate_page",
+      "mcp__chrome-devtools__new_page",
+      "mcp__chrome-devtools__select_page",
+      "mcp__chrome-devtools__list_pages",
+      "mcp__chrome-devtools__close_page",
+      "mcp__chrome-devtools__click",
+      "mcp__chrome-devtools__hover",
+      "mcp__chrome-devtools__fill",
+      "mcp__chrome-devtools__press_key",
+      "mcp__chrome-devtools__list_network_requests",
+      "mcp__chrome-devtools__get_network_request",
       "ListMcpResourcesTool",
       "ReadMcpResourceTool",
+
       "Bash(git init:*)",
       "Bash(git add:*)",
       "Bash(git status:*)",
@@ -60,6 +91,8 @@
       "Bash(git diff:*)",
       "Bash(git show:*)",
       "Bash(git mv:*)",
+      "Bash(jj *)",
+
       "Bash(ni:*)",
       "Bash(nr:*)",
       "Bash(nlx:*)",
@@ -67,9 +100,18 @@
       "Bash(bun:*)",
       "Bash(deno:*)",
       "Bash(pnpm:*)",
+      "Bash(uv run:*)",
+      "Bash(python3:*)",
+
       "Bash(mkdir:*)",
       "Bash(touch:*)",
       "Bash(rmdir:*)",
+      "Bash(open:*)",
+      "Bash(cd:*)",
+      "Bash(pwd)",
+      "Bash(basename:*)",
+      "Bash(dirname:*)",
+
       "Bash(jq:*)",
       "Bash(yq:*)",
       "Bash(choose:*)",
@@ -79,9 +121,7 @@
       "Bash(uniq:*)",
       "Bash(tr:*)",
       "Bash(wc:*)",
-      "Bash(gemini:*)",
-      "Bash(cd:*)",
-      "Bash(pwd)",
+
       "Bash(echo:*)",
       "Bash(printf:*)",
       "Bash(which:*)",
@@ -91,24 +131,26 @@
       "Bash(timestamp=:*)",
       "Bash(local timestamp=:*)",
       "Bash(:*date +%Y%m%d-%H%M%S:*)",
-      "Bash(basename:*)",
-      "Bash(dirname:*)",
+
+      "Bash(shellcheck:*)",
+      "Bash(bash -n:*)",
+      "Bash(code:*)",
+      "Bash(gemini:*)",
+
+      "Bash(gh issue:*)",
+      "Bash(gh project:*)",
+      "Bash(gh api graphql:*)",
+
+      "Bash(agent-browser open:*)",
+      "Bash(agent-browser snapshot:*)",
+      "Bash(agent-browser click:*)",
+      "Bash(agent-browser close:*)",
+
       "Bash(source ~/.claude/scripts/:*)",
       "Bash(~/.claude/scripts/smart-commit.sh:*)",
       "Bash(~/.claude/scripts/smart-commit.sh \"\")",
-      "Bash(jj *)",
-      "Bash(shellcheck:*)",
-      "Bash(bash -n:*)",
-      "WebFetch(domain:github.com)",
-      "WebFetch(domain:neovim.io)",
-      "Skill(research-output)",
-      "WebFetch(domain:zenn.dev)",
-      "WebFetch(domain:nikitabobko.github.io)",
-      "WebFetch(domain:felixkratz.github.io)",
-      "WebFetch(domain:catppuccin.com)",
-      "WebFetch(domain:raw.githubusercontent.com)",
-      "WebFetch(domain:eu-central-1-1.aws.cloud2.influxdata.com)",
-      "mcp__pencil"
+
+      "Bash(pkill:*)"
     ],
     "deny": [
       "Bash(rm -rf:*)",
@@ -119,6 +161,7 @@
       "Bash(fdisk:*)",
       "Bash(sudo:*)",
       "Bash(chmod 777:*)",
+
       "Bash(git reset:*)",
       "Bash(git rebase:*)",
       "Bash(git force:*)",
@@ -128,8 +171,10 @@
       "Bash(git checkout -- *)",
       "Bash(git clean *)",
       "Bash(git stash drop *)",
+
       "Bash(curl:*)",
       "Bash(wget:*)",
+
       "Read(.env)",
       "Read(.env.*)",
       "Read(secrets/**)",
@@ -141,6 +186,7 @@
       "Read(*.pem)",
       "Read(*.key)",
       "Write(.env*)",
+
       "Bash(ls:*)",
       "Bash(cat:*)",
       "Bash(find:*)",
@@ -152,16 +198,19 @@
       "Bash(git branch:*)",
       "Bash(gh pr merge:*)",
       "Bash(jj git push:*)",
-      "Bash(rm -f */index.lock)",
+
       "Bash(cp:*)",
       "Bash(mv:*)",
       "Bash(sed:*)",
       "Bash(export:*)",
+
       "Bash(tmux split-window:*)",
+
       "Bash(bun remove:*)",
       "Bash(deno uninstall:*)",
       "Bash(pnpm remove:*)",
       "Bash(pnpm rm:*)",
+
       "mcp__puppeteer__*",
       "mcp__playwright__*",
       "mcp__playwright-server__*"
@@ -196,6 +245,10 @@
       {
         "matcher": "Bash",
         "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/remove-index-lock.sh"
+          },
           {
             "type": "command",
             "command": "~/.claude/hooks/block-dangerous-commands.sh"
@@ -245,6 +298,6 @@
     ]
   },
   "alwaysThinkingEnabled": true,
-  "skipDangerousModePermissionPrompt": true,
-  "voiceEnabled": true
+  "voiceEnabled": true,
+  "skipDangerousModePermissionPrompt": true
 }
