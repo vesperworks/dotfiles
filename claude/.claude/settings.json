@@ -207,6 +207,11 @@
           {
             "type": "command",
             "command": "~/.claude/scripts/command-logger.sh"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/pre-commit-lint.sh",
+            "timeout": 60
           }
         ]
       },
@@ -240,5 +245,6 @@
     ]
   },
   "alwaysThinkingEnabled": true,
-  "skipDangerousModePermissionPrompt": true
+  "skipDangerousModePermissionPrompt": true,
+  "voiceEnabled": true
 }
