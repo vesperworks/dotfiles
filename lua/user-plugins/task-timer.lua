@@ -3,25 +3,6 @@
 
 local M = {}
 
--- 🔍 デバッグモードのオン/オフ
-local debug_mode = false
-
-function M.toggle_debug_mode()
-  debug_mode = not debug_mode
-  if debug_mode then
-    vim.notify("🔍 デバッグモード ON", vim.log.levels.INFO)
-  else
-    vim.notify("🔍 デバッグモード OFF", vim.log.levels.INFO)
-  end
-end
-
--- デバッグログヘルパー関数（一時無効化）
-local function debug_log(message)
-  -- if debug_mode then
-  --   vim.notify(message, vim.log.levels.INFO)
-  -- end
-end
-
 local storage = require('user-plugins.task-timer-storage')
 local display = require('user-plugins.task-timer-display')
 
@@ -108,7 +89,7 @@ function M.start_update_loop()
     update_timer:stop()
   end
   
-  update_timer = vim.loop.new_timer()
+  update_timer = vim.uv.new_timer()
   update_timer:start(0, 1000, vim.schedule_wrap(function()
     display.update_all_displays(active_timers)
   end))
@@ -365,9 +346,6 @@ end
 function M.jump_to_active_timer()
   -- デバッグ: 関数開始ログ（現在ファイル情報付き）
   local current_file = vim.api.nvim_buf_get_name(0)
-  debug_log("🔍 jump_to_active_timer() 開始")
-  debug_log(string.format("🔍   → 現在ファイル: %s", vim.fn.fnamemodify(current_file, ":t")))
-  debug_log(string.format("🔍   → 現在フルパス: %s", current_file))
   
   if vim.tbl_isempty(active_timers) then
     vim.notify("📊 アクティブなタイマーはありません", vim.log.levels.WARN)
@@ -376,7 +354,6 @@ function M.jump_to_active_timer()
   
   -- デバッグ: タイマー数確認
   local timer_count = vim.tbl_count(active_timers)
-  debug_log(string.format("🔍 アクティブタイマー数: %d個", timer_count))
   
   -- タイマー選択肢を作成
   local timer_options = {}
@@ -400,25 +377,19 @@ function M.jump_to_active_timer()
     timer_data_map[task_id] = timer_data
     
     -- デバッグ: 各タイマー情報（ファイルパス付き）
-    debug_log(string.format("🔍 タイマー追加: %s", display_text))
-    debug_log(string.format("🔍   → フルパス: %s", timer_data.file_path))
-    debug_log(string.format("🔍   → タスクID: %s", task_id:sub(1, 30)))
   end
   
   -- デバッグ: 選択肢数確認
-  debug_log(string.format("🔍 選択肢数: %d個", #timer_options))
   
   -- leader-c方式の専用バッファUIを表示
   M.show_timer_selection_buffer(timer_options, timer_data_map)
   
   -- デバッグ: 関数終了ログ
-  debug_log("🔍 jump_to_active_timer() 終了")
 end
 
 -- 📟 leader-c方式の専用バッファタイマー選択UI
 function M.show_timer_selection_buffer(timer_options, timer_data_map)
   -- デバッグ: 関数開始ログ
-  debug_log(string.format("🔍 show_timer_selection_buffer() 開始 - オプション数: %d", #timer_options))
   
   -- 選択キー（最大9個まで表示）
   local selection_keys = { 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l' }
@@ -427,7 +398,6 @@ function M.show_timer_selection_buffer(timer_options, timer_data_map)
   local display_count = math.min(#timer_options, #selection_keys)
   
   -- デバッグ: 表示数確認
-  debug_log(string.format("🔍 表示予定数: %d個", display_count))
   
   -- 専用バッファ作成
   local buf = vim.api.nvim_create_buf(false, true)
@@ -446,8 +416,6 @@ function M.show_timer_selection_buffer(timer_options, timer_data_map)
     
     -- デバッグ: 各選択肢（ファイルパス付き）
     local timer_data = timer_data_map[task_id]
-    debug_log(string.format("🔍 %s: %s", key, display_text))
-    debug_log(string.format("🔍   → フルパス: %s", timer_data.file_path))
   end
   
   -- 残りの項目がある場合は通知
@@ -462,9 +430,9 @@ function M.show_timer_selection_buffer(timer_options, timer_data_map)
   
   -- バッファにコンテンツを設定
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-  vim.api.nvim_buf_set_option(buf, 'modifiable', false)
-  vim.api.nvim_buf_set_option(buf, 'bufhidden', 'wipe')
-  vim.api.nvim_buf_set_option(buf, 'buftype', 'nofile')
+  vim.bo[buf].modifiable = false
+  vim.bo[buf].bufhidden = 'wipe'
+  vim.bo[buf].buftype = 'nofile'
   
   -- ウィンドウサイズを計算
   local width = 0
@@ -488,8 +456,8 @@ function M.show_timer_selection_buffer(timer_options, timer_data_map)
   })
   
   -- ウィンドウオプション設定
-  vim.api.nvim_win_set_option(win, 'wrap', false)
-  vim.api.nvim_win_set_option(win, 'cursorline', false)
+  vim.wo[win].wrap = false
+  vim.wo[win].cursorline = false
   
   -- クローズ処理
   local function close_and_callback(result)
@@ -583,11 +551,6 @@ function M.jump_to_file_and_line_by_content(file_path, task_id)
   local expanded_path = vim.fn.expand(file_path)
   local full_path = vim.fn.fnamemodify(expanded_path, ':p')
   
-  -- 📝 デバッグ: パス情報を表示（簡略版）
-  if debug_mode then
-    vim.notify(string.format("🔍 ジャンプ先: %s", vim.fn.fnamemodify(file_path, ":t")), vim.log.levels.INFO)
-  end
-  
   -- ファイルが存在するかチェック
   if vim.fn.filereadable(expanded_path) == 0 then
     local file_name = vim.fn.fnamemodify(file_path, ":t")
@@ -641,17 +604,10 @@ function M.jump_to_file_and_line_by_content(file_path, task_id)
     -- 1. バッファが既に開いているかチェック（複数の方法で確認）
     local existing_bufnr = vim.fn.bufnr(expanded_path)
     
-    -- デバッグ: バッファ情報（簡略版）
-    if debug_mode then
-      vim.notify(string.format("🔍 既存バッファ: %d", existing_bufnr), vim.log.levels.INFO)
-    end
-    
     -- 既存バッファが見つかった場合の安全な処理
     if existing_bufnr ~= -1 then
-      debug_log("🔍 既存バッファ発見、有効性チェック中...")
       
       if vim.api.nvim_buf_is_valid(existing_bufnr) then
-        debug_log("🔍 バッファは有効、切り替え試行中...")
         
         -- より安全なバッファ切り替え（複数の方法で試行）
         local buffer_switch_success = pcall(function()
@@ -660,7 +616,6 @@ function M.jump_to_file_and_line_by_content(file_path, task_id)
         end)
         
         if not buffer_switch_success then
-          debug_log("🔍 bufferコマンド失敗、dropコマンド試行...")
           -- bufferコマンドが失敗した場合、dropコマンドを試す
           buffer_switch_success = pcall(function()
             vim.cmd('drop ' .. vim.fn.fnameescape(expanded_path))
@@ -668,48 +623,20 @@ function M.jump_to_file_and_line_by_content(file_path, task_id)
         end
         
         if buffer_switch_success then
-      if debug_mode then
-        vim.notify("🔍 バッファ切替成功", vim.log.levels.INFO)
-      end
-          return true -- 成功したのでここで終了
-        else
-        if debug_mode then
-          vim.notify("🔍 バッファ切替失敗→通常オープン", vim.log.levels.INFO)
+          return true
         end
-        end
-      else
-        if debug_mode then
-          vim.notify("🔍 バッファ無効→通常オープン", vim.log.levels.INFO)
-        end
-      end
-    else
-      if debug_mode then
-        vim.notify("🔍 既存バッファなし→新規オープン", vim.log.levels.INFO)
       end
     end
     
     -- 🔒 iCloudパス対応の直接ファイルオープン（swapチェックスキップ）
     local escaped_path = vim.fn.fnameescape(expanded_path)
-    local drop_command = 'drop ' .. escaped_path
-    if debug_mode then
-      vim.notify(string.format("🔍 実行予定: %s", drop_command), vim.log.levels.INFO)
-    end
-    
+
     local open_success = pcall(function()
-      vim.cmd(drop_command)
+      vim.cmd('drop ' .. escaped_path)
     end)
-    
+
     if not open_success then
-      if debug_mode then
-        vim.notify("🔍 drop失敗→edit試行", vim.log.levels.INFO)
-      end
-      -- dropが失敗した場合のみeditを試す
-      local edit_command = 'edit! ' .. escaped_path
-      vim.cmd(edit_command)
-    else
-      if debug_mode then
-        vim.notify("🔍 drop成功", vim.log.levels.INFO)
-      end
+      vim.cmd('edit! ' .. escaped_path)
     end
     
     return true
@@ -721,7 +648,6 @@ function M.jump_to_file_and_line_by_content(file_path, task_id)
   end
   
   -- 🔍 ファイルオープン成功後の処理
-  debug_log("🔍 ファイルオープン成功、タスク検索開始")
   
   local bufnr = vim.api.nvim_get_current_buf()
   
@@ -730,7 +656,6 @@ function M.jump_to_file_and_line_by_content(file_path, task_id)
   
   if line_number then
     -- タスクが見つかった場合
-    debug_log(string.format("🔍 タスク発見: %d行目", line_number))
     vim.api.nvim_win_set_cursor(0, {line_number, 0})
     vim.cmd('normal! zz')  -- 画面中央にスクロール
     
@@ -738,7 +663,6 @@ function M.jump_to_file_and_line_by_content(file_path, task_id)
     vim.notify(string.format("🎯 %s:%d にジャンプしました", file_name, line_number), vim.log.levels.INFO)
   else
     -- タスクが見つからない場合
-    debug_log("🔍 タスクが見つからない")
     vim.notify("⚠️ 該当するタスクが見つかりません（内容が変更された可能性があります）", vim.log.levels.WARN)
     
     -- タスク内容の一部を表示してヒントを提供
@@ -775,7 +699,6 @@ function M.remove_lost_tasks()
         -- 🔒 swapファイル生成回避: ファイル内容を直接読み込み
         local file_handle = io.open(file_path, 'r')
         if not file_handle then
-          debug_log(string.format("🔍 ファイル直接読み込みエラー、スキップ: %s", vim.fn.fnamemodify(file_path, ":t")))
           should_check_task = false
         else
           local file_lines = {}
@@ -799,7 +722,6 @@ function M.remove_lost_tasks()
         end
       elseif not vim.api.nvim_buf_is_valid(bufnr) then
         -- バッファが存在するが無効な場合はスキップ（E94エラー対策）
-        debug_log(string.format("🔍 無効バッファ、スキップ: %s", vim.fn.fnamemodify(file_path, ":t")))
         should_check_task = false
       end
       
@@ -809,7 +731,6 @@ function M.remove_lost_tasks()
         
         if not ok then
           -- 検索エラーの場合はスキップ
-          debug_log(string.format("🔍 タスク検索エラー、スキップ: %s", vim.fn.fnamemodify(file_path, ":t")))
         elseif not line_number then
           -- タスクが見つからない場合は削除対象
           table.insert(lost_tasks, {
@@ -922,8 +843,6 @@ function M.auto_restore_timers(bufnr)
   if file_path == "" then return end
   
   -- デバッグ: 自動復元開始
-  debug_log(string.format("🔍 auto_restore_timers() 開始 - ファイル: %s", vim.fn.fnamemodify(file_path, ":t")))
-  debug_log(string.format("🔍 復元前アクティブタイマー数: %d個", vim.tbl_count(active_timers)))
   
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
   local restored_count = 0
@@ -935,9 +854,6 @@ function M.auto_restore_timers(bufnr)
       local task_id = display.generate_task_id(file_path, line)
 
       -- デバッグ: 実行中タスク発見（ファイルパス付き）
-      debug_log(string.format("🔍 実行中タスク発見: %d行目 - %s", line_num, task_id:sub(1, 20)))
-      debug_log(string.format("🔍   → ファイル: %s", vim.fn.fnamemodify(file_path, ":t")))
-      debug_log(string.format("🔍   → フルパス: %s", file_path))
       
       -- メモリ内にタイマーがない場合、保存済みデータから復元を試みる
       if not active_timers[task_id] then
@@ -946,22 +862,17 @@ function M.auto_restore_timers(bufnr)
           -- 保存済みタイマーを復元
           active_timers[task_id] = saved_timers[task_id]
           restored_count = restored_count + 1
-          debug_log(string.format("🔍 保存済みタイマー復元: %s", task_id:sub(1, 20)))
         else
           -- 新規タイマーを開始
           M.start_timer(task_id, file_path, line)
           new_timer_count = new_timer_count + 1
-          debug_log(string.format("🔍 新規タイマー開始: %s", task_id:sub(1, 20)))
         end
       else
-        debug_log(string.format("🔍 既存タイマー: %s", task_id:sub(1, 20)))
       end
     end
   end
   
   -- デバッグ: 結果ログ
-  debug_log(string.format("🔍 復元後アクティブタイマー数: %d個", vim.tbl_count(active_timers)))
-  debug_log(string.format("🔍 復元数: %d個, 新規: %d個", restored_count, new_timer_count))
   
   -- 表示を更新
   if restored_count > 0 or new_timer_count > 0 then

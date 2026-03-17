@@ -141,10 +141,10 @@ function M.render_window()
   end
 
   -- バッファオプション（pending-tasksと同じAPI）
-  vim.api.nvim_buf_set_option(buf, "modifiable", false)
-  vim.api.nvim_buf_set_option(buf, "bufhidden", "wipe")
-  vim.api.nvim_buf_set_option(buf, "buftype", "nofile")
-  vim.api.nvim_buf_set_option(buf, "filetype", "heading-jump")
+  vim.bo[buf].modifiable = false
+  vim.bo[buf].bufhidden = 'wipe'
+  vim.bo[buf].buftype = 'nofile'
+  vim.bo[buf].filetype = 'heading-jump'
 
   local width = vim.o.columns
   local height = math.min(math.max(M.config.min_height, #headings), 15)
@@ -165,9 +165,9 @@ function M.render_window()
   M.state.visible = true
 
   -- ウィンドウオプション（pending-tasksと同じAPI）
-  vim.api.nvim_win_set_option(win, "wrap", false)
-  vim.api.nvim_win_set_option(win, "cursorline", true)
-  vim.api.nvim_win_set_option(win, "winhl", "Normal:NormalFloat,CursorLine:Visual")
+  vim.wo[win].wrap = false
+  vim.wo[win].cursorline = true
+  vim.wo[win].winhl = 'Normal:NormalFloat,CursorLine:Visual'
 
   M.setup_window_keymaps(buf)
 

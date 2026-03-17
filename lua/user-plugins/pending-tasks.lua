@@ -221,10 +221,10 @@ function M.render_window()
   end
 
   -- バッファオプション
-  vim.api.nvim_buf_set_option(buf, "modifiable", false)
-  vim.api.nvim_buf_set_option(buf, "bufhidden", "wipe")
-  vim.api.nvim_buf_set_option(buf, "buftype", "nofile")
-  vim.api.nvim_buf_set_option(buf, "filetype", "pending-tasks")
+  vim.bo[buf].modifiable = false
+  vim.bo[buf].bufhidden = 'wipe'
+  vim.bo[buf].buftype = 'nofile'
+  vim.bo[buf].filetype = 'pending-tasks'
 
   -- ウィンドウサイズ計算
   local width = vim.o.columns
@@ -249,9 +249,9 @@ function M.render_window()
   M.state.visible = true
 
   -- ウィンドウオプション
-  vim.api.nvim_win_set_option(win, "wrap", false)
-  vim.api.nvim_win_set_option(win, "cursorline", true)
-  vim.api.nvim_win_set_option(win, "winhl", "Normal:NormalFloat,CursorLine:Visual")
+  vim.wo[win].wrap = false
+  vim.wo[win].cursorline = true
+  vim.wo[win].winhl = 'Normal:NormalFloat,CursorLine:Visual'
 
   -- キーマップ設定（ウィンドウ内操作）
   M.setup_window_keymaps(buf)

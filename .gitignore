@@ -21,3 +21,7 @@ Thumbs.db
 
 # その他
 debug.log
+
+# バックアップ・中間成果物
+.git.backup/
+.brain/

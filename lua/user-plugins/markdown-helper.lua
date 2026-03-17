@@ -439,9 +439,9 @@ function M.show_selection_buffer(options, prompt, default_key, callback)
   
   -- バッファにコンテンツを設定
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-  vim.api.nvim_buf_set_option(buf, 'modifiable', false)
-  vim.api.nvim_buf_set_option(buf, 'bufhidden', 'wipe')
-  vim.api.nvim_buf_set_option(buf, 'buftype', 'nofile')
+  vim.bo[buf].modifiable = false
+  vim.bo[buf].bufhidden = 'wipe'
+  vim.bo[buf].buftype = 'nofile'
   
   -- ウィンドウサイズを計算
   local width = 0
@@ -465,8 +465,8 @@ function M.show_selection_buffer(options, prompt, default_key, callback)
   })
   
   -- ウィンドウオプション設定
-  vim.api.nvim_win_set_option(win, 'wrap', false)
-  vim.api.nvim_win_set_option(win, 'cursorline', false)
+  vim.wo[win].wrap = false
+  vim.wo[win].cursorline = false
   
   -- クローズ処理
   local function close_and_callback(result)

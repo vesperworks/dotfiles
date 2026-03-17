@@ -64,8 +64,6 @@ if ok then
     { desc = "🔍 タイマーデバッグ", silent = true })
   vim.keymap.set('n', '<leader>Tc', function() task_timer.clear_saved_timers() end,
     { desc = "🗑️ タイマーデータクリア", silent = true })
-  vim.keymap.set('n', '<leader>TD', function() task_timer.toggle_debug_mode() end,
-    { desc = "🔍 デバッグモード切替", silent = true })
   vim.keymap.set('n', '<leader>Tr', function() task_timer.show_raw_timer_data() end,
     { desc = "📄 タイマーJSONデータ表示", silent = true })
   vim.keymap.set('n', '<leader>Tb', function()

@@ -57,7 +57,7 @@ vim.keymap.set('i', '<C-k>', '<C-o>D', { desc = "行末まで削除" })
 
 -- VSCode用の限定プラグインセット
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
-if not vim.loop.fs_stat(lazypath) then
+if not vim.uv.fs_stat(lazypath) then
   vim.fn.system({
     "git",
     "clone",

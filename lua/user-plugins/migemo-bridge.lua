@@ -2,14 +2,21 @@ local M = {}
 
 M._cache = {}
 
--- 定数
-M.CMIGEMO_PATH = "/opt/homebrew/bin/cmigemo"
-M.DICT_PATH = "/opt/homebrew/opt/cmigemo/share/migemo/utf-8/migemo-dict"
+-- パスを動的に検出（環境非依存）
+M.CMIGEMO_PATH = vim.fn.exepath("cmigemo")
+M.DICT_PATH = (function()
+  local path = vim.fn.exepath("cmigemo")
+  if path == "" then return "" end
+  local prefix = vim.fn.fnamemodify(path, ":h:h")
+  local dict = prefix .. "/share/migemo/utf-8/migemo-dict"
+  if vim.fn.filereadable(dict) == 0 then return "" end
+  return dict
+end)()
 
 --- cmigemoが利用可能か判定
 --- @return boolean
 function M.is_available()
-  return vim.fn.executable(M.CMIGEMO_PATH) == 1
+  return M.CMIGEMO_PATH ~= "" and M.DICT_PATH ~= ""
 end
 
 --- ローマ字→Vim正規表現パターンを取得（キャッシュあり）
