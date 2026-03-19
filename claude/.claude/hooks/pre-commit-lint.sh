@@ -43,10 +43,10 @@ if command -v jj &>/dev/null && jj root &>/dev/null 2>&1; then
     [[ -n "$file" ]] && changed_files+=("$file")
   done < <(jj diff --name-only 2>/dev/null)
 else
-  # git: ステージされたファイル
+  # git: 変更ファイル（staged + unstaged）
   while IFS= read -r file; do
     [[ -n "$file" ]] && changed_files+=("$file")
-  done < <(git diff --cached --name-only 2>/dev/null)
+  done < <(git diff --name-only HEAD 2>/dev/null)
 fi
 
 if [[ ${#changed_files[@]} -eq 0 ]]; then
