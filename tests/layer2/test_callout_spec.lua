@@ -4,10 +4,10 @@
 local helpers = require("tests.helpers")
 
 describe("callout", function()
-  local markdown_helper
+  local callout
 
   before_each(function()
-    markdown_helper = require("user-plugins.markdown-helper")
+    callout = require("vw.callout")
   end)
 
   describe("remove_callout", function()
@@ -18,7 +18,7 @@ describe("callout", function()
         "> 2行目",
       })
       vim.api.nvim_win_set_cursor(0, { 1, 0 })
-      markdown_helper.remove_callout(1, 3)
+      callout.remove_callout(1, 3)
       local lines = helpers.get_buf_lines(buf)
       -- ヘッダー行は削除、本体行は > が除去される
       assert.are.equal(2, #lines)
@@ -33,7 +33,7 @@ describe("callout", function()
         "  > 警告内容",
       })
       vim.api.nvim_win_set_cursor(0, { 1, 0 })
-      markdown_helper.remove_callout(1, 2)
+      callout.remove_callout(1, 2)
       local lines = helpers.get_buf_lines(buf)
       assert.are.equal(1, #lines)
       assert.are.equal("  警告内容", lines[1])
@@ -46,7 +46,7 @@ describe("callout", function()
         "> 続き",
       })
       vim.api.nvim_win_set_cursor(0, { 1, 0 })
-      markdown_helper.remove_callout(1, 2)
+      callout.remove_callout(1, 2)
       local lines = helpers.get_buf_lines(buf)
       assert.are.equal(2, #lines)
       assert.are.equal("引用テキスト", lines[1])
@@ -62,7 +62,7 @@ describe("callout", function()
         "通常行",
       })
       vim.api.nvim_win_set_cursor(0, { 1, 0 })
-      markdown_helper.insert_callout()
+      callout.insert_callout()
       local lines = helpers.get_buf_lines(buf)
       -- 1行目の > が除去される
       assert.are.equal("引用テキスト", lines[1])
@@ -75,7 +75,7 @@ describe("callout", function()
         "> [!note]",
         "> コンテンツ",
       })
-      markdown_helper.remove_callout(1, 2)
+      callout.remove_callout(1, 2)
       local lines = helpers.get_buf_lines(buf)
       assert.are.equal(1, #lines)
       assert.are.equal("コンテンツ", lines[1])
@@ -94,7 +94,7 @@ describe("callout", function()
         { "warning", "Warning", "w" },
         { "tip", "Tip", "t" },
       }
-      markdown_helper.show_selection_buffer(options, "テスト", "note", function(result)
+      callout.show_selection_buffer(options, "テスト", "note", function(result)
         callback_result = result
       end)
 
@@ -124,7 +124,7 @@ describe("callout", function()
         { "note", "Note", "n" },
         { "warning", "Warning", "w" },
       }
-      markdown_helper.show_selection_buffer(options, "プロンプト", "note", function() end)
+      callout.show_selection_buffer(options, "プロンプト", "note", function() end)
 
       -- フローティングウィンドウのバッファ内容を確認（閉じる前に読む）
       local float_win = nil
@@ -163,7 +163,7 @@ describe("callout", function()
       local options = {
         { "note", "Note", "n" },
       }
-      markdown_helper.show_selection_buffer(options, "テスト", "note", function() end)
+      callout.show_selection_buffer(options, "テスト", "note", function() end)
 
       -- defer_fn の 10ms を待つ
       vim.wait(50, function() return false end)

@@ -1,6 +1,6 @@
 -- tests/minimal_init.lua
 -- plenary.nvim を使ったテスト用の最小設定
--- lazy.nvim 管理のプラグインをロードし、user-plugins を利用可能にする
+-- lazy.nvim 管理のプラグインをロードし、vw.* モジュールを利用可能にする
 
 vim.g.mapleader = " "
 vim.g.maplocalleader = " "
@@ -13,7 +13,7 @@ vim.opt.rtp:prepend(lazypath)
 local plenary_path = vim.fn.stdpath("data") .. "/lazy/plenary.nvim"
 vim.opt.rtp:prepend(plenary_path)
 
--- nvim config のパスを追加（user-plugins が require できるように）
+-- nvim config のパスを追加（vw.* が require できるように）
 vim.opt.rtp:prepend(vim.fn.expand("~/.config/nvim"))
 
 -- plenary のコマンドを明示的にロード（--noplugin 対応）

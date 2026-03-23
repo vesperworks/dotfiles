@@ -8,8 +8,8 @@ endif
 
 " foldingメソッドをexprに設定（カスタムLua関数を使用：見出し + callout対応）
 setlocal foldmethod=expr
-setlocal foldexpr=v:lua.require('user-plugins.markdown-fold').foldexpr()
-setlocal foldtext=v:lua.require('user-plugins.markdown-fold').foldtext()
+setlocal foldexpr=v:lua.require('vw.fold').foldexpr()
+setlocal foldtext=v:lua.require('vw.fold').foldtext()
 
 " 見出しレベル1で開始（すべて開いた状態）
 setlocal foldlevelstart=1

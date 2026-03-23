@@ -5,7 +5,7 @@ describe("timer_display", function()
   local display
 
   before_each(function()
-    display = require("user-plugins.task-timer-display")
+    display = require("vw.timer.display")
   end)
 
   describe("format_elapsed_time", function()

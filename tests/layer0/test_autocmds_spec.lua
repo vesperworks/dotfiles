@@ -1,27 +1,27 @@
--- tests/test_autocmds_spec.lua
+-- tests/layer0/test_autocmds_spec.lua
 -- Layer 0: autocmd の登録確認テスト
 
 local helpers = require("tests.helpers")
 
-describe("user-plugins autocmds", function()
+describe("vw autocmds", function()
   before_each(function()
-    local ok_heading, heading_jump = pcall(require, "user-plugins.heading-jump")
-    if ok_heading then heading_jump.setup() end
+    local ok_heading, vw_heading = pcall(require, "vw.heading")
+    if ok_heading then vw_heading.setup() end
 
-    local ok_hover, hover = pcall(require, "user-plugins.obsidian-hover-preview")
-    if ok_hover then hover.setup({ delay = 500, max_height = 15, preview_lines = 50 }) end
+    local ok_hover, vw_hover = pcall(require, "vw.hover")
+    if ok_hover then vw_hover.setup({ delay = 500, max_height = 15, preview_lines = 50 }) end
 
-    local ok_pending, pending_tasks = pcall(require, "user-plugins.pending-tasks")
-    if ok_pending then pending_tasks.setup() end
+    local ok_pending, vw_tasks = pcall(require, "vw.tasks")
+    if ok_pending then vw_tasks.setup() end
 
-    local ok_countdown, countdown = pcall(require, "user-plugins.markdown-countdown")
-    if ok_countdown then countdown.setup() end
+    local ok_countdown, vw_countdown = pcall(require, "vw.countdown")
+    if ok_countdown then vw_countdown.setup() end
 
-    local ok_zoom, zoom = pcall(require, "user-plugins.markdown-zoom")
-    if ok_zoom then zoom.setup() end
+    local ok_fold, vw_fold = pcall(require, "vw.fold")
+    if ok_fold then vw_fold.setup() end
 
-    local ok_timer, task_timer = pcall(require, "user-plugins.task-timer")
-    if ok_timer then task_timer.setup() end
+    local ok_timer, vw_timer = pcall(require, "vw.timer")
+    if ok_timer then vw_timer.setup() end
   end)
 
   describe("HeadingJump autocmds", function()

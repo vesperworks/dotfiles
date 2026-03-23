@@ -80,7 +80,7 @@ function M.toggle_checkbox_state()
         local normalized_old = old_state == ' ' and ' ' or old_state
         local normalized_new = new_state == ' ' and ' ' or new_state
 
-        local ok, timer = pcall(require, 'user-plugins.task-timer')
+        local ok, timer = pcall(require, 'vw.timer')
         if ok then
           timer.on_checkbox_change(file_path, line_number, normalized_old, normalized_new, new_line)
         end

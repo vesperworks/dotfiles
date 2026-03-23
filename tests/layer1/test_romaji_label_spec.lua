@@ -5,7 +5,7 @@ describe("romaji_label", function()
   local romaji
 
   before_each(function()
-    romaji = require("user-plugins.romaji-label")
+    romaji = require("vw.migemo")
   end)
 
   describe("kana_to_romaji テーブル", function()

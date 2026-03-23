@@ -191,7 +191,7 @@ return {
     local function migemo_search_jump(offset)
       return function()
         local Flash = require("flash")
-        local romaji_label = require("user-plugins.romaji-label")
+        local romaji_label = require("vw.migemo")
 
         -- ハイライト設定（f/tと共通）
         vim.api.nvim_set_hl(0, "FlashLabelActive", { fg = "#ff007c", bg = "#3b2940", bold = true })
@@ -267,7 +267,7 @@ return {
               mode = function(input)
                 if not input or input == "" then return input end
                 current_search = input
-                local migemo = require("user-plugins.migemo-bridge")
+                local migemo = require("vw.migemo")
                 if not migemo.is_available() then return input end
                 local pattern = migemo.query(input)
                 if pattern and pattern ~= input then

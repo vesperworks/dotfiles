@@ -7,7 +7,7 @@ describe("pending_tasks", function()
   local pending_tasks
 
   before_each(function()
-    pending_tasks = require("user-plugins.pending-tasks")
+    pending_tasks = require("vw.tasks")
     pending_tasks.setup()
     -- 前回の状態をクリア
     if pending_tasks.state.visible then

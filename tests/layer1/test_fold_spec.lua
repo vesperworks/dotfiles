@@ -7,7 +7,7 @@ describe("fold", function()
   local fold
 
   before_each(function()
-    fold = require("user-plugins.markdown-fold")
+    fold = require("vw.fold")
   end)
 
   describe("foldexpr", function()

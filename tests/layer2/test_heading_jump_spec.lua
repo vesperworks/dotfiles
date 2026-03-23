@@ -7,7 +7,7 @@ describe("heading_jump", function()
   local heading_jump
 
   before_each(function()
-    heading_jump = require("user-plugins.heading-jump")
+    heading_jump = require("vw.heading")
     heading_jump.setup()
     -- 前回の状態をクリア
     heading_jump.state.visible = false
