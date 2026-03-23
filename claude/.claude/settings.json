@@ -21,17 +21,14 @@
       "LS",
       "Grep",
       "Glob",
-
       "TodoRead",
       "TodoWrite",
       "NotebookRead",
       "NotebookEdit",
       "Task",
       "ExitPlanMode",
-
       "Skill(*)",
       "SlashCommand(*)",
-
       "WebSearch",
       "WebFetch(domain:docs.anthropic.com)",
       "WebFetch(domain:www.anthropic.com)",
@@ -64,7 +61,6 @@
       "WebFetch(domain:felixkratz.github.io)",
       "WebFetch(domain:catppuccin.com)",
       "WebFetch(domain:eu-central-1-1.aws.cloud2.influxdata.com)",
-
       "mcp__ide__*",
       "mcp__context7__*",
       "mcp__pencil",
@@ -83,7 +79,6 @@
       "mcp__chrome-devtools__get_network_request",
       "ListMcpResourcesTool",
       "ReadMcpResourceTool",
-
       "Bash(git init:*)",
       "Bash(git add:*)",
       "Bash(git status:*)",
@@ -92,7 +87,6 @@
       "Bash(git show:*)",
       "Bash(git mv:*)",
       "Bash(jj *)",
-
       "Bash(ni:*)",
       "Bash(nr:*)",
       "Bash(nlx:*)",
@@ -102,7 +96,6 @@
       "Bash(pnpm:*)",
       "Bash(uv run:*)",
       "Bash(python3:*)",
-
       "Bash(mkdir:*)",
       "Bash(touch:*)",
       "Bash(rmdir:*)",
@@ -111,7 +104,6 @@
       "Bash(pwd)",
       "Bash(basename:*)",
       "Bash(dirname:*)",
-
       "Bash(jq:*)",
       "Bash(yq:*)",
       "Bash(choose:*)",
@@ -121,7 +113,6 @@
       "Bash(uniq:*)",
       "Bash(tr:*)",
       "Bash(wc:*)",
-
       "Bash(echo:*)",
       "Bash(printf:*)",
       "Bash(which:*)",
@@ -131,25 +122,20 @@
       "Bash(timestamp=:*)",
       "Bash(local timestamp=:*)",
       "Bash(:*date +%Y%m%d-%H%M%S:*)",
-
       "Bash(shellcheck:*)",
       "Bash(bash -n:*)",
       "Bash(code:*)",
       "Bash(gemini:*)",
-
       "Bash(gh issue:*)",
       "Bash(gh project:*)",
       "Bash(gh api graphql:*)",
-
       "Bash(agent-browser open:*)",
       "Bash(agent-browser snapshot:*)",
       "Bash(agent-browser click:*)",
       "Bash(agent-browser close:*)",
-
       "Bash(source ~/.claude/scripts/:*)",
       "Bash(~/.claude/scripts/smart-commit.sh:*)",
       "Bash(~/.claude/scripts/smart-commit.sh \"\")",
-
       "Bash(pkill:*)"
     ],
     "deny": [
@@ -161,7 +147,6 @@
       "Bash(fdisk:*)",
       "Bash(sudo:*)",
       "Bash(chmod 777:*)",
-
       "Bash(git reset:*)",
       "Bash(git rebase:*)",
       "Bash(git force:*)",
@@ -171,10 +156,8 @@
       "Bash(git checkout -- *)",
       "Bash(git clean *)",
       "Bash(git stash drop *)",
-
       "Bash(curl:*)",
       "Bash(wget:*)",
-
       "Read(.env)",
       "Read(.env.*)",
       "Read(secrets/**)",
@@ -186,7 +169,6 @@
       "Read(*.pem)",
       "Read(*.key)",
       "Write(.env*)",
-
       "Bash(ls:*)",
       "Bash(cat:*)",
       "Bash(find:*)",
@@ -198,19 +180,15 @@
       "Bash(git branch:*)",
       "Bash(gh pr merge:*)",
       "Bash(jj git push:*)",
-
       "Bash(cp:*)",
       "Bash(mv:*)",
       "Bash(sed:*)",
       "Bash(export:*)",
-
       "Bash(tmux split-window:*)",
-
       "Bash(bun remove:*)",
       "Bash(deno uninstall:*)",
       "Bash(pnpm remove:*)",
       "Bash(pnpm rm:*)",
-
       "mcp__puppeteer__*",
       "mcp__playwright__*",
       "mcp__playwright-server__*"
