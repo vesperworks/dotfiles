@@ -1,0 +1,3 @@
+chore: update settings.local.json
+
+ビジュアル選択を末尾に移動する機能を追加

@@ -1,0 +1,9 @@
+-- lazy.nvimを使用してmini.nvimをインストール
+return {
+  'echasnovski/mini.nvim',
+  version = '*',
+  config = function()
+    require('mini.move').setup()
+  end
+}
+
