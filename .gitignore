@@ -31,6 +31,18 @@ yazi/.config/yazi/plugins/
 # aerospace layouts (contain window titles with personal info)
 aerospace/.config/aerospace/layouts*.json
 
+# nvim (managed by lazy.nvim / personal notes)
+nvim/.config/nvim/lazy-lock.json
+nvim/.config/nvim/**/lazy/*
+nvim/.config/nvim/PRPs/
+nvim/.config/nvim/thoughts/
+nvim/.config/nvim/logs.md
+nvim/.config/nvim/logcompact.md
+nvim/.config/nvim/tmp/
+nvim/.config/nvim/CLAUDE.md
+nvim/.config/nvim/CONTINUITY.md
+nvim/.config/nvim/vscode-alt-move-keybindings.json
+
 # Application credentials
 .config/gh/hosts.yml
 .config/gcloud/
