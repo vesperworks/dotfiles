@@ -1,4 +1,4 @@
--- ~/.config/nvim/lua/user-plugins/obsidian-hover-preview.lua
+-- lua/vw/hover.lua
 -- [[wikilink]]ホバープレビュー
 
 local M = {}

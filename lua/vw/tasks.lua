@@ -1,4 +1,4 @@
--- ~/.config/nvim/lua/user-plugins/pending-tasks.lua
+-- lua/vw/tasks.lua
 -- 現在のファイル内の「- [>]」行をフローティングウィンドウに表示
 
 local M = {}
@@ -50,8 +50,8 @@ function M.collect_pending_tasks()
   local tasks_paused = {}
 
   -- task-timer連携
-  local ok_display, timer_display = pcall(require, "user-plugins.task-timer-display")
-  local ok_storage, timer_storage = pcall(require, "user-plugins.task-timer-storage")
+  local ok_display, timer_display = pcall(require, "vw.timer.display")
+  local ok_storage, timer_storage = pcall(require, "vw.timer.storage")
   local active_timers = {}
   if ok_storage then
     active_timers = timer_storage.load_timers()
@@ -301,7 +301,7 @@ function M.setup_window_keymaps(buf)
   -- / で全実行中タスクを一括中止 [>] → [/]
   vim.keymap.set("n", "/", function()
     M.close_window()
-    local ok, timer = pcall(require, "user-plugins.task-timer")
+    local ok, timer = pcall(require, "vw.timer")
     if ok then
       timer.cancel_all_in_progress_tasks()
     end

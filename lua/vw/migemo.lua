@@ -1,4 +1,53 @@
+-- lua/vw/migemo.lua
+-- cmigemo 連携・ローマ字ラベル
+-- migemo-bridge.lua + romaji-label.lua を統合
+
 local M = {}
+
+-- =============================================
+-- cmigemo 連携 (migemo-bridge)
+-- =============================================
+
+M._cache = {}
+
+-- パスを動的に検出（環境非依存）
+M.CMIGEMO_PATH = vim.fn.exepath("cmigemo")
+M.DICT_PATH = (function()
+  local path = vim.fn.exepath("cmigemo")
+  if path == "" then return "" end
+  local prefix = vim.fn.fnamemodify(path, ":h:h")
+  local dict = prefix .. "/share/migemo/utf-8/migemo-dict"
+  if vim.fn.filereadable(dict) == 0 then return "" end
+  return dict
+end)()
+
+--- cmigemoが利用可能か判定
+function M.is_available()
+  return M.CMIGEMO_PATH ~= "" and M.DICT_PATH ~= ""
+end
+
+--- ローマ字→Vim正規表現パターンを取得（キャッシュあり）
+function M.query(input)
+  if not input or input == "" then return input end
+  if M._cache[input] then return M._cache[input] end
+  if not M.is_available() then return input end
+
+  local result = vim.fn.system({
+    M.CMIGEMO_PATH, "-d", M.DICT_PATH, "-v", "-q", "-w", input,
+  })
+  result = vim.trim(result)
+
+  if result and result ~= "" then
+    M._cache[input] = result
+    return result
+  end
+
+  return input
+end
+
+-- =============================================
+-- ローマ字ラベル (romaji-label)
+-- =============================================
 
 -- ひらがな/カタカナ → ローマ字変換テーブル（kunrei式 = cmigemo互換）
 M.kana_to_romaji = {
@@ -75,9 +124,6 @@ M.youon = {
 }
 
 --- UTF-8文字を1文字取得
---- @param str string
---- @param pos number バイト位置（1-indexed）
---- @return string|nil char, number next_pos
 local function get_utf8_char(str, pos)
   local byte = str:byte(pos)
   if not byte then return nil, pos end
@@ -90,9 +136,6 @@ local function get_utf8_char(str, pos)
 end
 
 --- テキストからローマ字を計算し、検索入力分をスキップした残りを返す
---- @param text string マッチ位置のテキスト
---- @param search_input string ユーザーの検索入力（ローマ字）
---- @return string|nil suffix 残りのローマ字（nilならフォールバック）
 function M.compute_suffix(text, search_input)
   local romaji = ""
   local pos = 1
@@ -101,7 +144,7 @@ function M.compute_suffix(text, search_input)
     local char, next_pos = get_utf8_char(text, pos)
     if not char then break end
 
-    -- 促音チェック（っ/ッ）: 次の文字の子音を重ねる
+    -- 促音チェック（っ/ッ）
     if char == "っ" or char == "ッ" then
       local next_char = get_utf8_char(text, next_pos)
       if next_char then
@@ -112,7 +155,6 @@ function M.compute_suffix(text, search_input)
           goto continue
         end
       end
-      -- 次の文字が変換不能ならスキップ
       pos = next_pos
       goto continue
     end
@@ -125,7 +167,6 @@ function M.compute_suffix(text, search_input)
       if youon_r then
         romaji = romaji .. youon_r
         pos = next_pos
-        -- next_charも消費
         local _, after_next = get_utf8_char(text, pos)
         pos = after_next
         goto continue
@@ -137,10 +178,8 @@ function M.compute_suffix(text, search_input)
     if r then
       romaji = romaji .. r
     elseif char:byte() <= 127 then
-      -- ASCII文字はそのまま
       romaji = romaji .. char
     else
-      -- 漢字等の変換不能文字 → フォールバック
       if #romaji <= #search_input then
         return nil
       end
@@ -151,7 +190,6 @@ function M.compute_suffix(text, search_input)
     ::continue::
   end
 
-  -- 検索入力分をスキップ
   if romaji:sub(1, #search_input) == search_input then
     local suffix = romaji:sub(#search_input + 1)
     if suffix == "" then return nil end
@@ -159,6 +197,10 @@ function M.compute_suffix(text, search_input)
   end
 
   return nil
+end
+
+function M.setup()
+  -- migemo はセットアップ不要（flash.lua から直接 require される）
 end
 
 return M

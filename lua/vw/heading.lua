@@ -1,32 +1,33 @@
--- ~/.config/nvim/lua/user-plugins/heading-jump.lua
--- 現在のファイル内の見出し（# ～ ######）をフローティングウィンドウに表示
+-- lua/vw/heading.lua
+-- 見出しジャンプ・セクション移動
+-- heading-jump.lua + move-to-heading.lua を統合
 
 local M = {}
 
--- 設定
+-- =============================================
+-- 見出しジャンプ (heading-jump)
+-- =============================================
+
 M.config = {
-  pattern = "^(#+)%s+(.+)", -- 見出しにマッチ
-  max_items = 100,          -- 最大表示件数
-  min_height = 1,           -- 最小高さ
-  border = "rounded",       -- ボーダースタイル
+  pattern = "^(#+)%s+(.+)",
+  max_items = 100,
+  min_height = 1,
+  border = "rounded",
 }
 
--- 状態管理
 M.state = {
   win = nil,
   buf = nil,
   visible = false,
-  headings = {},    -- { lnum, level, text } のリスト
-  source_buf = nil, -- 元のバッファID
-  preview_extmark = nil, -- プレビュー用extmark ID
-  input_text = "",  -- fuzzy検索用入力文字列
-  input_group = nil, -- InsertCharPre用autocmdグループ
+  headings = {},
+  source_buf = nil,
+  preview_extmark = nil,
+  input_text = "",
+  input_group = nil,
 }
 
--- extmark用namespace
 M.ns_id = vim.api.nvim_create_namespace("heading_jump_preview")
 
--- 現在のバッファから見出しを収集
 function M.collect_headings()
   local bufnr = vim.api.nvim_get_current_buf()
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
@@ -44,7 +45,6 @@ function M.collect_headings()
     end
   end
 
-  -- 最大件数で切り詰め
   if #headings > M.config.max_items then
     local trimmed = {}
     for i = 1, M.config.max_items do
@@ -58,12 +58,11 @@ function M.collect_headings()
   return headings
 end
 
--- 現在のカーソル行から親見出しのインデックスを取得
 function M.find_parent_heading_index(current_lnum)
   local headings = M.state.headings
   if #headings == 0 then return 1 end
 
-  local parent_idx = 1 -- デフォルトは最初の見出し
+  local parent_idx = 1
   for i, h in ipairs(headings) do
     if h.lnum <= current_lnum then
       parent_idx = i
@@ -74,16 +73,13 @@ function M.find_parent_heading_index(current_lnum)
   return parent_idx
 end
 
--- ウィンドウを閉じる
 function M.close_window()
-  -- fuzzy入力グループをクリーンアップ
   if M.state.input_group then
     pcall(vim.api.nvim_del_augroup_by_id, M.state.input_group)
     M.state.input_group = nil
   end
   M.state.input_text = ""
 
-  -- プレビューハイライトをクリア
   if M.state.source_buf and vim.api.nvim_buf_is_valid(M.state.source_buf) then
     vim.api.nvim_buf_clear_namespace(M.state.source_buf, M.ns_id, 0, -1)
   end
@@ -99,15 +95,11 @@ function M.close_window()
   M.state.visible = false
 end
 
--- フローティングウィンドウを描画
 function M.render_window()
-  -- 現在のカーソル位置を保存（close_window前に取得）
   local current_lnum = vim.api.nvim_win_get_cursor(0)[1]
-
   M.close_window()
 
   local headings = M.collect_headings()
-
   if #headings == 0 then
     vim.notify("見出し (#～######) はありません", vim.log.levels.INFO)
     return
@@ -116,31 +108,26 @@ function M.render_window()
   local buf = vim.api.nvim_create_buf(false, true)
   M.state.buf = buf
 
-  -- 表示内容を作成
   local display_lines = {}
   local highlight_info = {}
   for i, h in ipairs(headings) do
-    -- インデント: レベルに応じて2スペースずつ
     local indent = string.rep("  ", h.level - 1)
     local line = string.format(" %d.%s %s %s  (L:%d)", i, indent, h.prefix, h.text, h.lnum)
     table.insert(display_lines, line)
     table.insert(highlight_info, {
       level = h.level,
-      -- 見出しテキスト開始位置を計算
       start_col = #string.format(" %d.%s ", i, indent),
     })
   end
 
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, display_lines)
 
-  -- 各行に見出しレベルに応じたハイライトを適用
   for i, info in ipairs(highlight_info) do
     local line_idx = i - 1
     local heading_hl = "HeadingJumpH" .. info.level
     vim.api.nvim_buf_add_highlight(buf, -1, heading_hl, line_idx, info.start_col, -1)
   end
 
-  -- バッファオプション（pending-tasksと同じAPI）
   vim.bo[buf].modifiable = false
   vim.bo[buf].bufhidden = 'wipe'
   vim.bo[buf].buftype = 'nofile'
@@ -164,34 +151,25 @@ function M.render_window()
   M.state.win = win
   M.state.visible = true
 
-  -- ウィンドウオプション（pending-tasksと同じAPI）
   vim.wo[win].wrap = false
   vim.wo[win].cursorline = true
   vim.wo[win].winhl = 'Normal:NormalFloat,CursorLine:Visual'
 
   M.setup_window_keymaps(buf)
 
-  -- 親見出しをデフォルトカーソル位置に設定
   local default_idx = M.find_parent_heading_index(current_lnum)
   vim.api.nvim_win_set_cursor(win, { default_idx, 0 })
   M.preview_heading(default_idx)
 end
 
--- fuzzyマッチで見出しを検索し、最初のマッチ行を返す
 function M.find_fuzzy_match(input)
   if input == "" then return nil end
-
-  -- 見出しテキストのリストを作成
   local texts = {}
   for i, h in ipairs(M.state.headings) do
     texts[i] = h.text
   end
-
-  -- matchfuzzyでマッチする見出しを検索
   local matches = vim.fn.matchfuzzy(texts, input)
   if #matches == 0 then return nil end
-
-  -- 最初のマッチの元のインデックスを探す
   for i, h in ipairs(M.state.headings) do
     if h.text == matches[1] then
       return i
@@ -200,38 +178,22 @@ function M.find_fuzzy_match(input)
   return nil
 end
 
--- fuzzy入力ハンドラをセットアップ
 function M.setup_fuzzy_input(buf)
   M.state.input_text = ""
   M.state.input_group = vim.api.nvim_create_augroup("HeadingJumpInput", { clear = true })
-
-  -- Insert modeに切り替え
   vim.cmd("startinsert")
 
-  -- InsertCharPreで文字入力をキャッチ
   vim.api.nvim_create_autocmd("InsertCharPre", {
     buffer = buf,
     group = M.state.input_group,
     callback = function()
       local char = vim.v.char
-
-      -- 改行は処理しない
-      if char == "\n" or char == "\r" then
-        return
-      end
-
-      -- 入力をキャンセル（文字を表示させない）
+      if char == "\n" or char == "\r" then return end
       vim.v.char = ""
-
-      -- 非同期で処理
       vim.schedule(function()
-        -- 入力文字列に追加
         M.state.input_text = M.state.input_text .. char
-
-        -- fuzzyマッチを実行
         local match_idx = M.find_fuzzy_match(M.state.input_text)
         if match_idx then
-          -- マッチした行にカーソル移動＋プレビュー
           if M.state.win and vim.api.nvim_win_is_valid(M.state.win) then
             vim.api.nvim_win_set_cursor(M.state.win, { match_idx, 0 })
             M.preview_heading(match_idx)
@@ -241,7 +203,6 @@ function M.setup_fuzzy_input(buf)
     end,
   })
 
-  -- Enterキーで確定ジャンプ
   vim.keymap.set("i", "<CR>", function()
     vim.api.nvim_del_augroup_by_id(M.state.input_group)
     vim.cmd("stopinsert")
@@ -249,18 +210,15 @@ function M.setup_fuzzy_input(buf)
     M.jump_to_heading(cursor[1])
   end, { buffer = buf, silent = true })
 
-  -- Escキーで閉じる
   vim.keymap.set("i", "<Esc>", function()
     vim.api.nvim_del_augroup_by_id(M.state.input_group)
     vim.cmd("stopinsert")
     M.close_window()
   end, { buffer = buf, silent = true })
 
-  -- BackSpaceで1文字削除
   vim.keymap.set("i", "<BS>", function()
     if #M.state.input_text > 0 then
       M.state.input_text = M.state.input_text:sub(1, -2)
-      -- 再検索
       local match_idx = M.find_fuzzy_match(M.state.input_text)
       if match_idx and M.state.win and vim.api.nvim_win_is_valid(M.state.win) then
         vim.api.nvim_win_set_cursor(M.state.win, { match_idx, 0 })
@@ -270,7 +228,6 @@ function M.setup_fuzzy_input(buf)
   end, { buffer = buf, silent = true })
 end
 
--- ウィンドウ内のキーマップ設定
 function M.setup_window_keymaps(buf)
   local opts = { buffer = buf, noremap = true, silent = true }
 
@@ -302,29 +259,23 @@ function M.setup_window_keymaps(buf)
     M.preview_heading(prev_line)
   end, opts)
 
-  -- i でfuzzy入力モードを開始
   vim.keymap.set("n", "i", function()
     M.setup_fuzzy_input(buf)
   end, opts)
 end
 
--- プレビューハイライトをクリア
 function M.clear_preview_highlight()
   if M.state.source_buf and vim.api.nvim_buf_is_valid(M.state.source_buf) then
     vim.api.nvim_buf_clear_namespace(M.state.source_buf, M.ns_id, 0, -1)
   end
 end
 
--- 見出しをプレビュー（ウィンドウを閉じずに本文側を移動）
 function M.preview_heading(index)
   local heading = M.state.headings[index]
   if not heading then return end
 
   if M.state.source_buf and vim.api.nvim_buf_is_valid(M.state.source_buf) then
-    -- 前のハイライトをクリア
     M.clear_preview_highlight()
-
-    -- 反転ハイライトを適用
     local hl_group = "HeadingJumpH" .. heading.level .. "Preview"
     vim.api.nvim_buf_set_extmark(M.state.source_buf, M.ns_id, heading.lnum - 1, 0, {
       end_row = heading.lnum - 1,
@@ -346,7 +297,6 @@ function M.preview_heading(index)
   end
 end
 
--- 指定した見出しへジャンプ
 function M.jump_to_heading(index)
   local heading = M.state.headings[index]
   if not heading then
@@ -368,7 +318,6 @@ function M.jump_to_heading(index)
   end
 end
 
--- 表示/非表示トグル
 function M.toggle()
   if M.state.visible then
     M.close_window()
@@ -377,50 +326,109 @@ function M.toggle()
   end
 end
 
--- 初期化
+-- =============================================
+-- セクション移動 (move-to-heading)
+-- =============================================
+
+local function move_selection_to_heading(pattern, to_bottom)
+  local v_start = vim.fn.line("v")
+  local v_end = vim.fn.line(".")
+  if v_start > v_end then
+    v_start, v_end = v_end, v_start
+  end
+  local line_count = v_end - v_start + 1
+
+  local target_line = nil
+  for i = 1, vim.fn.line('$') do
+    local line = vim.fn.getline(i)
+    if line:match(pattern) then
+      target_line = i
+      break
+    end
+  end
+
+  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "x", false)
+
+  local dest
+  if target_line then
+    if to_bottom then
+      local next_heading = nil
+      for i = target_line + 1, vim.fn.line('$') do
+        if vim.fn.getline(i):match("^#+ ") then
+          next_heading = i
+          break
+        end
+      end
+      dest = (next_heading and next_heading - 1) or vim.fn.line('$')
+    else
+      dest = target_line
+    end
+  else
+    dest = 0
+  end
+
+  vim.cmd(string.format(":%d,%dmove %d", v_start, v_end, dest))
+
+  local new_start = dest + 1
+  vim.fn.append(new_start - 1, "")
+
+  local new_end = new_start + line_count
+  vim.cmd(string.format("normal! %dGV%dG=", new_start + 1, new_end))
+
+  local return_line
+  if dest >= v_end then
+    return_line = v_start - 1
+  else
+    return_line = v_start - 1 + line_count + 1
+  end
+  if return_line < 1 then return_line = 1 end
+  vim.api.nvim_win_set_cursor(0, {return_line, 0})
+end
+
+-- =============================================
+-- setup
+-- =============================================
+
 function M.setup(opts)
   if opts then
     M.config = vim.tbl_deep_extend("force", M.config, opts)
   end
 
-  -- 見出しレベル別のハイライトを定義（tokyonight準拠）
+  -- 見出しレベル別のハイライトを定義
   local heading_colors = {
-    "#7aa2f7", -- H1: blue
-    "#e0af68", -- H2: yellow
-    "#9ece6a", -- H3: green
-    "#1abc9c", -- H4: teal
-    "#bb9af7", -- H5: purple
-    "#fca7ea", -- H6: pink (tokyonight moon)
+    "#7aa2f7", "#e0af68", "#9ece6a", "#1abc9c", "#bb9af7", "#fca7ea",
   }
-  local bg_dark = "#1a1b26" -- tokyonight背景色
+  local bg_dark = "#1a1b26"
   for i = 1, 6 do
-    -- 通常ハイライト
     vim.api.nvim_set_hl(0, "HeadingJumpH" .. i, { fg = heading_colors[i], bold = true })
-    -- 反転ハイライト（プレビュー用）
     vim.api.nvim_set_hl(0, "HeadingJumpH" .. i .. "Preview", {
-      fg = bg_dark,
-      bg = heading_colors[i],
-      bold = true,
+      fg = bg_dark, bg = heading_colors[i], bold = true,
     })
   end
 
   local group = vim.api.nvim_create_augroup("HeadingJump", { clear = true })
-
   vim.api.nvim_create_autocmd("BufLeave", {
     group = group,
     pattern = "*.md",
     callback = function()
-      if M.state.visible then
-        M.close_window()
-      end
+      if M.state.visible then M.close_window() end
     end,
   })
 
+  -- 見出しジャンプ
   vim.keymap.set("n", "<leader>h", M.toggle, {
-    noremap = true,
-    silent = true,
+    noremap = true, silent = true,
     desc = "Toggle heading jump window (#～######)",
   })
+
+  -- セクション移動キーマップ
+  vim.keymap.set("v", "<leader>mn", function() move_selection_to_heading("^# NEXT", false) end, { desc = "Move to # NEXT", silent = true })
+  vim.keymap.set("v", "<leader>mw", function() move_selection_to_heading("^## WANTS", false) end, { desc = "Move to ## WANTS", silent = true })
+  vim.keymap.set("v", "<leader>md", function() move_selection_to_heading("^# DONE", true) end, { desc = "Move to # DONE (bottom)", silent = true })
+  vim.keymap.set("v", "<leader>ms", function() move_selection_to_heading("^## SHOULD", false) end, { desc = "Move to ## SHOULD", silent = true })
+  vim.keymap.set("v", "<leader>mm", function() move_selection_to_heading("^## MUST", false) end, { desc = "Move to ## MUST", silent = true })
+  vim.keymap.set("v", "<leader>mb", function() move_selection_to_heading("^# BACKLOG", false) end, { desc = "Move to # BACKLOG", silent = true })
+  vim.keymap.set("v", "<leader>mi", function() move_selection_to_heading("^# WIP", false) end, { desc = "Move to # WIP", silent = true })
 end
 
 return M

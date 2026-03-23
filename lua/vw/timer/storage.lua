@@ -1,4 +1,4 @@
--- ~/.config/nvim/lua/user-plugins/task-timer-storage.lua
+-- lua/vw/timer/storage.lua
 -- タスクタイマーのデータ永続化モジュール
 
 local M = {}
@@ -17,13 +17,13 @@ local function normalize_path_for_storage(path)
       return '$OBSIDIAN_VAULT' .. path:sub(#expanded_vault + 1)
     end
   end
-  
+
   -- 次にユーザーディレクトリを~で置き換え
   local home = vim.fn.expand('~')
   if path:sub(1, #home) == home then
     return '~' .. path:sub(#home + 1)
   end
-  
+
   return path
 end
 
@@ -36,12 +36,12 @@ local function expand_path_from_storage(path)
       return vim.fn.expand(vault_path) .. path:sub(16)
     end
   end
-  
+
   -- チルダの展開
   if path:sub(1, 1) == '~' then
     return vim.fn.expand('~') .. path:sub(2)
   end
-  
+
   return path
 end
 
@@ -61,7 +61,7 @@ end
 function M.save_timers(timers)
   -- ⚠️ 警告: この関数は完全上書きするため危険
   -- 新しいsave_timer_safe()またはremove_timer_safe()を使用してください
-  
+
   -- file_pathを環境変数と~で正規化してからJSONに保存
   local normalized_timers = {}
   for task_id, timer_data in pairs(timers) do
@@ -72,13 +72,13 @@ function M.save_timers(timers)
       task_content = timer_data.task_content
     }
   end
-  
+
   local file = io.open(data_file, 'w')
   if file then
     -- インデント付きJSON出力で可読性向上
     local json_str = vim.json.encode(normalized_timers)
     json_str = format_json(json_str)
-    
+
     file:write(json_str)
     file:close()
     return true
@@ -90,7 +90,7 @@ end
 function M.save_timer_safe(task_id, timer_data)
   -- 既存データを読み込み
   local existing_timers = M.load_timers()
-  
+
   -- 新しいタイマーデータを追加/更新
   existing_timers[task_id] = {
     start_time = timer_data.start_time,
@@ -99,7 +99,7 @@ function M.save_timer_safe(task_id, timer_data)
     -- line_number は削除（文字列ベースなので不要）
     last_updated = os.time()  -- 更新時刻を記録
   }
-  
+
   -- マージされたデータを保存
   return M.save_timers_internal(existing_timers)
 end
@@ -108,11 +108,11 @@ end
 function M.remove_timer_safe(task_id)
   -- 既存データを読み込み
   local existing_timers = M.load_timers()
-  
+
   -- 指定されたタイマーを削除
   local was_present = existing_timers[task_id] ~= nil
   existing_timers[task_id] = nil
-  
+
   -- マージされたデータを保存
   local success = M.save_timers_internal(existing_timers)
   return success, was_present
@@ -122,7 +122,7 @@ end
 function M.save_timers_internal(timers)
   -- バックアップを作成（安全性向上）
   M.create_backup()
-  
+
   -- file_pathを環境変数と~で正規化してからJSONに保存
   local normalized_timers = {}
   for task_id, timer_data in pairs(timers) do
@@ -134,13 +134,13 @@ function M.save_timers_internal(timers)
       last_updated = timer_data.last_updated or os.time()  -- 更新時刻を保持
     }
   end
-  
+
   local file = io.open(data_file, 'w')
   if file then
     -- インデント付きJSON出力で可読性向上
     local json_str = vim.json.encode(normalized_timers)
     json_str = format_json(json_str)
-    
+
     file:write(json_str)
     file:close()
     return true
@@ -153,14 +153,14 @@ function M.create_backup()
   if not M.data_file_exists() then
     return true  -- ファイルがない場合はバックアップ不要
   end
-  
+
   local backup_file = data_file .. '.backup'
   local source_file = io.open(data_file, 'r')
   if not source_file then return false end
-  
+
   local content = source_file:read('*all')
   source_file:close()
-  
+
   local backup = io.open(backup_file, 'w')
   if backup then
     backup:write(content)
@@ -175,13 +175,13 @@ function M.get_storage_stats()
   local timers = M.load_timers()
   local file_count = {}
   local total_timers = 0
-  
+
   for task_id, timer_data in pairs(timers) do
     total_timers = total_timers + 1
     local file_path = timer_data.file_path
     file_count[file_path] = (file_count[file_path] or 0) + 1
   end
-  
+
   return {
     total_timers = total_timers,
     file_count = file_count,

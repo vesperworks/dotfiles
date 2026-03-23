@@ -60,10 +60,10 @@ return {
         })
         -- <CR>を独自タスクステータスに再設定（obsidianのマッピングを上書き）
         vim.keymap.set("n", "<CR>", function()
-          require("user-plugins.markdown-helper").toggle_checkbox_state()
+          require("vw.checkbox").toggle_checkbox_state()
         end, { buffer = true, desc = "Toggle task checkbox" })
         vim.keymap.set("v", "<CR>", function()
-          require("user-plugins.markdown-helper").toggle_checkbox_state()
+          require("vw.checkbox").toggle_checkbox_state()
         end, { buffer = true, desc = "Toggle task checkbox" })
       end,
     },
