@@ -1,0 +1,117 @@
+-- tests/test_keymaps_spec.lua
+-- Layer 0: 全キーマップの登録確認テスト
+-- リファクタリング後にキーが消えていないことを保証する
+
+local helpers = require("tests.helpers")
+
+describe("user-plugins keymaps", function()
+  -- init.lua と同じ初期化を実行
+  before_each(function()
+    require("user-plugins.markdown-helper").setup_keymaps()
+
+    local ok_heading, heading_jump = pcall(require, "user-plugins.heading-jump")
+    if ok_heading then heading_jump.setup() end
+
+    local ok_move, move_to_heading = pcall(require, "user-plugins.move-to-heading")
+    if ok_move then move_to_heading.setup_keymaps() end
+
+    local ok_pending, pending_tasks = pcall(require, "user-plugins.pending-tasks")
+    if ok_pending then pending_tasks.setup() end
+
+    local ok, task_timer = pcall(require, "user-plugins.task-timer")
+    if ok then
+      task_timer.setup()
+      vim.keymap.set("n", "<leader>Ta", function() task_timer.show_active_timers() end, { desc = "アクティブタイマー表示", silent = true })
+      vim.keymap.set("n", "<leader>Tq", function() task_timer.stop_all_timers() end, { desc = "全タイマー停止", silent = true })
+      vim.keymap.set("n", "<leader>Ts", function() task_timer.rescan_current_buffer() end, { desc = "タイマー再スキャン", silent = true })
+      vim.keymap.set("n", "<leader>Ti", function() task_timer.show_timer_data_info() end, { desc = "タイマーデータ情報", silent = true })
+      vim.keymap.set("n", "<leader>Td", function() task_timer.debug_timer_comparison() end, { desc = "タイマーデバッグ", silent = true })
+      vim.keymap.set("n", "<leader>Tc", function() task_timer.clear_saved_timers() end, { desc = "タイマーデータクリア", silent = true })
+      vim.keymap.set("n", "<leader>Tr", function() task_timer.show_raw_timer_data() end, { desc = "タイマーJSONデータ表示", silent = true })
+      vim.keymap.set("n", "<leader>Tb", function()
+        local stats = require("user-plugins.task-timer-storage").get_storage_stats()
+        local backup_status = stats.backup_exists and "あり" or "なし"
+        vim.notify(string.format("ストレージ統計:\n総タイマー数: %d個\nバックアップ: %s", stats.total_timers, backup_status), vim.log.levels.INFO)
+      end, { desc = "ストレージ統計", silent = true })
+      vim.keymap.set("n", "<leader>t", function() task_timer.jump_to_active_timer() end, { desc = "稼働中タイマーにジャンプ", silent = true })
+    end
+  end)
+
+  describe("markdown-helper keymaps", function()
+    it("leader+1~6 でヘッダー挿入が登録されている", function()
+      for i = 1, 6 do
+        assert.is_true(helpers.keymap_exists("n", " " .. i), "<leader>" .. i .. " が未登録")
+      end
+    end)
+
+    it("leader+0 でヘッダー削除が登録されている", function()
+      assert.is_true(helpers.keymap_exists("n", " 0"))
+    end)
+
+    it("leader+x でチェックボックストグルが登録されている (n, v)", function()
+      assert.is_true(helpers.keymap_exists("n", " x"))
+      assert.is_true(helpers.keymap_exists("v", " x"))
+    end)
+
+    it("leader+/ で全進行中タスク中止が登録されている", function()
+      assert.is_true(helpers.keymap_exists("n", " /"))
+    end)
+
+    it("leader+* でリストアイテム(*) が登録されている (n, v)", function()
+      assert.is_true(helpers.keymap_exists("n", " *"))
+      assert.is_true(helpers.keymap_exists("v", " *"))
+    end)
+
+    it("leader+- でリストアイテム(-) が登録されている (n, v)", function()
+      assert.is_true(helpers.keymap_exists("n", " -"))
+      assert.is_true(helpers.keymap_exists("v", " -"))
+    end)
+
+    it("leader+c でCalloutが登録されている (n, v)", function()
+      assert.is_true(helpers.keymap_exists("n", " c"))
+      assert.is_true(helpers.keymap_exists("v", " c"))
+    end)
+
+    it("leader+[ でWikilink囲みが登録されている (v)", function()
+      assert.is_true(helpers.keymap_exists("v", " ["))
+    end)
+
+    it("leader+a でノート抽出が登録されている (v)", function()
+      assert.is_true(helpers.keymap_exists("v", " a"))
+    end)
+
+    it("leader+fs でファイル送信が登録されている", function()
+      assert.is_true(helpers.keymap_exists("n", " fs"))
+    end)
+  end)
+
+  describe("heading-jump keymaps", function()
+    it("leader+h で見出しジャンプウィンドウが登録されている", function()
+      assert.is_true(helpers.keymap_exists("n", " h"))
+    end)
+  end)
+
+  describe("move-to-heading keymaps", function()
+    local keys = { "mn", "mw", "md", "ms", "mm", "mb", "mi" }
+    for _, key in ipairs(keys) do
+      it("leader+" .. key .. " が登録されている (v)", function()
+        assert.is_true(helpers.keymap_exists("v", " " .. key))
+      end)
+    end
+  end)
+
+  describe("pending-tasks keymaps", function()
+    it("leader+j でタスクウィンドウが登録されている", function()
+      assert.is_true(helpers.keymap_exists("n", " j"))
+    end)
+  end)
+
+  describe("task-timer keymaps", function()
+    local keys = { "Ta", "Tq", "Ts", "Ti", "Td", "Tc", "Tr", "Tb", "t" }
+    for _, key in ipairs(keys) do
+      it("leader+" .. key .. " が登録されている", function()
+        assert.is_true(helpers.keymap_exists("n", " " .. key))
+      end)
+    end
+  end)
+end)
