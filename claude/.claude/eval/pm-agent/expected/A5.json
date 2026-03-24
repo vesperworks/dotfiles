@@ -1,0 +1,10 @@
+{
+  "id": "A5",
+  "name": "実務的な開発指示メモ",
+  "category": "parse",
+  "expected": {
+    "totalItems": { "min": 4, "max": 8 },
+    "requiredTitles": ["データセット|Eval", "RAGAS|評価", "マージ|merge|develop", "アサイン|Sprint|vw"],
+    "hasTaskOrStory": true
+  }
+}

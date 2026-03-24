@@ -1,0 +1,10 @@
+{
+  "id": "A4",
+  "name": "口語・略語",
+  "category": "parse",
+  "expected": {
+    "totalItems": 4,
+    "requiredTitles": ["ログイン|バグ|認証", "ダッシュボード|パフォーマンス|速度", "マイグレ|DB|データベース|migration", "テスト|カバレッジ"],
+    "hasBug": true
+  }
+}

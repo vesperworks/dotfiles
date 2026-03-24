@@ -1,0 +1,12 @@
+{
+  "id": "C2",
+  "name": "複合フィールド更新",
+  "category": "e2e",
+  "expected": {
+    "scriptsInvoked": ["pm-project-fields.sh"],
+    "operations": [
+      { "issue": 5, "field": "priority", "value": "High" },
+      { "issue": 5, "field": "estimate", "value": 3 }
+    ]
+  }
+}

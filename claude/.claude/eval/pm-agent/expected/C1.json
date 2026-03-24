@@ -1,0 +1,14 @@
+{
+  "id": "C1",
+  "name": "Status更新（Kanban vs Issue State）",
+  "category": "e2e",
+  "expected": {
+    "scriptsInvoked": ["pm-project-fields.sh"],
+    "operations": [
+      { "issue": 5, "field": "status", "value": "In Progress" },
+      { "issue": 7, "field": "status", "value": "In Review" }
+    ],
+    "forbiddenCommands": ["gh issue close", "gh issue edit --remove-label"],
+    "kanbanStatusNotIssueState": true
+  }
+}

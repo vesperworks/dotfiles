@@ -1,0 +1,11 @@
+{
+  "id": "B1",
+  "name": "初期セットアップ",
+  "category": "e2e",
+  "expected": {
+    "scriptsInvoked": ["pm-setup-labels.sh", "pm-project-fields.sh"],
+    "labelsCreated": ["type:epic", "type:feature", "type:story", "type:task", "type:bug"],
+    "fieldsCreated": ["Status", "Priority", "Estimate"],
+    "completionRequired": true
+  }
+}

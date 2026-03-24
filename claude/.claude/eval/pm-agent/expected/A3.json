@@ -1,0 +1,11 @@
+{
+  "id": "A3",
+  "name": "敬語・間接表現",
+  "category": "parse",
+  "expected": {
+    "totalItems": { "min": 2, "max": 4 },
+    "requiredTitles": ["レスポンス|パフォーマンス|問い合わせ|フォーム", "フィルター|管理画面"],
+    "hasBugOrTask": true,
+    "detectedDate": true
+  }
+}

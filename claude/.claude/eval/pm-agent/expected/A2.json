@@ -1,0 +1,18 @@
+{
+  "id": "A2",
+  "name": "機能開発議事録",
+  "category": "parse",
+  "expected": {
+    "totalItems": { "min": 7, "max": 12 },
+    "layers": {
+      "epic": { "min": 1 },
+      "feature": { "min": 2 },
+      "story": { "min": 1 },
+      "task": { "min": 3 },
+      "bug": { "min": 1 }
+    },
+    "requiredTitles": ["通知", "パフォーマンス|検索|ダッシュボード", "テスト"],
+    "hasMilestone": true,
+    "hasHierarchy": true
+  }
+}

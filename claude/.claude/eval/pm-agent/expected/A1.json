@@ -1,0 +1,13 @@
+{
+  "id": "A1",
+  "name": "最小TODO",
+  "category": "parse",
+  "expected": {
+    "totalItems": 3,
+    "layers": { "task": 3 },
+    "requiredTitles": ["バリデーション", "ページネーション", "README"],
+    "maxEstimatePerTask": 3,
+    "hasHierarchy": false,
+    "hasMilestone": false
+  }
+}
