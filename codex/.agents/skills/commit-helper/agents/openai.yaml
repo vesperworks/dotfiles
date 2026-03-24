@@ -1,0 +1,3 @@
+display_name: Commit Helper
+short_description: jj 優先で安全なコミットを組み立てる
+default_prompt: 変更を分析して、jj 優先の安全なコミット手順を提案してください。

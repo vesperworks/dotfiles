@@ -1,0 +1,263 @@
+prefix_rule(
+    pattern = ["rg"],
+    decision = "allow",
+    justification = "Fast text search is non-destructive.",
+)
+
+prefix_rule(
+    pattern = ["fd"],
+    decision = "allow",
+    justification = "File discovery is non-destructive.",
+)
+
+prefix_rule(
+    pattern = ["eza"],
+    decision = "allow",
+    justification = "Modern directory listing is non-destructive.",
+)
+
+prefix_rule(
+    pattern = ["pwd"],
+    decision = "allow",
+    justification = "Working directory inspection is non-destructive.",
+)
+
+prefix_rule(
+    pattern = ["bat"],
+    decision = "allow",
+    justification = "Modern read-only file inspection is non-destructive.",
+)
+
+prefix_rule(
+    pattern = ["sed", "-n"],
+    decision = "allow",
+    justification = "Paged file inspection is non-destructive.",
+)
+
+prefix_rule(
+    pattern = ["head"],
+    decision = "allow",
+    justification = "Read-only file inspection is non-destructive.",
+)
+
+prefix_rule(
+    pattern = ["tail"],
+    decision = "allow",
+    justification = "Read-only file inspection is non-destructive.",
+)
+
+prefix_rule(
+    pattern = ["wc"],
+    decision = "allow",
+    justification = "Read-only counting is non-destructive.",
+)
+
+prefix_rule(
+    pattern = ["git", "status"],
+    decision = "allow",
+    justification = "Repository status inspection is non-destructive.",
+)
+
+prefix_rule(
+    pattern = ["git", "diff"],
+    decision = "allow",
+    justification = "Diff inspection is non-destructive.",
+)
+
+prefix_rule(
+    pattern = ["git", "log"],
+    decision = "allow",
+    justification = "Commit history inspection is non-destructive.",
+)
+
+prefix_rule(
+    pattern = ["jj", "status"],
+    decision = "allow",
+    justification = "Repository status inspection is non-destructive.",
+)
+
+prefix_rule(
+    pattern = ["jj", "diff"],
+    decision = "allow",
+    justification = "Diff inspection is non-destructive.",
+)
+
+prefix_rule(
+    pattern = ["jj", "log"],
+    decision = "allow",
+    justification = "Commit history inspection is non-destructive.",
+)
+
+prefix_rule(
+    pattern = ["jj", "root"],
+    decision = "allow",
+    justification = "Repository root discovery is non-destructive.",
+)
+
+prefix_rule(
+    pattern = ["jj", "file", "list"],
+    decision = "allow",
+    justification = "Tracked file listing is non-destructive.",
+)
+
+prefix_rule(
+    pattern = ["jj", "commit"],
+    decision = "allow",
+    justification = "Local-only jj commit is reversible with jj workflow tools.",
+)
+
+prefix_rule(
+    pattern = ["jj", "describe"],
+    decision = "allow",
+    justification = "Local-only jj metadata update is reversible.",
+)
+
+prefix_rule(
+    pattern = ["jj", "new"],
+    decision = "allow",
+    justification = "Creating a new local working copy is low risk and reversible.",
+)
+
+prefix_rule(
+    pattern = ["jj", "split"],
+    decision = "prompt",
+    justification = "History reshaping should be confirmed explicitly.",
+)
+
+prefix_rule(
+    pattern = ["jj", "squash"],
+    decision = "prompt",
+    justification = "History reshaping should be confirmed explicitly.",
+)
+
+prefix_rule(
+    pattern = ["jj", "rebase"],
+    decision = "prompt",
+    justification = "History reshaping should be confirmed explicitly.",
+)
+
+prefix_rule(
+    pattern = ["jj", "undo"],
+    decision = "prompt",
+    justification = "Undo changes are reversible but still change repository state.",
+)
+
+prefix_rule(
+    pattern = ["git", "add"],
+    decision = "prompt",
+    justification = "git staging is not the primary workflow in this repository.",
+)
+
+prefix_rule(
+    pattern = ["git", "commit"],
+    decision = "prompt",
+    justification = "git commit is local-only but jj is the preferred workflow here.",
+)
+
+prefix_rule(
+    pattern = ["cp"],
+    decision = "prompt",
+    justification = "Copy operations can affect tracked files and should be reviewed.",
+)
+
+prefix_rule(
+    pattern = ["mv"],
+    decision = "prompt",
+    justification = "Move operations can affect tracked files and should be reviewed.",
+)
+
+prefix_rule(
+    pattern = ["stow"],
+    decision = "prompt",
+    justification = "Symlink changes can affect the live home directory and should be reviewed.",
+)
+
+prefix_rule(
+    pattern = ["bash", "-lc"],
+    decision = "prompt",
+    justification = "Shell wrapper execution can hide risky subcommands and should be reviewed.",
+)
+
+prefix_rule(
+    pattern = ["zsh", "-c"],
+    decision = "prompt",
+    justification = "Shell wrapper execution can hide risky subcommands and should be reviewed.",
+)
+
+prefix_rule(
+    pattern = ["sh", "-c"],
+    decision = "prompt",
+    justification = "Shell wrapper execution can hide risky subcommands and should be reviewed.",
+)
+
+prefix_rule(
+    pattern = ["curl"],
+    decision = "prompt",
+    justification = "Remote fetch commands should be reviewed explicitly.",
+)
+
+prefix_rule(
+    pattern = ["wget"],
+    decision = "prompt",
+    justification = "Remote fetch commands should be reviewed explicitly.",
+)
+
+prefix_rule(
+    pattern = ["git", "push"],
+    decision = "forbidden",
+    justification = "Remote-affecting operations are not allowed by default.",
+)
+
+prefix_rule(
+    pattern = ["jj", "git", "push"],
+    decision = "forbidden",
+    justification = "Remote-affecting operations are not allowed by default.",
+)
+
+prefix_rule(
+    pattern = ["sudo"],
+    decision = "forbidden",
+    justification = "Privilege escalation is not allowed by default.",
+)
+
+prefix_rule(
+    pattern = ["git", "rebase"],
+    decision = "forbidden",
+    justification = "History rewriting is not allowed by default.",
+)
+
+prefix_rule(
+    pattern = ["rm", "-rf"],
+    decision = "forbidden",
+    justification = "Recursive destructive deletion is not allowed by default.",
+)
+
+prefix_rule(
+    pattern = ["dd"],
+    decision = "forbidden",
+    justification = "Low-level destructive disk operations are not allowed by default.",
+)
+
+prefix_rule(
+    pattern = ["mkfs"],
+    decision = "forbidden",
+    justification = "Filesystem formatting commands are not allowed by default.",
+)
+
+prefix_rule(
+    pattern = ["chmod", "777"],
+    decision = "forbidden",
+    justification = "Overly permissive filesystem permission changes are not allowed by default.",
+)
+
+prefix_rule(
+    pattern = ["git", "reset", "--hard"],
+    decision = "forbidden",
+    justification = "Destructive reset is not allowed by default.",
+)
+
+prefix_rule(
+    pattern = ["git", "clean"],
+    decision = "forbidden",
+    justification = "Destructive cleanup is not allowed by default.",
+)

@@ -23,6 +23,17 @@ claude/.claude/settings.local.json
 claude/.claude/projects/
 claude/.claude/todos/
 claude/.claude/plans/
+claude/.claude/eval/**/results/
+
+# Codex local
+codex/.codex/sessions/
+codex/.codex/archived_sessions/
+codex/.codex/log/
+codex/.codex/auth.json
+codex/.codex/history.jsonl
+codex/.codex/version.json
+codex/.codex/skills/.system/
+codex/.codex/skills/vercel-react-best-practices/
 
 # Plugins (managed by plugin managers)
 tmux/.config/tmux/plugins/

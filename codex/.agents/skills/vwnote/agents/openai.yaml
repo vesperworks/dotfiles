@@ -1,0 +1,3 @@
+display_name: VW Note
+short_description: 「ノートにして」で Atomic Notes 形式に整える
+default_prompt: 会話内容や技術用語を Atomic Notes 形式に整えてください。

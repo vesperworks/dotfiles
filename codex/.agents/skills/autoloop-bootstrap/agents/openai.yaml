@@ -1,0 +1,3 @@
+display_name: Autoloop Bootstrap
+short_description: 質問に答えるだけで半自動の改善ループを初期化する
+default_prompt: Codex の標準機能を優先して、半自動の改善ループをセットアップしてください。

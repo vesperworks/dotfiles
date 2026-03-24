@@ -1,0 +1,96 @@
+#:schema https://developers.openai.com/codex/config-schema.json
+# ~/.codex/config.toml
+
+# === ベースライン（安全デフォルト） ===
+model = "gpt-5.4"
+model_verbosity = "medium"    # 応答の冗長さ
+approval_policy = "on-request" # 通常は自走、危険操作だけ承認
+sandbox_mode = "workspace-write"    # ローカル作業を止まりにくくする
+model_reasoning_effort = "medium"
+model_reasoning_summary = "concise"  # 推論過程を簡潔に表示
+personality = "pragmatic"
+web_search = "live"
+allow_login_shell = false
+
+# workspace-write の既定
+[sandbox_workspace_write]
+network_access = false # 基本はネットワーク遮断
+writable_roots = []    # 必要なら "~/.npm" などを追加
+
+# === プロファイル（用途別に緩める） ===
+
+# 依存インストールやWeb開発などで限定的に緩める
+[profiles.web]
+sandbox_mode = "workspace-write"
+approval_policy = "on-request"   # モデルが必要と判断した時のみ承認要求
+allow_login_shell = false
+[profiles.web.sandbox_workspace_write]
+network_access = true
+writable_roots = ["~/.npm", "~/.cache/yarn", "~/.cache/uv", "~/.bun/install/cache"]
+
+# 完全読み取り専用（安全）
+[profiles.readonly]
+approval_policy = "untrusted"
+sandbox_mode = "read-only"
+allow_login_shell = false
+
+# 深い分析用（推論最大）
+[profiles.deep]
+model = "gpt-5.3-codex"
+model_reasoning_effort = "xhigh"
+model_reasoning_summary = "detailed"
+sandbox_mode = "read-only"
+approval_policy = "untrusted"
+allow_login_shell = false
+
+# 高速なローカル探索用。rules による allow を前提に承認を最小化する
+[profiles.fast-explore]
+approval_policy = "never"
+sandbox_mode = "workspace-write"
+allow_login_shell = false
+[profiles.fast-explore.sandbox_workspace_write]
+network_access = false
+writable_roots = []
+
+# === エディタ・通知など ===
+file_opener = "vscode"
+notify = ["bash", "-lc", "afplay /System/Library/Sounds/Ping.aiff"]
+
+[tui]
+# デスクトップ通知
+notifications = ["agent-turn-complete", "approval-requested"]
+status_line = ["model-with-reasoning", "context-remaining", "current-dir", "five-hour-limit"]
+
+# === シェル環境の安全化 ===
+[shell_environment_policy]
+inherit = "core"
+exclude = ["AWS_*", "AZURE_*", "*TOKEN*", "*SECRET*", "*KEY*"]
+
+# === ツール機能 ===
+[tools.web_search]
+context_size = "medium"
+
+# === MCP サーバー ===
+[mcp_servers.chrome-devtools]
+command = "npx"
+args = ["chrome-devtools-mcp"]
+
+[mcp_servers.context7]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp@latest"]
+
+[mcp_servers.pencil]
+command = "/Applications/Pencil.app/Contents/Resources/app.asar.unpacked/out/mcp-server-darwin-arm64"
+args = ["--ws-port", "63922"]
+
+[projects."."]
+trust_level = "trusted"
+
+[notice.model_migrations]
+gpt-5-codex = "gpt-5.4"
+
+[features]
+multi_agent = true
+
+[plugins."github@openai-curated"]
+enabled = true
