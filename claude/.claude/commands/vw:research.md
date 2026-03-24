@@ -177,20 +177,32 @@ Filter aggressively - return only actionable insights.
 Task(subagent_type="general-purpose", description="Web research for {topic}", prompt="""
 You are hl-web-search-researcher. Research "{topic}" from web sources.
 
+## Step 0: Get Today's Date (MANDATORY)
+Before any search, run this Bash command to get the real date:
+  Bash: date '+%Y-%m-%d'
+Use this date (NOT your training knowledge cutoff) for:
+- Filtering search results by recency
+- Adding "2026" or "after:YYYY-MM-DD" to search queries when freshness matters
+- Judging whether a source is current or outdated
+
 ## Tool Selection Guide
 - **Use WebSearch** for: official docs, version info, citations needed (provides source URLs)
 - **Use /vw:websearch command** for: conceptual explanations, design philosophy, comparative analysis (deep explanations, no URLs)
 
 Strategy:
-1. Search official documentation first (use WebSearch for source URLs)
-2. Look for best practices from recognized experts
-3. Find real-world solutions from Stack Overflow, GitHub issues
-4. For deep conceptual understanding, use /vw:websearch command
-5. Include publication dates for currency
+1. Run `date '+%Y-%m-%d'` first to know today's date
+2. Search official documentation first (use WebSearch for source URLs)
+3. For version-sensitive topics, append the current year to queries (e.g., "{topic} 2026")
+4. Look for best practices from recognized experts
+5. Find real-world solutions from Stack Overflow, GitHub issues
+6. For deep conceptual understanding, use /vw:websearch command
+7. Include publication dates for currency — flag anything older than 1 year
 
 Return findings with:
+- Today's date (from Step 0) and knowledge cutoff disclaimer
 - Direct links to sources (from WebSearch)
 - Relevant quotes with attribution
+- Publication dates for each source
 - Note any conflicting information
 - Mark which tool was used for each finding
 """)
