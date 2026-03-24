@@ -153,8 +153,13 @@ return {
           vim.api.nvim_buf_set_lines(0, 0, 0, false, padding_lines)
           -- カーソルを31行目に移動
           vim.api.nvim_win_set_cursor(0, { 31, 0 })
-          -- Alacritty透明度を0.05に変更（ほぼ透明 + blur）
-          vim.fn.system([[sed -i '' 's/^opacity = .*/opacity = 0.05/' ~/.config/alacritty/alacritty.toml]])
+          -- Alacritty透明度を0.05に変更（IPC経由、symlinkを壊さない）
+          local wid = vim.env.ALACRITTY_WINDOW_ID
+          local w_flag = wid and ("-w " .. wid) or "-w -1"
+          vim.fn.system(string.format(
+            "/Applications/Alacritty.app/Contents/MacOS/alacritty msg config %s 'window.opacity=0.05'",
+            w_flag
+          ))
         end,
         on_close = function()
           -- Zen Mode 終了時: heading 背景を復元
@@ -165,8 +170,13 @@ return {
           end
           -- 冒頭の30行を削除
           vim.api.nvim_buf_set_lines(0, 0, 30, false, {})
-          -- Alacritty透明度を0.8に戻す
-          vim.fn.system([[sed -i '' 's/^opacity = .*/opacity = 0.8/' ~/.config/alacritty/alacritty.toml]])
+          -- Alacritty透明度を0.8に戻す（IPC経由）
+          local wid = vim.env.ALACRITTY_WINDOW_ID
+          local w_flag = wid and ("-w " .. wid) or "-w -1"
+          vim.fn.system(string.format(
+            "/Applications/Alacritty.app/Contents/MacOS/alacritty msg config %s 'window.opacity=0.8'",
+            w_flag
+          ))
         end,
       })
     end,
