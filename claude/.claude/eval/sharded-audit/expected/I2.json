@@ -1,0 +1,14 @@
+{
+  "id": "I2",
+  "name": "複数要件の分割",
+  "target": "vw:issue",
+  "category": "format-compliance",
+  "checks": {
+    "correctSplit": { "description": "5つの要件が個別Issueに分割されている", "min": 4, "max": 6, "weight": 3 },
+    "hasLabels": { "pattern": "bug|feature|enhancement|performance", "weight": 2 },
+    "hasPriority": { "pattern": "priority|P[0-9]|優先", "weight": 1 },
+    "correctCategorization": { "description": "バグ/新機能/改善が正しく分類", "weight": 2 },
+    "noMergedIssues": { "description": "複数要件が1つのIssueに混在していない", "weight": 2 }
+  },
+  "maxScore": 10
+}

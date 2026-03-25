@@ -1,0 +1,16 @@
+{
+  "id": "I1",
+  "name": "シンプルバグ報告",
+  "target": "vw:issue",
+  "category": "format-compliance",
+  "checks": {
+    "hasTitle": { "pattern": "クラッシュ|全角|ログイン", "weight": 1 },
+    "hasLabels": { "pattern": "bug|バグ", "weight": 2 },
+    "hasPriority": { "pattern": "high|critical|P[12]|優先", "weight": 2 },
+    "hasReproSteps": { "pattern": "再現|手順|steps", "weight": 2 },
+    "hasEnvironment": { "pattern": "iOS|iPhone|環境", "weight": 1 },
+    "hasAcceptanceCriteria": { "pattern": "受入|criteria|完了条件", "weight": 1 },
+    "noEpicOverGeneration": { "pattern": "Epic|エピック", "expect": "absent", "weight": 2 }
+  },
+  "maxScore": 11
+}

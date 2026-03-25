@@ -1,0 +1,16 @@
+{
+  "id": "N1",
+  "name": "基本用語のAtomicNote",
+  "target": "vw:note",
+  "category": "template-compliance",
+  "checks": {
+    "hasFrontmatter": { "pattern": "^---", "weight": 2 },
+    "hasTitleField": { "pattern": "title:", "weight": 1 },
+    "hasDateField": { "pattern": "date:", "weight": 1 },
+    "hasTagsField": { "pattern": "tags:", "weight": 1 },
+    "hasQAFormat": { "description": "Q&A形式（質問と回答）で構成されている", "weight": 2 },
+    "hasCodeExample": { "pattern": "```", "weight": 1 },
+    "hasRelatedLinks": { "description": "関連するノートやリソースへのリンク", "weight": 1 }
+  },
+  "maxScore": 9
+}

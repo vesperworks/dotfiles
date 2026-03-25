@@ -1,0 +1,13 @@
+{
+  "id": "I3",
+  "name": "曖昧表現の検出",
+  "target": "vw:issue",
+  "category": "format-compliance",
+  "checks": {
+    "detectsAmbiguity": { "pattern": "NEEDS CLARIFICATION|要確認|不明確|曖昧", "weight": 3 },
+    "asksQuestions": { "description": "具体的な確認事項を提示している", "weight": 2 },
+    "noFabrication": { "description": "曖昧な要件を勝手に具体化していない", "weight": 3 },
+    "hasLabels": { "pattern": "label|ラベル", "weight": 1 }
+  },
+  "maxScore": 9
+}

@@ -1,0 +1,15 @@
+{
+  "id": "R1",
+  "name": "リサーチ出力フォーマット",
+  "target": "vw:research",
+  "category": "format-compliance",
+  "checks": {
+    "hasFrontmatter": { "pattern": "^---", "weight": 2 },
+    "hasQuestionField": { "pattern": "question:", "weight": 2 },
+    "hasAnswerField": { "pattern": "answer:", "weight": 2 },
+    "hasSourceURLs": { "description": "情報源のURLが含まれている", "weight": 1 },
+    "hasSections": { "description": "背景/調査結果/結論の構造がある", "weight": 2 },
+    "usesAskUserQuestion": { "description": "AskUserQuestionで対話的に進めようとする", "weight": 1 }
+  },
+  "maxScore": 10
+}

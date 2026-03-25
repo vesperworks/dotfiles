@@ -1,0 +1,18 @@
+{
+  "id": "P1",
+  "name": "PRPテンプレート準拠",
+  "target": "vw:plan-prp",
+  "category": "template-compliance",
+  "checks": {
+    "hasGoalSection": { "pattern": "## Goal|## 目的", "weight": 2 },
+    "hasWhySection": { "pattern": "## Why|## 背景", "weight": 2 },
+    "hasWhatSection": { "pattern": "## What|## 設計", "weight": 2 },
+    "hasImplementationPlan": { "pattern": "## 実装計画|Implementation", "weight": 2 },
+    "hasSuccessCriteria": { "pattern": "Success Criteria|成功基準", "weight": 2 },
+    "hasAntiPatterns": { "pattern": "Anti-Pattern|アンチパターン", "weight": 1 },
+    "hasKnownGotchas": { "pattern": "Known Gotcha|注意", "weight": 1 },
+    "hasTestStrategy": { "pattern": "テスト|Test|検証", "weight": 1 },
+    "hasConfidenceScore": { "pattern": "Confidence Score|信頼度", "weight": 1 }
+  },
+  "maxScore": 14
+}

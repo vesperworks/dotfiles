@@ -1,0 +1,14 @@
+{
+  "id": "N2",
+  "name": "複合概念の分割判断",
+  "target": "vw:note",
+  "category": "template-compliance",
+  "checks": {
+    "hasFrontmatter": { "pattern": "^---", "weight": 1 },
+    "addressesFivePrinciples": { "description": "S/O/L/I/Dの5原則すべてに言及", "weight": 3 },
+    "structuredContent": { "description": "各原則が構造的に整理されている", "weight": 2 },
+    "hasExamples": { "description": "具体的なコード例や適用場面", "weight": 1 },
+    "hasCrossLinks": { "description": "各原則間の関連や個別ノートへのリンク提案", "weight": 2 }
+  },
+  "maxScore": 9
+}
