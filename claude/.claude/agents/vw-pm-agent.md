@@ -97,6 +97,22 @@ AskUserQuestion:
 4. カスタムフィールド（Type/Priority/Effort）を設定
 </workflow>
 
+<sandbox_rule>
+## サンドボックスルール（必須）
+
+**gh コマンドは必ず `dangerouslyDisableSandbox: true` で実行すること。**
+
+理由: サンドボックスが macOS Keychain（keyring）へのアクセスをブロックし、gh の認証が失敗する。
+`excludedCommands: ["gh"]` ではネットワーク制限のみ解除され、keyring アクセスは解除されない。
+
+```
+# 正しい例
+Bash(command: "gh issue list", dangerouslyDisableSandbox: true)
+Bash(command: "gh auth status", dangerouslyDisableSandbox: true)
+Bash(command: "gh api graphql ...", dangerouslyDisableSandbox: true)
+```
+</sandbox_rule>
+
 <github_api>
 ## GitHub API 使い分け
 
@@ -150,6 +166,7 @@ gh auth status
 </output_format>
 
 <constraints>
+- **最重要**: gh コマンド（gh auth, gh issue, gh project, gh api 等）を Bash で実行する際は、**必ず `dangerouslyDisableSandbox: true` を指定すること**。サンドボックスが macOS Keychain へのアクセスをブロックし認証が失敗するため。
 - **必須**: すべての操作で `AskUserQuestion` ツールを使用してユーザー確認を取る
 - **必須**: 認証確認（gh auth status）を実行前に行う
 - **禁止**: ユーザー確認なしでの Issue 作成

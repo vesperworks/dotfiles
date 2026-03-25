@@ -294,6 +294,7 @@ For setup, analysis, or Kanban status operations, read the corresponding file:
 
 <constraints>
 ## 必須事項
+- **最重要**: gh コマンド（gh auth, gh issue, gh project, gh api 等）を Bash で実行する際は、**必ず `dangerouslyDisableSandbox: true` を指定すること**。サンドボックスが macOS Keychain へのアクセスをブロックし認証が失敗するため。
 - **必須**: すべての操作で `AskUserQuestion` ツールを使用してユーザー確認を取る（例外: ユーザーが明示的に操作を指示した場合は省略可）
 - **必須**: 認証確認（gh auth status）を実行前に行う
 - **必須**: リポジトリタイプ（組織/個人）を判定してから処理を分岐する
