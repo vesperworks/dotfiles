@@ -47,7 +47,7 @@ AskUserQuestion:
 承認後に実行:
 
 ```bash
-.claude/skills/pm-agent/scripts/pm-project-fields.sh {number} \
+.claude/skills/vw-pm/scripts/pm-project-fields.sh {number} \
   --status "{new_status}" \
   --project 1 --owner @me
 ```
@@ -72,7 +72,7 @@ Issue #{number}: {old_status} → **{new_status}**
 
 ```bash
 # 直接リクエスト例
-.claude/skills/pm-agent/scripts/pm-project-fields.sh 123 \
+.claude/skills/vw-pm/scripts/pm-project-fields.sh 123 \
   --status "Done" \
   --project 1 --owner @me
 ```

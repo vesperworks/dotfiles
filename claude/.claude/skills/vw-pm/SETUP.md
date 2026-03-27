@@ -2,7 +2,7 @@
 
 ## ステップ 3B.1: セットアップガイドの読み込み
 
-GraphQL ミューテーションの詳細は `.claude/skills/pm-agent/GRAPHQL.md` を参照。
+GraphQL ミューテーションの詳細は `.claude/skills/vw-pm/GRAPHQL.md` を参照。
 
 ## ステップ 3B.2: 現在の状態を確認
 
@@ -90,7 +90,7 @@ AskUserQuestion:
 
 **共通**: priority:*ラベルは作成しない（Projects V2 Fieldで管理）
 
-参照: `.claude/skills/pm-agent/GRAPHQL.md`
+参照: `.claude/skills/vw-pm/GRAPHQL.md`
 
 ## ステップ 3B.5: 結果の報告
 
@@ -167,6 +167,6 @@ gh auth refresh -s project
 gh project view PROJECT_NUMBER --owner @me
 
 # フィールド一覧（pm-project-fields.sh 使用推奨）
-.claude/skills/pm-agent/scripts/pm-project-fields.sh \
+.claude/skills/vw-pm/scripts/pm-project-fields.sh \
   --project 1 --owner @me --list-fields
 ```

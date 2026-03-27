@@ -252,8 +252,7 @@ AskUserQuestion:
 </error_handling>
 
 <skill_references>
-- pm-agent/SKILL.md: PM Agent の詳細ガイダンス（設定・エラー処理含む）
-- pm-agent/PARSER.md: 議事録パース詳細ロジック
-- pm-agent/SETUP.md: 初期セットアップ手順
-- pm-agent/GRAPHQL.md: GraphQL API リファレンス
+- vw-pm/SKILL.md: PM Agent の詳細ガイダンス（設定・エラー処理含む）
+- vw-pm/SETUP.md: 初期セットアップ手順
+- vw-pm/GRAPHQL.md: GraphQL API リファレンス
 </skill_references>

@@ -142,10 +142,12 @@ git subtree add --prefix=<package>/.config/<app> <source-repo> <branch>
 | 4 | git パッケージ（丸ごと stow） | 完了 |
 | 5 | brew パッケージ（.Brewfile 手動記載） | 完了 |
 | 6 | アプリ設定（aerospace, sketchybar） | 完了 |
-| 6a | codex パッケージ | 後回し |
-| 6.8 | nvim パッケージ（独自 git リポから subtree merge） | 未着手 |
-| 5.9 | non-colocate 移行（PRP-017 Part 2） | 未着手 |
-| 7 | ドキュメント + クリーンアップ（LICENSE, README） | 未着手 |
+| 6a | codex パッケージ（stow） | 完了 |
+| 6.8a | nvim リファクタリング（PRP-018） | 完了 |
+| 6.8b | nvim vw.* 化（PRP-019） | 完了 |
+| 6.8c | nvim subtree merge + stow + クリーンアップ | 完了 |
+| 5.9 | non-colocate 移行（PRP-017 Part 2） | 中止 |
+| 7 | ドキュメント + クリーンアップ（LICENSE, README） | 完了 |
 
 詳細は `.brain/dotfiles/prp/PRP-001-dotfiles-setup.md` 参照。
 
@@ -162,6 +164,9 @@ git subtree add --prefix=<package>/.config/<app> <source-repo> <branch>
 
 | PRP | 内容 | 状態 |
 |-----|------|------|
-| PRP-001 | dotfiles プロジェクト構築（マスタープラン） | アクティブ |
+| PRP-001 | dotfiles プロジェクト構築（マスタープラン） | ほぼ完了（残: PRP-020 codex） |
 | PRP-002 | GitHub リモートリポジトリ登録 | done |
-| PRP-017 | vw:commit git/jj 両対応 + non-colocate 移行 | Part 1 完了 / Part 2 待機 |
+| PRP-017 | vw:commit git/jj 両対応 | Part 1 完了 / Part 2 中止 |
+| PRP-018 | nvim リファクタリング | done |
+| PRP-019 | nvim vw.* 化 | done |
+| PRP-020 | codex 標準作法移行 | アクティブ |
