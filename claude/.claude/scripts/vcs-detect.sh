@@ -163,6 +163,138 @@ do_new() {
 }
 
 # ============================================================
+# Bookmark / Branch Operations
+# ============================================================
+
+# Create a new bookmark/branch at a revision
+# Usage: do_bookmark_create "feat/claude" [@-]
+do_bookmark_create() {
+  local name="$1"
+  local rev="${2:-@}"
+  local vcs
+  vcs=$(detect_vcs) || return 1
+
+  case "$vcs" in
+    jj)
+      jj bookmark create "$name" -r "$rev"
+      ;;
+    git)
+      git branch "$name" "${rev:-HEAD}"
+      ;;
+  esac
+}
+
+# Move a bookmark/branch to a revision
+# Usage: do_bookmark_set "feat/claude" @-
+do_bookmark_set() {
+  local name="$1"
+  local rev="${2:-@}"
+  local vcs
+  vcs=$(detect_vcs) || return 1
+
+  case "$vcs" in
+    jj)
+      jj bookmark set "$name" -r "$rev"
+      ;;
+    git)
+      git branch -f "$name" "${rev:-HEAD}"
+      ;;
+  esac
+}
+
+# Check if a bookmark/branch exists
+# Usage: if bookmark_exists "feat/claude"; then ...
+bookmark_exists() {
+  local name="$1"
+  local vcs
+  vcs=$(detect_vcs) || return 1
+
+  case "$vcs" in
+    jj)
+      jj bookmark list --names-only 2>/dev/null | grep -qx "$name"
+      ;;
+    git)
+      git show-ref --verify --quiet "refs/heads/$name"
+      ;;
+  esac
+}
+
+# Create a new working copy from a specific parent
+# Usage: do_new_from main
+do_new_from() {
+  local parent="${1:-}"
+  local vcs
+  vcs=$(detect_vcs) || return 1
+
+  case "$vcs" in
+    jj)
+      if [[ -n "$parent" ]]; then
+        jj new "$parent"
+      else
+        jj new
+      fi
+      ;;
+    git)
+      if [[ -n "$parent" ]]; then
+        git checkout "$parent"
+      fi
+      ;;
+  esac
+}
+
+# Restore files from a specific revision into current WC
+# Usage: do_restore_from <rev> file1 file2 ...
+do_restore_from() {
+  local from_rev="$1"
+  shift
+  local vcs
+  vcs=$(detect_vcs) || return 1
+
+  case "$vcs" in
+    jj)
+      jj restore --from "$from_rev" -- "$@"
+      ;;
+    git)
+      git checkout "$from_rev" -- "$@"
+      ;;
+  esac
+}
+
+# Get current change_id (jj) or HEAD commit hash (git)
+# Usage: current_rev=$(get_current_rev)
+get_current_rev() {
+  local vcs
+  vcs=$(detect_vcs) || return 1
+
+  case "$vcs" in
+    jj)
+      jj log -r @ --no-graph -T 'change_id.short()' 2>/dev/null
+      ;;
+    git)
+      git rev-parse --short HEAD 2>/dev/null
+      ;;
+  esac
+}
+
+# Abandon a specific revision (jj only, noop for git)
+# Usage: do_abandon <change_id>
+do_abandon() {
+  local rev="$1"
+  local vcs
+  vcs=$(detect_vcs) || return 1
+
+  case "$vcs" in
+    jj)
+      jj abandon "$rev"
+      ;;
+    git)
+      # git has no equivalent; caller handles cleanup
+      :
+      ;;
+  esac
+}
+
+# ============================================================
 # Log Operations
 # ============================================================
 

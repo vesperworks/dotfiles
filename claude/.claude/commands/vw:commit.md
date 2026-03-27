@@ -270,23 +270,69 @@ TodoWrite([
 
 各グループを順番に処理。VCS によってコマンドが異なる：
 
-#### jj の場合（`jj split` で段階コミット）
+#### jj の場合（scope 別 bookmark 分岐）
 
-最初〜最後の1つ前のグループまで:
-1. **分離コミット**: `jj split -m "<type>(<scope>): <subject>" -- <files>`
-2. **進捗更新**: TodoWrite で該当タスクを `completed` にマーク
-3. 次のグループへ進む
+jj では各グループの **scope** を検出し、scope ごとに main から分岐して `feat/<scope>` bookmark を自動作成する。これにより、論理的に独立した変更が DAG 上で分岐し、push 時に個別管理できる。
 
-最後のグループ:
-4. **メッセージ設定**: `jj describe -m "<type>(<scope>): <subject>"`（残り全変更にメッセージ）
-5. **新ワーキングコピー**: `jj new`（新しい作業開始）
+**scope 検出ルール**:
+- 各グループのファイルパスから共通のトップレベルディレクトリを推定
+- 例: `src/auth/login.ts`, `src/auth/validate.ts` → scope = `auth`
+- 例: `packages/api/index.ts` → scope = `api`
+- ルート直下のファイル（`README.md`, `.gitignore` 等）→ scope = プロジェクト名 or `root`
+- 複数ディレクトリが混在 → ユーザーに scope 名を AskUserQuestion で確認
 
-**jj 段階コミットの例**:
+**手順**:
+
+1. **元の WC を記録**: `ORIG=$(jj log -r @ --no-graph -T 'change_id.short()')`
+2. **各グループについて**:
+   a. scope を検出（上記ルール）
+   b. bookmark 名を決定: `feat/<scope>`
+   c. 分岐先を決定:
+      - `feat/<scope>` bookmark が既存 → `jj new feat/<scope>` （追加コミット）
+      - 新規 → `jj new main` （main から分岐）
+   d. ファイルを持ってくる: `jj restore --from $ORIG -- <files>`
+   e. コミット: `jj commit -m "<type>(<scope>): <subject>"`
+   f. bookmark を更新:
+      - 新規: `jj bookmark create feat/<scope> -r @-`
+      - 既存: `jj bookmark set feat/<scope> -r @-`
+   g. **進捗更新**: TodoWrite で該当タスクを `completed` にマーク
+3. **元の WC を abandon**: `jj abandon $ORIG`
+4. **新しい WC**: `jj new main`（main に戻る）
+
+**例**: モノレポで api/ と web/ の変更がある場合:
 ```bash
-jj split -m "feat(auth): add login validation" -- src/auth.ts src/auth.test.ts
-jj split -m "docs: update README" -- README.md
-jj describe -m "chore: update config"   # 最後の残り
-jj new                                    # 新しいワーキングコピー
+ORIG=$(jj log -r @ --no-graph -T 'change_id.short()')
+
+# Group 1: api/ → feat/api
+jj new main
+jj restore --from $ORIG -- src/api/routes.ts src/api/middleware.ts
+jj commit -m "feat(api): add rate limiting middleware"
+jj bookmark create feat/api -r @-
+
+# Group 2: web/ → feat/web
+jj new main
+jj restore --from $ORIG -- src/web/components/Login.tsx src/web/hooks/useAuth.ts
+jj commit -m "feat(web): add login form component"
+jj bookmark create feat/web -r @-
+
+# クリーンアップ
+jj abandon $ORIG
+jj new main
+```
+
+**結果の DAG**:
+```
+main ─┬─ feat/api ─ (rate limiting)
+      └─ feat/web ─ (login form)
+```
+
+**同一 scope への追加コミット**:
+既存の `feat/api` bookmark がある状態で追加変更をコミットする場合:
+```bash
+jj new feat/api                    # 既存 bookmark から分岐
+jj restore --from $ORIG -- src/api/tests/rate-limit.test.ts
+jj commit -m "test(api): add rate limiting tests"
+jj bookmark set feat/api -r @-    # bookmark を先頭に移動
 ```
 
 #### git の場合（従来動作）
@@ -303,11 +349,17 @@ jj new                                    # 新しいワーキングコピー
 
 ```bash
 # jj の場合
-jj log -n N  # N = 作成したコミット数
+jj log -r 'bookmarks() & mine()'  # 自分の bookmark 付きコミット一覧
+jj bookmark list                   # bookmark 状態を表示
 
 # git の場合
 git log --oneline -N  # N = 作成したコミット数
 ```
+
+**jj の場合、以下も表示**:
+- 作成/更新された bookmark 一覧
+- 各 bookmark の origin に対する ahead 状態
+- push コマンドのヒント: `jj git push --bookmark feat/<scope>`
 
 ---
 
