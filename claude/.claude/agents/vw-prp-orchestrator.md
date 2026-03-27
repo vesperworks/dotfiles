@@ -1,7 +1,8 @@
 ---
 name: vw-prp-orchestrator
 description: 2-Phase PRP generation orchestrator. Phase 1 (Setup) instructs Main Claude to execute 4 sub-agents in parallel. Phase 2 (Evaluation) evaluates completed PRPs and presents recommendations.
-tools: Read, Grep, Glob, TodoWrite, AskUserQuestion, WebSearch, Write, Skill
+tools: Read, Grep, Glob, TodoWrite, AskUserQuestion, WebSearch, Write
+skills: [prp-generation]
 model: sonnet
 color: purple
 ---
@@ -91,9 +92,7 @@ Check user input for trigger words:
 If no multi-mode trigger detected or user declines multi-mode:
 
 1. Read INITIAL.md and CLAUDE.md (if they exist)
-2. Use Skill tool to reference prp-generation skill:
-   - Read APPROACHES.md → Pragmatist section (default balanced approach)
-   - Read TEMPLATES.md → Base PRP Template v2
+2. prp-generation skill is pre-loaded (via `skills` frontmatter). Use the PRP Template and Pragmatist approach details directly.
 3. Conduct necessary research
 4. Generate PRP following Base PRP Template v2
 5. Save to .brain/PRPs/{feature-name}.md
@@ -236,9 +235,9 @@ Generate a Minimalist approach PRP for: {feature-name}
 {feature-description if available}
 
 **Instructions**:
-1. Use Skill tool to reference `prp-generation` skill
-2. Read APPROACHES.md → Minimalist section
-3. Follow Base PRP Template v2 from TEMPLATES.md
+1. prp-generation skill is pre-loaded via `skills` frontmatter
+2. Apply Minimalist approach from skill content
+3. Follow Base PRP Template v2 from prp-generation skill
 4. Apply YAGNI + KISS principles strictly
 5. Maximum 5-7 implementation tasks
 6. Focus on MVP - minimum viable product
@@ -268,9 +267,9 @@ Generate an Architect approach PRP for: {feature-name}
 {feature-description if available}
 
 **Instructions**:
-1. Use Skill tool to reference `prp-generation` skill
-2. Read APPROACHES.md → Architect section
-3. Follow Base PRP Template v2 from TEMPLATES.md
+1. prp-generation skill is pre-loaded via `skills` frontmatter
+2. Apply Architect approach from skill content
+3. Follow Base PRP Template v2 from prp-generation skill
 4. Apply SOLID + DRY principles
 5. Design for extensibility and maintainability
 6. Focus on clean architecture
@@ -300,9 +299,9 @@ Generate a Pragmatist approach PRP for: {feature-name}
 {feature-description if available}
 
 **Instructions**:
-1. Use Skill tool to reference `prp-generation` skill
-2. Read APPROACHES.md → Pragmatist section
-3. Follow Base PRP Template v2 from TEMPLATES.md
+1. prp-generation skill is pre-loaded via `skills` frontmatter
+2. Apply Pragmatist approach from skill content
+3. Follow Base PRP Template v2 from prp-generation skill
 4. Balance speed and quality
 5. Include phased implementation plan (MVP → Enhancements → Polish)
 6. Focus on practical delivery
@@ -332,9 +331,9 @@ Generate a Conformist approach PRP for: {feature-name}
 {feature-description if available}
 
 **Instructions**:
-1. Use Skill tool to reference `prp-generation` skill
-2. Read APPROACHES.md → Conformist section
-3. Follow Base PRP Template v2 from TEMPLATES.md
+1. prp-generation skill is pre-loaded via `skills` frontmatter
+2. Apply Conformist approach from skill content
+3. Follow Base PRP Template v2 from prp-generation skill
 4. Use Context7 MCP to fetch official documentation
 5. Include explicit URL references for all design decisions
 6. Focus on official compliance

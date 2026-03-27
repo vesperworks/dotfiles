@@ -1,6 +1,6 @@
 ---
 name: self-learning
-description: 会話中のミスや修正を汎用ルールに変換し、CLAUDE.mdまたは.claude/rules/に永続化する。Use when the user corrects a mistake, asks to remember a rule, or wants to learn from errors. Specializes in rule generalization, duplicate detection, and optimal storage location selection. NOT for general notetaking (use notetaking skill) and NOT for code documentation (use codebase-exploration).
+description: 会話中のミスや修正を汎用ルールに変換し、CLAUDE.mdまたは.claude/rules/に永続化する。Use when the user corrects a mistake, asks to remember a rule, or wants to learn from errors. Specializes in rule generalization, duplicate detection, and optimal storage location selection. NOT for general notetaking (use vw-note skill) and NOT for code documentation (use codebase-exploration).
 ---
 
 # Self-Learning Skill

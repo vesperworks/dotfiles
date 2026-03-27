@@ -85,7 +85,7 @@ Follow this structure:
 
 ### Step 2.2: Generate Details
 
-Use Skill `notetaking` for output format:
+Output format (from vw-note skill):
 
 ```markdown
 # {Term}
@@ -187,7 +187,7 @@ If same tag > 10: `💡 #{tag} が {n} 個に。MOC作成? (y/n)`
 </constraints>
 
 <skill_references>
-- **notetaking**: 出力フォーマット、MOCロジック
+- **vw-note**: 出力フォーマット、MOCロジック
 </skill_references>
 
 <rollback>
