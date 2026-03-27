@@ -11,16 +11,21 @@ COLOR_BLUE=$'\033[38;2;122;162;247m'    # #7aa2f7 (IDLE)
 COLOR_DIM=$'\033[38;2;86;95;137m'       # #565f89 (リソース数値)
 COLOR_RESET=$'\033[0m'
 
-# === 一時ディレクトリ ===
-TMPDIR_WORK=$(mktemp -d)
-trap 'rm -rf "$TMPDIR_WORK"' EXIT
+# === 一時ディレクトリ・スナップショット（init で遅延初期化） ===
+TMPDIR_WORK=""
+PS_SNAPSHOT=""
 
-# === プロセスツリーの一括スナップショット ===
-# ps -ax を一度だけ呼び、親子関係・リソース・コマンド名をファイルに保存
-# commは最後に配置（切り詰め防止のため）
-# フィールド: $1=pid, $2=ppid, $3=%cpu, $4=rss, $5=comm
-PS_SNAPSHOT="$TMPDIR_WORK/ps_snapshot"
-ps -ax -o pid=,ppid=,%cpu=,rss=,comm= 2>/dev/null > "$PS_SNAPSHOT" || true
+_init_snapshot() {
+  if [ -n "$TMPDIR_WORK" ]; then return; fi
+  TMPDIR_WORK=$(mktemp -d)
+  trap 'rm -rf "$TMPDIR_WORK"' EXIT
+  # プロセスツリーの一括スナップショット
+  # ps -ax を一度だけ呼び、親子関係・リソース・コマンド名をファイルに保存
+  # commは最後に配置（切り詰め防止のため）
+  # フィールド: $1=pid, $2=ppid, $3=%cpu, $4=rss, $5=comm
+  PS_SNAPSHOT="$TMPDIR_WORK/ps_snapshot"
+  ps -ax -o pid=,ppid=,%cpu=,rss=,comm= 2>/dev/null > "$PS_SNAPSHOT" || true
+}
 
 # === AI CLI検出パターン ===
 # basenameで完全一致させるため、awkでは別ロジックを使用
@@ -77,6 +82,7 @@ has_ai_process() {
 
 # === AI CLIステータス検出 ===
 detect_ai_status() {
+  _init_snapshot
   local session_name=$1
   local best_status=""
 
@@ -118,6 +124,7 @@ detect_ai_status() {
 
 # === セッションリソース取得 ===
 get_session_resources() {
+  _init_snapshot
   local session_name=$1
   local pid_file="$TMPDIR_WORK/res_$$_${session_name}"
 
@@ -200,6 +207,7 @@ process_session() {
 
 # === メイン処理 ===
 main() {
+  _init_snapshot
   local tmpdir=$TMPDIR_WORK
 
   # sesh listで基本リスト取得
@@ -263,4 +271,7 @@ main() {
   done
 }
 
-main "$@"
+# source時はmain()を実行しない（関数のみ公開）
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  main "$@"
+fi
