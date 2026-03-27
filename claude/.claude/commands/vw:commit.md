@@ -297,7 +297,9 @@ jj では各グループの **scope** を検出し、scope ごとに main から
       - 既存: `jj bookmark set feat/<scope> -r @-`
    g. **進捗更新**: TodoWrite で該当タスクを `completed` にマーク
 3. **元の WC を abandon**: `jj abandon $ORIG`
-4. **新しい WC**: `jj new main`（main に戻る）
+4. **新しい WC の配置**:
+   - **1 scope のみ** → `jj new feat/<scope>`（作業継続のためそのまま feat ブランチに留まる）
+   - **複数 scope** → 最後に処理した `feat/<scope>` に `jj new` する（AskUserQuestion でどの scope に留まるか確認）
 
 **例**: モノレポで api/ と web/ の変更がある場合:
 ```bash
@@ -317,7 +319,9 @@ jj bookmark create feat/web -r @-
 
 # クリーンアップ
 jj abandon $ORIG
-jj new main
+
+# 最後に処理した scope に留まる（複数 scope の場合はユーザーに確認）
+jj new feat/web
 ```
 
 **結果の DAG**:
