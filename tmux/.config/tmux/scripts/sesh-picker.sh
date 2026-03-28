@@ -4,20 +4,27 @@
 # - Create new session: type new name and Enter
 # - Kill session: Ctrl+d on a session
 # - Move current pane to selected session: Ctrl+o
+# - Answer WAITING CC: Ctrl+y (yes) / Ctrl+u (no)
 
 SESH_SESSIONS=~/.config/tmux/scripts/sesh-sessions.sh
+CC_PREVIEW=~/.config/tmux/scripts/cc-question-preview.sh
+CC_RESPOND=~/.config/tmux/scripts/cc-wait-respond.sh
 
 result=$($SESH_SESSIONS -t | fzf-tmux -p 55%,60% \
   --layout=reverse \
   --no-sort --ansi --border-label "  sesh " --prompt "  " \
-  --header "  ^a all ^t tmux ^x zoxide ^d kill ^o move" \
+  --header "  ^a all ^t tmux ^x zoxide ^d kill ^o move ^y yes ^u no" \
   --print-query \
   --expect=ctrl-o \
+  --preview "$CC_PREVIEW {}" \
+  --preview-window "right,45%,wrap,<80(bottom,40%,wrap)" \
   --bind "tab:down,btab:up" \
   --bind "ctrl-a:change-prompt(  )+reload($SESH_SESSIONS)" \
   --bind "ctrl-t:change-prompt(  )+reload($SESH_SESSIONS -t)" \
   --bind "ctrl-x:change-prompt(  )+reload(sesh list -z -i)" \
-  --bind "ctrl-d:execute-silent(tmux kill-session -t \$(echo {} | awk '{print \$2}'))+change-prompt(  )+reload($SESH_SESSIONS -t)")
+  --bind "ctrl-d:execute-silent(tmux kill-session -t \$(echo {} | awk '{print \$2}'))+change-prompt(  )+reload($SESH_SESSIONS -t)" \
+  --bind "ctrl-y:execute-silent($CC_RESPOND \$(echo {} | awk '{print \$2}') y)+reload($SESH_SESSIONS -t)" \
+  --bind "ctrl-u:execute-silent($CC_RESPOND \$(echo {} | awk '{print \$2}') n)+reload($SESH_SESSIONS -t)")
 
 # --expect と --print-query の出力:
 # Line 1: query (入力テキスト)
@@ -31,15 +38,18 @@ selection=$(echo "$result" | sed -n '3p')
 if [ -n "$selection" ]; then
   session=$(echo "$selection" | awk '{print $2}')
 
-  if [ "$key" = "ctrl-o" ]; then
-    # Ctrl+o: 現在のペインを選択したセッションに移動
-    tmux break-pane       # 現在のペインを新しいウィンドウに分離
-    tmux move-window -t "$session:"  # そのウィンドウを移動
-    tmux switch-client -t "$session"
-  else
-    # Enter: 通常のセッション接続
-    sesh connect "$session"
-  fi
+  case "$key" in
+    ctrl-o)
+      # Ctrl+o: 現在のペインを選択したセッションに移動
+      tmux break-pane       # 現在のペインを新しいウィンドウに分離
+      tmux move-window -t "$session:"  # そのウィンドウを移動
+      tmux switch-client -t "$session"
+      ;;
+    *)
+      # Enter: 通常のセッション接続
+      sesh connect "$session"
+      ;;
+  esac
 elif [ -n "$query" ]; then
   # No selection but query exists: create new tmux session directly
   tmux new-session -d -s "$query" 2>/dev/null
