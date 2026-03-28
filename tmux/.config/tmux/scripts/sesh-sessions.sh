@@ -263,9 +263,16 @@ main() {
     wait "$pid" 2>/dev/null || true
   done
 
-  # 順序通りに結果を出力
+  # WAITING セッションを先頭に、他は元の順序で出力
+  # Pass 1: WAITING
   for ((i=0; i<idx; i++)); do
-    if [ -f "$tmpdir/$i" ]; then
+    if [ -f "$tmpdir/$i" ] && grep -q "◐ WAIT" "$tmpdir/$i"; then
+      cat "$tmpdir/$i"
+    fi
+  done
+  # Pass 2: non-WAITING
+  for ((i=0; i<idx; i++)); do
+    if [ -f "$tmpdir/$i" ] && ! grep -q "◐ WAIT" "$tmpdir/$i"; then
       cat "$tmpdir/$i"
     fi
   done
