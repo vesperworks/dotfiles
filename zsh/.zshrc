@@ -17,7 +17,7 @@ else
 fi
 
 # sheldon (plugin manager)
-eval "$(sheldon source)"
+eval "$(sheldon source 2>/dev/null)"
 
 # Powerlevel10k config
 [[ -f ~/.p10k.zsh ]] && source ~/.p10k.zsh
