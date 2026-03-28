@@ -8,6 +8,7 @@ set -euo pipefail
 COLOR_YELLOW=$'\033[38;2;224;175;104m'  # #e0af68 (WAITING)
 COLOR_BLUE=$'\033[38;2;122;162;247m'    # #7aa2f7 (IDLE)
 COLOR_GREEN=$'\033[38;2;115;218;202m'   # #73daca (BUSY)
+COLOR_MAGENTA=$'\033[38;2;187;154;247m' # #bb9af7 (DONE)
 COLOR_DIM=$'\033[38;2;86;95;137m'       # #565f89
 COLOR_RESET=$'\033[0m'
 
@@ -88,26 +89,30 @@ if [ -n "$waiting_pane" ]; then
   echo ""
 
   # Capture pane content and extract question area
-  pane_content=$(tmux capture-pane -t "$waiting_pane" -p 2>/dev/null) || true
+  pane_content=$(tmux capture-pane -t "$waiting_pane" -pe 2>/dev/null) || true
 
   # Show the last 25 lines (question context)
   echo "$pane_content" | tail -25
 
   echo ""
   echo "${COLOR_DIM}────────────────────────────────${COLOR_RESET}"
-  echo "${COLOR_YELLOW}ctrl-y${COLOR_RESET} yes  ${COLOR_YELLOW}ctrl-u${COLOR_RESET} no"
+  echo "${COLOR_YELLOW}ctrl-y${COLOR_RESET} 選択肢を開く"
 else
   # Not WAITING: show general pane content
   local_pane=$(tmux list-panes -t "$session_name" -F "#{pane_id}" 2>/dev/null | head -1) || true
 
   if [ -n "$local_pane" ]; then
-    pane_output=$(tmux capture-pane -t "$local_pane" -p 2>/dev/null | tail -20) || true
+    # 検出用はプレーンテキスト、表示用はカラー付き
+    pane_plain=$(tmux capture-pane -t "$local_pane" -p 2>/dev/null | tail -20) || true
+    pane_output=$(tmux capture-pane -t "$local_pane" -pe 2>/dev/null | tail -20) || true
 
-    # Detect status from output
-    if echo "$pane_output" | grep -qiE "$BUSY_PATTERN"; then
+    # Detect status from output (plain text for reliable matching)
+    if echo "$pane_plain" | grep -qiE "$BUSY_PATTERN"; then
       echo "${COLOR_GREEN}● BUSY — 処理中${COLOR_RESET}"
+    elif echo "$pane_plain" | grep -qE -- '-- INSERT --|⏎'; then
+      echo "${COLOR_BLUE}○ IDLE — 入力待ち${COLOR_RESET}"
     else
-      echo "${COLOR_BLUE}○ IDLE${COLOR_RESET}"
+      echo "${COLOR_MAGENTA}◇ DONE — 応答完了${COLOR_RESET}"
     fi
 
     echo "${COLOR_DIM}────────────────────────────────${COLOR_RESET}"

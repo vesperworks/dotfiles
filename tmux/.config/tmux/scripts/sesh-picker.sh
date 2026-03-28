@@ -4,16 +4,17 @@
 # - Create new session: type new name and Enter
 # - Kill session: Ctrl+d on a session
 # - Move current pane to selected session: Ctrl+o
-# - Answer WAITING CC: Ctrl+y (yes) / Ctrl+u (no)
+# - Answer WAITING CC: Ctrl+y で選択肢popup表示
 
 SESH_SESSIONS=~/.config/tmux/scripts/sesh-sessions.sh
 CC_PREVIEW=~/.config/tmux/scripts/cc-question-preview.sh
-CC_RESPOND=~/.config/tmux/scripts/cc-wait-respond.sh
+CC_ANSWER=~/.config/tmux/scripts/cc-wait-answer.sh
+KEY_MARKER="/tmp/sesh-picker-key-$$"
 
 result=$($SESH_SESSIONS -t | fzf-tmux -p 55%,60% \
   --layout=reverse \
   --no-sort --ansi --border-label "  sesh " --prompt "  " \
-  --header "  ^a all ^t tmux ^x zoxide ^d kill ^o move ^y yes ^u no" \
+  --header "  ^a all ^t tmux ^x zoxide ^d kill ^o move ^y answer" \
   --print-query \
   --expect=ctrl-o \
   --preview "$CC_PREVIEW {}" \
@@ -23,8 +24,7 @@ result=$($SESH_SESSIONS -t | fzf-tmux -p 55%,60% \
   --bind "ctrl-t:change-prompt(  )+reload($SESH_SESSIONS -t)" \
   --bind "ctrl-x:change-prompt(  )+reload(sesh list -z -i)" \
   --bind "ctrl-d:execute-silent(tmux kill-session -t \$(echo {} | awk '{print \$2}'))+change-prompt(  )+reload($SESH_SESSIONS -t)" \
-  --bind "ctrl-y:execute-silent($CC_RESPOND \$(echo {} | awk '{print \$2}') y)+reload($SESH_SESSIONS -t)" \
-  --bind "ctrl-u:execute-silent($CC_RESPOND \$(echo {} | awk '{print \$2}') n)+reload($SESH_SESSIONS -t)")
+  --bind "ctrl-y:execute-silent(touch $KEY_MARKER)+accept")
 
 # --expect と --print-query の出力:
 # Line 1: query (入力テキスト)
@@ -35,15 +35,26 @@ query=$(echo "$result" | sed -n '1p')
 key=$(echo "$result" | sed -n '2p')
 selection=$(echo "$result" | sed -n '3p')
 
+# ctrl-y のマーカーファイルチェック
+if [ -f "$KEY_MARKER" ]; then
+  rm -f "$KEY_MARKER"
+  key="ctrl-y"
+fi
+
 if [ -n "$selection" ]; then
   session=$(echo "$selection" | awk '{print $2}')
 
   case "$key" in
     ctrl-o)
       # Ctrl+o: 現在のペインを選択したセッションに移動
-      tmux break-pane       # 現在のペインを新しいウィンドウに分離
-      tmux move-window -t "$session:"  # そのウィンドウを移動
+      tmux break-pane
+      tmux move-window -t "$session:"
       tmux switch-client -t "$session"
+      ;;
+    ctrl-y)
+      # Ctrl+y: popup で選択肢表示
+      tmux display-popup -E -w 60% -h 40% -T " $session — 選択肢 " \
+        "$CC_ANSWER '$session'"
       ;;
     *)
       # Enter: 通常のセッション接続
