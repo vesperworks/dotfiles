@@ -1,8 +1,26 @@
-# Oh My Zsh
-ZSH=$HOME/.oh-my-zsh
-ZSH_THEME="agnoster"
-plugins=(git zsh-autosuggestions zsh-syntax-highlighting)
-source $ZSH/oh-my-zsh.sh
+# Powerlevel10k Instant Prompt
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
+# Completions (must be before sheldon to avoid compdef errors)
+if type brew &>/dev/null; then
+  FPATH="$(brew --prefix)/share/zsh/site-functions:${FPATH}"
+fi
+# Remove non-existent /usr/local paths from FPATH (Apple Silicon)
+FPATH="${FPATH/\/usr\/local\/share\/zsh\/site-functions:/}"
+autoload -Uz compinit
+if [[ -n "${ZDOTDIR:-$HOME}/.zcompdump(#qN.mh+24)" ]]; then
+  compinit -u
+else
+  compinit -C -u
+fi
+
+# sheldon (plugin manager)
+eval "$(sheldon source)"
+
+# Powerlevel10k config
+[[ -f ~/.p10k.zsh ]] && source ~/.p10k.zsh
 
 # PATH
 export PATH="$HOME/.bun/bin:$PATH"
@@ -39,12 +57,7 @@ export NVM_DIR="$HOME/.nvm"
 export BUN_INSTALL="$HOME/.bun"
 [ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
 
-# Completions
-if type brew &>/dev/null; then
-  FPATH="$(brew --prefix)/share/zsh/site-functions:${FPATH}"
-fi
-autoload -Uz compinit
-compinit
+# UV completion
 if command -v uv >/dev/null 2>&1; then
   eval "$(uv generate-shell-completion zsh)"
 fi
@@ -65,6 +78,17 @@ alias ll='eza -la --color=always --icons'
 alias la='eza -a --color=always --icons'
 alias lt='eza --tree --color=always --icons --level=2'
 alias ccm='ccmanager --multi-project'
+
+# Git aliases (migrated from Oh My Zsh git plugin)
+alias g='git'
+alias ga='git add'
+alias gc='git commit -v'
+alias gco='git checkout'
+alias gd='git diff'
+alias gl='git pull'
+alias gp='git push'
+alias gst='git status'
+alias glog='git log --oneline --decorate --graph'
 
 # nv: Obsidian notes
 function nv() {
@@ -184,16 +208,6 @@ ag() {
     else
       agent-deck "$@"
     fi
-}
-
-# Prompt
-prompt_context() {
-  prompt_segment black default "⚡mur41"
-}
-
-prompt_aws() {
-  [[ -z "$AWS_PROFILE" ]] && return
-  prompt_segment green black "AWS: $AWS_PROFILE"
 }
 
 # tmux auto-start

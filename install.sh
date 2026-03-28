@@ -4,7 +4,7 @@ set -euo pipefail
 DOTFILES_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DOTFILES_DIR"
 
-STOW_PACKAGES=(zsh git brew claude codex ghostty alacritty aerospace borders sketchybar tmux nvim yazi)
+STOW_PACKAGES=(zsh git brew claude codex ghostty alacritty aerospace borders sketchybar tmux nvim yazi sheldon)
 
 log() { printf '\033[0;32m[✓]\033[0m %s\n' "$*"; }
 warn() { printf '\033[0;33m[!]\033[0m %s\n' "$*"; }
@@ -56,6 +56,20 @@ brew_bundle() {
   fi
 }
 
+# --- sheldon ---
+install_sheldon() {
+  if command -v sheldon >/dev/null 2>&1; then
+    return 0
+  fi
+  if command -v brew >/dev/null 2>&1; then
+    log "Installing sheldon..."
+    brew install sheldon
+  else
+    err "brew not found. Install sheldon manually: https://sheldon.cli.rs/"
+    return 1
+  fi
+}
+
 # --- uv ---
 install_uv() {
   if command -v uv >/dev/null 2>&1; then
@@ -73,6 +87,7 @@ log "dotfiles setup starting..."
 
 install_homebrew
 setup_brew_env
+install_sheldon
 stow_packages
 brew_bundle
 install_uv
