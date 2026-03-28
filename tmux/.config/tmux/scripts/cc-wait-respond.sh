@@ -2,6 +2,9 @@
 set -euo pipefail
 
 # Send response to WAITING AI pane in a tmux session
+# Detects prompt type and sends appropriate key sequence:
+#   - Permission prompt ([y/n]) → sends "y"/"n" + Enter
+#   - Selector UI (AskUserQuestion) → sends Enter (accept) or Escape (cancel)
 # Usage: cc-wait-respond.sh <session_name> <y|n|text>
 
 session_name="${1:-}"
@@ -14,9 +17,12 @@ fi
 
 # AI CLI process names
 AI_COMM_NAMES='claude|agent|codex|gemini'
-WAITING_PATTERN='esc to cancel|enter to select|Do you want|Would you like|allow command|Allow execution|\[y/n\]|ready to submit'
-
-# Find the WAITING pane with AI process
+# Prompt types:
+#   Permission: [y/n], allow command, Allow execution, Do you want, Would you like
+#   Selector:   esc to cancel, enter to select, ready to submit
+PERMISSION_PATTERN='\[y/n\]|\[Y/n\]|allow command|Allow execution|Do you want|Would you like'
+SELECTOR_PATTERN='esc to cancel|enter to select|ready to submit'
+# Find the WAITING pane with AI process, output: pane_id<TAB>prompt_type
 find_waiting_pane() {
   local sess=$1
   while IFS=$'\t' read -r pane_pid pane_id; do
@@ -51,23 +57,51 @@ find_waiting_pane() {
       continue
     fi
 
-    # Check pane output for WAITING pattern
+    # Check pane output for WAITING pattern and detect type
     local pane_output
     pane_output=$(tmux capture-pane -t "$pane_id" -p 2>/dev/null | tail -30) || true
 
-    if echo "$pane_output" | grep -qiE "$WAITING_PATTERN"; then
-      echo "$pane_id"
+    if echo "$pane_output" | grep -qiE "$SELECTOR_PATTERN"; then
+      printf '%s\t%s\n' "$pane_id" "selector"
+      return
+    elif echo "$pane_output" | grep -qiE "$PERMISSION_PATTERN"; then
+      printf '%s\t%s\n' "$pane_id" "permission"
       return
     fi
   done < <(tmux list-panes -t "$sess" -F "#{pane_pid}	#{pane_id}" 2>/dev/null)
 }
 
-pane_id=$(find_waiting_pane "$session_name")
+result=$(find_waiting_pane "$session_name")
 
-if [ -z "$pane_id" ]; then
+if [ -z "$result" ]; then
   # No WAITING pane found — silent exit (not an error)
   exit 0
 fi
 
-# Send response to the pane
-tmux send-keys -t "$pane_id" "$response" Enter
+pane_id=$(echo "$result" | cut -f1)
+prompt_type=$(echo "$result" | cut -f2)
+
+# Send appropriate key sequence based on prompt type
+case "$prompt_type" in
+  selector)
+    # AskUserQuestion / interactive selector UI
+    # y → Enter (accept current selection)
+    # n → Escape (cancel)
+    if [ "$response" = "y" ]; then
+      tmux send-keys -t "$pane_id" Enter
+    elif [ "$response" = "n" ]; then
+      tmux send-keys -t "$pane_id" Escape
+    else
+      # Free text: type it and press Enter
+      tmux send-keys -t "$pane_id" "$response" Enter
+    fi
+    ;;
+  permission)
+    # Permission prompt ([y/n])
+    tmux send-keys -t "$pane_id" "$response" Enter
+    ;;
+  *)
+    # Fallback: send as-is
+    tmux send-keys -t "$pane_id" "$response" Enter
+    ;;
+esac

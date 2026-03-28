@@ -15,14 +15,16 @@ result=$($SESH_SESSIONS -t | fzf-tmux -p 55%,60% \
   --no-sort --ansi --border-label "  sesh " --prompt "  " \
   --header "  ^a all ^t tmux ^x zoxide ^d kill ^o move ^y yes ^u no" \
   --print-query \
-  --expect=ctrl-o,ctrl-y,ctrl-u \
+  --expect=ctrl-o \
   --preview "$CC_PREVIEW {}" \
   --preview-window "right,45%,wrap,<80(bottom,40%,wrap)" \
   --bind "tab:down,btab:up" \
   --bind "ctrl-a:change-prompt(  )+reload($SESH_SESSIONS)" \
   --bind "ctrl-t:change-prompt(  )+reload($SESH_SESSIONS -t)" \
   --bind "ctrl-x:change-prompt(  )+reload(sesh list -z -i)" \
-  --bind "ctrl-d:execute-silent(tmux kill-session -t \$(echo {} | awk '{print \$2}'))+change-prompt(  )+reload($SESH_SESSIONS -t)")
+  --bind "ctrl-d:execute-silent(tmux kill-session -t \$(echo {} | awk '{print \$2}'))+change-prompt(  )+reload($SESH_SESSIONS -t)" \
+  --bind "ctrl-y:execute-silent($CC_RESPOND \$(echo {} | awk '{print \$2}') y)+reload($SESH_SESSIONS -t)" \
+  --bind "ctrl-u:execute-silent($CC_RESPOND \$(echo {} | awk '{print \$2}') n)+reload($SESH_SESSIONS -t)")
 
 # --expect と --print-query の出力:
 # Line 1: query (入力テキスト)
@@ -42,16 +44,6 @@ if [ -n "$selection" ]; then
       tmux break-pane       # 現在のペインを新しいウィンドウに分離
       tmux move-window -t "$session:"  # そのウィンドウを移動
       tmux switch-client -t "$session"
-      ;;
-    ctrl-y)
-      # Ctrl+y: WAITING ペインに "y" を送信してセッションに移動
-      "$CC_RESPOND" "$session" y
-      sesh connect "$session"
-      ;;
-    ctrl-u)
-      # Ctrl+n: WAITING ペインに "n" を送信してセッションに移動
-      "$CC_RESPOND" "$session" n
-      sesh connect "$session"
       ;;
     *)
       # Enter: 通常のセッション接続
