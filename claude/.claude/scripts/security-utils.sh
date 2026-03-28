@@ -1,7 +1,9 @@
 #!/bin/bash
 # security-utils.sh - Shared Security Validation Library
 #
-# Usage: source security-utils.sh
+# Usage:
+#   source security-utils.sh                    # as library
+#   security-utils.sh <func> [args]             # direct execution
 #
 # This file provides common security validation functions for .klaude/ scripts.
 # Design principle: Minimal, focused validation for actual threat vectors.
@@ -9,7 +11,10 @@
 # Reference: OWASP Command Injection (CWE-78)
 # Created: 2025-12-28 (PRP-013)
 
-set -euo pipefail
+# Only set strict mode when executed directly (not when sourced as library)
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  set -euo pipefail
+fi
 
 # ============================================================
 # Input Sanitization
@@ -174,3 +179,17 @@ check_staged_sensitive() {
 
   check_sensitive_info "${files_array[@]}"
 }
+
+# ============================================================
+# Direct Execution Mode
+# ============================================================
+# When executed directly (not sourced), dispatch to the specified function.
+# Usage: security-utils.sh <function_name> [args...]
+# Example: security-utils.sh check_sensitive_info file1 file2
+#          security-utils.sh check_staged_sensitive
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  func="${1:?Usage: security-utils.sh <function_name> [args...]}"
+  shift
+  "$func" "$@"
+fi

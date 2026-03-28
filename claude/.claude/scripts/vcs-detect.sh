@@ -1,7 +1,9 @@
 #!/bin/bash
 # vcs-detect.sh - VCS Detection and Abstraction Library
 #
-# Usage: source vcs-detect.sh
+# Usage:
+#   source vcs-detect.sh          # as library (functions available in caller)
+#   vcs-detect.sh <func> [args]   # direct execution (e.g. vcs-detect.sh detect_vcs)
 #
 # Provides unified VCS operations for both jj (Jujutsu) and git.
 # jj is prioritized over git (colocate mode makes git also pass).
