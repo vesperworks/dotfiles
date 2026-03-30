@@ -8,6 +8,7 @@ set -euo pipefail
 COLOR_GREEN=$'\033[38;2;115;218;202m'   # #73daca (BUSY)
 COLOR_YELLOW=$'\033[38;2;224;175;104m'  # #e0af68 (WAITING)
 COLOR_BLUE=$'\033[38;2;122;162;247m'    # #7aa2f7 (IDLE)
+COLOR_MAGENTA=$'\033[38;2;187;154;247m' # #bb9af7 (DONE)
 COLOR_DIM=$'\033[38;2;86;95;137m'       # #565f89 (リソース数値)
 COLOR_RESET=$'\033[0m'
 
@@ -110,9 +111,15 @@ detect_ai_status() {
       if [ "$best_status" != "WAITING" ]; then
         best_status="WAITING"
       fi
-    else
+    elif echo "$pane_output" | grep -qE -- '-- INSERT --|⏎'; then
+      # プロンプトにカーソルがある = 入力待ち
       if [ -z "$best_status" ]; then
         best_status="IDLE"
+      fi
+    else
+      # AIプロセスはあるが入力プロンプトなし = 応答完了・放置
+      if [ -z "$best_status" ]; then
+        best_status="DONE"
       fi
     fi
   done < <(tmux list-panes -t "$session_name" -F "#{pane_pid}	#{pane_id}" 2>/dev/null)
@@ -167,6 +174,7 @@ format_status() {
     BUSY)    echo "${COLOR_GREEN}● BUSY${COLOR_RESET}" ;;
     WAITING) echo "${COLOR_YELLOW}◐ WAIT${COLOR_RESET}" ;;
     IDLE)    echo "${COLOR_BLUE}○ IDLE${COLOR_RESET}" ;;
+    DONE)    echo "${COLOR_MAGENTA}◇ DONE${COLOR_RESET}" ;;
     *)       echo "" ;;
   esac
 }
@@ -263,17 +271,54 @@ main() {
     wait "$pid" 2>/dev/null || true
   done
 
-  # WAITING セッションを先頭に、他は元の順序で出力
-  # Pass 1: WAITING
+  # ステータスごとにグループ化して出力（セパレータ付き）
+  local has_output=false
+  # Pass 1: WAIT
   for ((i=0; i<idx; i++)); do
     if [ -f "$tmpdir/$i" ] && grep -q "◐ WAIT" "$tmpdir/$i"; then
       cat "$tmpdir/$i"
+      has_output=true
     fi
   done
-  # Pass 2: non-WAITING
+  # Pass 2: BUSY
+  local need_sep=$has_output
   for ((i=0; i<idx; i++)); do
-    if [ -f "$tmpdir/$i" ] && ! grep -q "◐ WAIT" "$tmpdir/$i"; then
+    if [ -f "$tmpdir/$i" ] && grep -q "● BUSY" "$tmpdir/$i"; then
+      if $need_sep; then echo "${COLOR_DIM}──${COLOR_RESET}"; need_sep=false; fi
       cat "$tmpdir/$i"
+      has_output=true
+    fi
+  done
+  # Pass 3: DONE
+  need_sep=$has_output
+  local done_printed=false
+  for ((i=0; i<idx; i++)); do
+    if [ -f "$tmpdir/$i" ] && grep -q "◇ DONE" "$tmpdir/$i"; then
+      if $need_sep && ! $done_printed; then echo "${COLOR_DIM}──${COLOR_RESET}"; fi
+      cat "$tmpdir/$i"
+      has_output=true
+      done_printed=true
+    fi
+  done
+  # Pass 4: IDLE
+  need_sep=$has_output
+  local idle_printed=false
+  for ((i=0; i<idx; i++)); do
+    if [ -f "$tmpdir/$i" ] && grep -q "○ IDLE" "$tmpdir/$i"; then
+      if $need_sep && ! $idle_printed; then echo "${COLOR_DIM}──${COLOR_RESET}"; fi
+      cat "$tmpdir/$i"
+      has_output=true
+      idle_printed=true
+    fi
+  done
+  # Pass 5: その他（AI CLIなし）
+  need_sep=$has_output
+  local other_printed=false
+  for ((i=0; i<idx; i++)); do
+    if [ -f "$tmpdir/$i" ] && ! grep -qE "◐ WAIT|● BUSY|◇ DONE|○ IDLE" "$tmpdir/$i"; then
+      if $need_sep && ! $other_printed; then echo "${COLOR_DIM}──${COLOR_RESET}"; fi
+      cat "$tmpdir/$i"
+      other_printed=true
     fi
   done
 }
