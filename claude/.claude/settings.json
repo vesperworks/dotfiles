@@ -85,7 +85,8 @@
       "Bash(~/.claude/scripts/:*)",
       "Bash(gh issue:*)",
       "Bash(gh project:*)",
-      "Bash(gh api graphql:*)"
+      "Bash(gh api graphql:*)",
+      "Bash(search-sessions:*)"
     ],
     "deny": [
       "Bash(rm -rf:*)",

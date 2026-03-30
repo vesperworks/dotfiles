@@ -15,6 +15,25 @@ AI_COMM_NAMES='claude|agent|codex|gemini'
 WAITING_PATTERN='esc to cancel|enter to select|Do you want|Would you like|allow command|Allow execution|\[y/n\]|ready to submit'
 BUSY_PATTERN='esc to interrupt|ctrl\+c to interrupt'
 
+# === trim_blank_lines ===
+# capture-pane 出力の先頭・末尾の空白行を除去（ANSI エスケープ対応）
+trim_blank_lines() {
+  awk '
+  {
+    plain = $0
+    gsub(/\033\[[0-9;]*m/, "", plain)
+    gsub(/[[:space:]]/, "", plain)
+    if (plain != "") {
+      for (i = 0; i < blanks; i++) print blank_lines[i]
+      blanks = 0
+      print
+      found = 1
+    } else if (found) {
+      blank_lines[blanks++] = $0
+    }
+  }'
+}
+
 # === find_waiting_pane ===
 # セッション内の WAITING 状態のペインIDを返す
 # Usage: pane_id=$(find_waiting_pane "session_name")

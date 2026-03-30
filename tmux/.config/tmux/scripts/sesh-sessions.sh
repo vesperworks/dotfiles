@@ -222,9 +222,11 @@ main() {
     return
   fi
 
-  # tmuxセッション一覧をキャッシュ
-  local tmux_sessions
+  # tmuxセッション一覧をキャッシュ（最終アクセス時刻付き）
+  local tmux_sessions tmux_sessions_with_time today_start
   tmux_sessions=$(tmux list-sessions -F '#{session_name}' 2>/dev/null) || true
+  tmux_sessions_with_time=$(tmux list-sessions -F '#{session_name}	#{session_last_attached}' 2>/dev/null) || true
+  today_start=$(date -j -v0H -v0M -v0S +%s 2>/dev/null) || today_start=$(date -d 'today 00:00:00' +%s 2>/dev/null) || today_start=0
 
   # セッション名の最大長を計算（列揃え用）
   local max_name_len=0
@@ -245,6 +247,15 @@ main() {
 
     local session_name
     session_name=$(echo "$line" | awk '{print $2}')
+
+    # 今日アクセスしたかを判定
+    local last_attached
+    last_attached=$(echo "$tmux_sessions_with_time" | awk -F'\t' -v s="$session_name" '$1==s {print $2; exit}')
+    if [ -n "$last_attached" ] && [ "$last_attached" -ge "$today_start" ] 2>/dev/null; then
+      echo "1" > "$tmpdir/${idx}.today"
+    else
+      echo "0" > "$tmpdir/${idx}.today"
+    fi
 
     if echo "$tmux_sessions" | grep -qxF "$session_name"; then
       process_session "$line" "$session_name" "$tmpdir/$idx" "$max_name_len" &
@@ -267,32 +278,42 @@ main() {
     wait "$pid" 2>/dev/null || true
   done
 
-  # 1パスでステータス分類 → グループ別に出力（セパレータ付き）
-  local -a wait_items=() busy_items=() done_items=() idle_items=() other_items=()
+  # WAIT → 今日アクセス済み(MRU) → セパレータ → 未アクセス(MRU)
+  local -a wait_items=() today_items=() old_items=()
   for ((i=0; i<idx; i++)); do
     [ -f "$tmpdir/$i" ] || continue
-    local content
+    local content is_today
     content=$(cat "$tmpdir/$i")
+    is_today=$(cat "$tmpdir/${i}.today" 2>/dev/null) || is_today="0"
     case "$content" in
       *"◐ WAIT"*) wait_items+=("$content") ;;
-      *"● BUSY"*) busy_items+=("$content") ;;
-      *"◇ DONE"*) done_items+=("$content") ;;
-      *"○ IDLE"*) idle_items+=("$content") ;;
-      *)          other_items+=("$content") ;;
+      *)
+        if [ "$is_today" = "1" ]; then
+          today_items+=("$content")
+        else
+          old_items+=("$content")
+        fi
+        ;;
     esac
   done
 
   local sep="${COLOR_DIM}──${COLOR_RESET}"
   local has_output=false
-  for group in wait busy "done" idle other; do
-    local count_var="${group}_items[@]"
-    local items=("${!count_var+"${!count_var}"}")
-    if [ "${#items[@]}" -gt 0 ] && [ -n "${items[0]:-}" ]; then
-      if $has_output; then echo "$sep"; fi
-      printf '%s\n' "${items[@]}"
-      has_output=true
-    fi
-  done
+  # WAIT（常に最上位）
+  if [ "${#wait_items[@]}" -gt 0 ]; then
+    printf '%s\n' "${wait_items[@]}"
+    has_output=true
+  fi
+  # 今日アクセス済み
+  if [ "${#today_items[@]}" -gt 0 ]; then
+    printf '%s\n' "${today_items[@]}"
+    has_output=true
+  fi
+  # セパレータ + 未アクセス
+  if [ "${#old_items[@]}" -gt 0 ]; then
+    if $has_output; then echo "$sep"; fi
+    printf '%s\n' "${old_items[@]}"
+  fi
 }
 
 # source時はmain()を実行しない（関数のみ公開）
