@@ -24,6 +24,33 @@ VCS=$(detect_vcs)  # → "jj" or "git"
 - **jj リポジトリ**: ステージングなし。全変更が自動トラッキングされる
 - **git リポジトリ**: 従来通りステージング + コミット
 
+### Step 0.5: ブランチ戦略（jj のみ）
+
+jj の場合、コミットを**どのブランチに配置するか**を事前に確認する。
+
+**確認コマンド**:
+```bash
+# 現在のブランチ（bookmark）と DAG 構造
+jj log -r 'ancestors(@, 5)'
+jj bookmark list
+```
+
+**確認ポイント**:
+1. 現在のワーキングコピーはどのブランチ上にあるか？
+2. 変更ファイルの中に、現在のブランチとは**無関係な変更**が混在していないか？
+3. main に直接入れるべき変更（独立した fix/feat）はあるか？
+
+**判定結果を記録**（Step 2 で表示する）:
+- **current**: 現在のブランチにそのまま split する
+- **main**: main の子として配置する（split → rebase）
+- **new:<name>**: 新しいブランチを作成して配置する（split → rebase → bookmark create）
+- **skip**: 今回はコミットしない（開発中の変更）
+
+> **⚠️ ワーキングコピー切り替えの注意**: jj のワーキングコピーは1つしかない。
+> 別エージェントが同じディレクトリで作業中の場合、`jj new main` 等でワーキングコピーを
+> 切り替えるとファイルシステムが変わり影響が出る。その場合は rebase 方式（現在位置で
+> split → 後から rebase で移動）を使うこと。
+
 ---
 
 ## クイックコミットモード（引数あり）
@@ -158,21 +185,27 @@ sed -i '' "s|$USERNAME|{username}|g" <file>
 
 分析結果を表示した後、AskUserQuestionで確認を求める：
 
-**まず、提案グループを表示**:
+**まず、提案グループを表示**（jj の場合はブランチ配置先も含める）:
 ```
 ## コミットグループ提案
 
-Commit 1: [feat] 新機能追加
+Commit 1: [feat] 新機能追加 → current (feat/auth)
   - src/feature.ts
   - src/feature.test.ts
 
-Commit 2: [docs] ドキュメント更新
+Commit 2: [docs] ドキュメント更新 → main
   - README.md
   - CLAUDE.md
 
-Commit 3: [chore] 設定変更
+Commit 3: [chore] 設定変更 → main
   - ~/.claude/settings.json
+
+Skip (開発中):
+  - src/wip-feature.ts
 ```
+
+> **jj**: `→ main` のコミットは split 後に `jj rebase` で main の子に移動される。
+> `→ current` は現在のブランチにそのまま配置。`→ new:<name>` は新規ブランチ作成。
 
 **次に、AskUserQuestionで確認**:
 ```yaml
@@ -270,73 +303,62 @@ TodoWrite([
 
 各グループを順番に処理。VCS によってコマンドが異なる：
 
-#### jj の場合（scope 別 bookmark 分岐）
+#### jj の場合（split → rebase → bookmark）
 
-jj では各グループの **scope** を検出し、scope ごとに main から分岐して `feat/<scope>` bookmark を自動作成する。これにより、論理的に独立した変更が DAG 上で分岐し、push 時に個別管理できる。
+**Phase A: Split（現在位置で分割）**
 
-**scope 検出ルール**:
-- 各グループのファイルパスから共通のトップレベルディレクトリを推定
-- 例: `src/auth/login.ts`, `src/auth/validate.ts` → scope = `auth`
-- 例: `packages/api/index.ts` → scope = `api`
-- ルート直下のファイル（`README.md`, `.gitignore` 等）→ scope = プロジェクト名 or `root`
-- 複数ディレクトリが混在 → ユーザーに scope 名を AskUserQuestion で確認
+skip 以外のグループを順に split する。配置先に関係なく、まず現在位置で直列に分割：
 
-**手順**:
+最初〜最後の1つ前のグループまで:
+1. **分離コミット**: `jj split -m "<type>(<scope>): <subject>" -- <files>`
+2. **進捗更新**: TaskUpdate で該当タスクを `completed` にマーク
+3. 次のグループへ進む
 
-1. **元の WC を記録**: `ORIG=$(jj log -r @ --no-graph -T 'change_id.short()')`
-2. **各グループについて**:
-   a. scope を検出（上記ルール）
-   b. bookmark 名を決定: `feat/<scope>`
-   c. 分岐先を決定:
-      - `feat/<scope>` bookmark が既存 → `jj new feat/<scope>` （追加コミット）
-      - 新規 → `jj new main` （main から分岐）
-   d. ファイルを持ってくる: `jj restore --from $ORIG -- <files>`
-   e. コミット: `jj commit -m "<type>(<scope>): <subject>"`
-   f. bookmark を更新:
-      - 新規: `jj bookmark create feat/<scope> -r @-`
-      - 既存: `jj bookmark set feat/<scope> -r @-`
-   g. **進捗更新**: TodoWrite で該当タスクを `completed` にマーク
-3. **元の WC を abandon**: `jj abandon $ORIG`
-4. **新しい WC の配置**:
-   - **1 scope のみ** → `jj new feat/<scope>`（作業継続のためそのまま feat ブランチに留まる）
-   - **複数 scope** → 最後に処理した `feat/<scope>` に `jj new` する（AskUserQuestion でどの scope に留まるか確認）
+最後のグループ（skip がある場合 = ワーキングコピーに残す変更がある場合）:
+4. **分離コミット**: `jj split -m "<type>(<scope>): <subject>" -- <files>`
+5. 残りの変更はワーキングコピーに残る
 
-**例**: モノレポで api/ と web/ の変更がある場合:
+最後のグループ（skip がない場合 = 全変更をコミットする場合）:
+4. **メッセージ設定**: `jj describe -m "<type>(<scope>): <subject>"`（残り全変更にメッセージ）
+5. **新ワーキングコピー**: `jj new`（新しい作業開始）
+
+**Phase B: Rebase + Bookmark（配置先が `main` または `new:<name>` のコミットを移動）**
+
+`→ current` 以外のコミットを正しい位置に rebase する：
+
 ```bash
-ORIG=$(jj log -r @ --no-graph -T 'change_id.short()')
+# main 宛のコミットを main の子に移動
+jj rebase -r <commit_id> -d main
 
-# Group 1: api/ → feat/api
-jj new main
-jj restore --from $ORIG -- src/api/routes.ts src/api/middleware.ts
-jj commit -m "feat(api): add rate limiting middleware"
-jj bookmark create feat/api -r @-
-
-# Group 2: web/ → feat/web
-jj new main
-jj restore --from $ORIG -- src/web/components/Login.tsx src/web/hooks/useAuth.ts
-jj commit -m "feat(web): add login form component"
-jj bookmark create feat/web -r @-
-
-# クリーンアップ
-jj abandon $ORIG
-
-# 最後に処理した scope に留まる（複数 scope の場合はユーザーに確認）
-jj new feat/web
+# 新規ブランチ宛の場合は rebase 後に bookmark 作成
+jj rebase -r <commit_id> -d main
+jj bookmark create <branch_name> -r <commit_id>
 ```
 
-**結果の DAG**:
-```
-main ─┬─ feat/api ─ (rate limiting)
-      └─ feat/web ─ (login form)
-```
+> **重要**: rebase 後、直列チェーンの中間コミットが抜けるため、
+> 後続コミットの親が自動的に繋ぎ直される（jj が自動処理）。
 
-**同一 scope への追加コミット**:
-既存の `feat/api` bookmark がある状態で追加変更をコミットする場合:
+**jj 段階コミットの例（全て current 宛の場合）**:
 ```bash
-jj new feat/api                    # 既存 bookmark から分岐
-jj restore --from $ORIG -- src/api/tests/rate-limit.test.ts
-jj commit -m "test(api): add rate limiting tests"
-jj bookmark set feat/api -r @-    # bookmark を先頭に移動
+jj split -m "feat(auth): add login validation" -- src/auth.ts src/auth.test.ts
+jj split -m "docs: update README" -- README.md
+jj describe -m "chore: update config"   # 最後の残り
+jj new                                    # 新しいワーキングコピー
+```
+
+**jj 段階コミットの例（混在する場合）**:
+```bash
+# Phase A: Split（全て現在位置で直列に分割）
+jj split -m "feat(sheldon): add stow package" -- sheldon/ install.sh
+jj split -m "feat(zsh): add p10k config" -- zsh/
+jj split -m "feat(tmux): add resurrect guard" -- tmux/scripts/guard.sh tmux/tmux.conf
+# → ワーキングコピーには skip した開発中ファイルが残る
+
+# Phase B: Rebase（main 宛のコミットを移動）
+jj rebase -r <sheldon_commit> -d main
+jj rebase -r <zsh_commit> -d main
+jj rebase -r <tmux_commit> -d main
+# → 3つのコミットが main の子として並列に配置される
 ```
 
 #### git の場合（従来動作）
@@ -435,6 +457,7 @@ feat(auth): add login validation
 
 - 段階コミットモードでは、各グループごとに個別のコミットが作成されます
 - VCS は自動検出されます（jj 優先。colocate モードでは jj が検出される）
-- **jj モード**: ステージング概念なし。全変更が自動トラッキング。`jj split` で段階コミット
+- **jj モード**: ステージング概念なし。全変更が自動トラッキング。`jj split` → `jj rebase` で段階コミット
+- **jj ブランチ戦略**: Step 0.5 で各グループの配置先を決定し、Phase B で rebase する。**split だけで終わらせない**
 - **git モード**: 従来通り `git add` + `git commit`。ステージングされていない変更も自動ステージングされます
 - コミット前に変更内容を確認することを推奨します

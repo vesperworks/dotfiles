@@ -78,6 +78,7 @@ alias ll='eza -la --color=always --icons'
 alias la='eza -a --color=always --icons'
 alias lt='eza --tree --color=always --icons --level=2'
 alias ccm='ccmanager --multi-project'
+alias ch='claude-history'
 
 # Git aliases (migrated from Oh My Zsh git plugin)
 alias g='git'
