@@ -38,22 +38,30 @@ PRP パス: .brain/*/prp/
    → Success Criteria のチェック状況を集計
 ```
 
-#### 0-B: 会話履歴の読み取り
+#### 0-B: 会話履歴の読み取り（VCS ログ → search-sessions）
 
 ```
-会話履歴パス: ~/.claude/projects/{project-slug}/
-（project-slug は MEMORY.md パスから逆算）
+VCS コミットログからキーワードを抽出し、search-sessions で関連セッションを検索する。
+（search-sessions はクエリ必須のため、コミットログから逆算する）
 
-1. Bash: ls -lt ~/.claude/projects/{slug}/*.jsonl | head -5
-   → 更新日時順でスレッドファイルを特定
-2. 最新1つ（= 現在のセッション）を除外
-3. 2番目・3番目のファイルを対象に:
-   Bash: tail -n 50 <file>
-4. 各行から type: "user" / "assistant" のメッセージのみ抽出
-   - file-history-snapshot, system, progress 等は無視
-   - assistant の content が配列の場合、type: "text" のみ（tool_use は無視）
-5. 各スレッドから最後の user + assistant 1往復を要約
-   - content が長い場合は先頭500文字に切り詰め
+1. 直近コミットからキーワード抽出:
+   jj の場合: jj log -r 'ancestors(main, 5)' --no-graph -T 'description ++ "\n"'
+   git の場合: git log --oneline -5
+
+2. コミットメッセージから scope / キーワードを抽出:
+   例: "feat(tmux): add git status" → "tmux", "git status"
+   例: "fix(zsh): suppress sheldon" → "zsh", "sheldon"
+
+3. 各キーワードで search-sessions 実行（並列可）:
+   Bash: search-sessions "<keyword>" --since "3 days ago" --limit 3
+   ヒットしない場合: search-sessions "<keyword>" --deep --limit 3
+
+4. 結果から以下を抽出:
+   - セッション日時
+   - サマリー / 最初のプロンプト
+   - セッション ID（resume 用）
+
+5. MEMORY.md の残タスクに関連するセッションがあれば紐付け
 ```
 
 #### 0-C: wip-*.md スキャン
@@ -116,13 +124,13 @@ IF 完了候補の PRP（Success Criteria 80%以上チェック済み）:
   → done/ への移動を提案
 ```
 
-#### E. 会話履歴からの洞察
+#### E. 会話履歴からの洞察（search-sessions）
 
 ```
-直近2スレッドの末尾から以下を抽出:
-- 最後の作業内容: 何をしていたか
-- 未完了の指示: ユーザーが依頼したが完了していない可能性があるもの
-- 次のアクション示唆: 「次は〜」「後で〜」等の記載
+search-sessions の結果から以下を抽出:
+- 直近セッションのサマリー: 何をしていたか
+- MEMORY.md の残タスクに関連するセッション: 進捗の手がかり
+- 必要に応じてキーワード検索で深掘り（--deep）
 
 → 残タスク候補として Memory/TaskList と照合
 → **提案のみ**（自動タスク生成はしない → AskUserQuestion で確認）
@@ -249,7 +257,5 @@ AskUserQuestion:
 
 ### パフォーマンス
 - PRP は Glob でファイル一覧 → アクティブ PRP のみ Read（done/cancel/tbd はファイル名のみ）
-- JSONL は tail で末尾50行のみ読み取り（全ファイル読み込みを避ける）
-- type: user/assistant 以外のメッセージは無視
-- assistant メッセージの tool_use 部分は無視（テキスト部分のみ抽出）
-- content が長い場合は先頭500文字に切り詰め
+- 会話履歴は `search-sessions` CLI 経由（JSONL 直接読み取りは権限問題があるため避ける）
+- `search-sessions` のインデックス検索は ~18ms、ディープ検索は ~280ms で十分高速
