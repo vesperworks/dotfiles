@@ -12,74 +12,97 @@ err() { printf '\033[0;31m[✗]\033[0m %s\n' "$*" >&2; }
 
 # --- Homebrew ---
 install_homebrew() {
-  if [[ -x "/opt/homebrew/bin/brew" ]] || [[ -x "/usr/local/bin/brew" ]]; then
-    return 0
-  fi
+	if [[ -x "/opt/homebrew/bin/brew" ]] || [[ -x "/usr/local/bin/brew" ]]; then
+		return 0
+	fi
 
-  if [[ -f "$DOTFILES_DIR/scripts/install-homebrew.sh" ]]; then
-    log "Installing Homebrew..."
-    bash "$DOTFILES_DIR/scripts/install-homebrew.sh"
-  else
-    err "Homebrew not found and install script missing"
-    return 1
-  fi
+	if [[ -f "$DOTFILES_DIR/scripts/install-homebrew.sh" ]]; then
+		log "Installing Homebrew..."
+		bash "$DOTFILES_DIR/scripts/install-homebrew.sh"
+	else
+		err "Homebrew not found and install script missing"
+		return 1
+	fi
 }
 
 setup_brew_env() {
-  if [[ -x "/opt/homebrew/bin/brew" ]]; then
-    eval "$(/opt/homebrew/bin/brew shellenv)"
-  elif [[ -x "/usr/local/bin/brew" ]]; then
-    eval "$(/usr/local/bin/brew shellenv)"
-  fi
+	if [[ -x "/opt/homebrew/bin/brew" ]]; then
+		eval "$(/opt/homebrew/bin/brew shellenv)"
+	elif [[ -x "/usr/local/bin/brew" ]]; then
+		eval "$(/usr/local/bin/brew shellenv)"
+	fi
 }
 
 # --- Stow ---
 stow_packages() {
-  if ! command -v stow >/dev/null 2>&1; then
-    err "stow not found. Install with: brew install stow"
-    return 1
-  fi
+	if ! command -v stow >/dev/null 2>&1; then
+		err "stow not found. Install with: brew install stow"
+		return 1
+	fi
 
-  for pkg in "${STOW_PACKAGES[@]}"; do
-    if [[ -d "$DOTFILES_DIR/$pkg" ]]; then
-      log "Stowing $pkg..."
-      stow -t "$HOME" -d "$DOTFILES_DIR" --no-folding "$pkg"
-    fi
-  done
+	for pkg in "${STOW_PACKAGES[@]}"; do
+		if [[ -d "$DOTFILES_DIR/$pkg" ]]; then
+			log "Stowing $pkg..."
+			stow -t "$HOME" -d "$DOTFILES_DIR" --no-folding "$pkg"
+		fi
+	done
 }
 
 # --- Brew bundle ---
 brew_bundle() {
-  if command -v brew >/dev/null 2>&1 && [[ -f "$HOME/.Brewfile" ]]; then
-    log "Running brew bundle..."
-    brew bundle --global
-  fi
+	if command -v brew >/dev/null 2>&1 && [[ -f "$HOME/.Brewfile" ]]; then
+		log "Running brew bundle..."
+		brew bundle --global
+	fi
 }
 
 # --- sheldon ---
 install_sheldon() {
-  if command -v sheldon >/dev/null 2>&1; then
-    return 0
-  fi
-  if command -v brew >/dev/null 2>&1; then
-    log "Installing sheldon..."
-    brew install sheldon
-  else
-    err "brew not found. Install sheldon manually: https://sheldon.cli.rs/"
-    return 1
-  fi
+	if command -v sheldon >/dev/null 2>&1; then
+		return 0
+	fi
+	if command -v brew >/dev/null 2>&1; then
+		log "Installing sheldon..."
+		brew install sheldon
+	else
+		err "brew not found. Install sheldon manually: https://sheldon.cli.rs/"
+		return 1
+	fi
 }
 
 # --- uv ---
 install_uv() {
-  if command -v uv >/dev/null 2>&1; then
-    return 0
-  fi
+	if command -v uv >/dev/null 2>&1; then
+		return 0
+	fi
 
-  if [[ -f "$DOTFILES_DIR/scripts/install-uv.sh" ]]; then
-    log "Installing uv..."
-    bash "$DOTFILES_DIR/scripts/install-uv.sh"
-  fi
+	if [[ -f "$DOTFILES_DIR/scripts/install-uv.sh" ]]; then
+		log "Installing uv..."
+		bash "$DOTFILES_DIR/scripts/install-uv.sh"
+	fi
+}
+
+# --- yazi plugins ---
+install_yazi_plugins() {
+	if command -v ya >/dev/null 2>&1; then
+		log "Installing yazi plugins..."
+		ya pack -i
+	else
+		warn "ya not found. Skipping yazi plugin install."
+	fi
+}
+
+# --- tmux plugins (TPM) ---
+install_tmux_plugins() {
+	local tpm_dir="$HOME/.config/tmux/plugins/tpm"
+	if [[ ! -d "$tpm_dir" ]]; then
+		log "Installing TPM (Tmux Plugin Manager)..."
+		git clone https://github.com/tmux-plugins/tpm "$tpm_dir"
+	fi
+	if [[ -x "$tpm_dir/bin/install_plugins" ]]; then
+		log "Installing tmux plugins..."
+		"$tpm_dir/bin/install_plugins"
+	fi
 }
 
 # --- Main ---
@@ -91,5 +114,7 @@ install_sheldon
 stow_packages
 brew_bundle
 install_uv
+install_yazi_plugins
+install_tmux_plugins
 
 log "Done! Restart your shell or run: source ~/.zshrc"
