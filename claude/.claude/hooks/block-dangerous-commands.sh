@@ -1,68 +1,51 @@
 #!/bin/bash
 
-# block-dangerous-commands.sh - 危険なBashコマンドをブロック
-# PreToolUse hook for Bash tool
+# block-dangerous-commands.sh - PreToolUse hook for Bash tool
+# permissions.deny でカバーできない複合的な危険パターンをブロックする
 #
+# Note: rm, dd, sudo, chmod 777, curl, wget 等の単純パターンは
+#       settings.json の permissions.deny で既にブロック済み。
+#       このスクリプトは deny では検出困難なパターンのみ担当する。
+#
+# Input: stdin JSON with tool_input.command
 # Exit codes:
 #   0 - Allow command execution
 #   2 - Block command (dangerous pattern detected)
 
-# Read JSON input from stdin
 input=$(cat)
-
-# Extract command from tool_input
 command=$(echo "$input" | jq -r '.tool_input.command // empty')
 
-if [ -z "$command" ]; then
-    exit 0
+if [[ -z "$command" ]]; then
+	exit 0
 fi
 
-# Dangerous patterns to block
-# Each pattern is a regex that will be matched against the command
+# deny でカバーできない危険パターン
 dangerous_patterns=(
-    # Destructive file operations
-    'rm\s+-rf\s+/'               # rm -rf /
-    'rm\s+-rf\s+~'               # rm -rf ~
-    'rm\s+-rf\s+\$HOME'          # rm -rf $HOME
-    'rm\s+-rf\s+\*'              # rm -rf *
+	# Fork bomb (various forms)
+	':\(\)\s*\{'
+	':\s*\(\s*\)\s*\{'
 
-    # Fork bomb (various forms)
-    ':\(\)\s*\{'            # :(){ pattern
-    ':\s*\(\s*\)\s*\{'      # : ( ) { pattern with spaces
+	# Disk device direct write (dd は deny だが of=/dev は複合パターン)
+	'>\s*/dev/sd[a-z]'
+	'mkfs\.'
 
-    # Disk operations
-    '>\s*/dev/sd[a-z]'           # > /dev/sda
-    'mkfs\.'                     # mkfs.ext4, mkfs.ntfs, etc.
-    'dd\s+if=.*of=/dev'          # dd to disk
+	# System shutdown/reboot
+	'shutdown\s+-h'
+	'reboot'
+	'init\s+0'
 
-    # Permission escalation
-    'chmod\s+-R\s+777\s+/'       # chmod -R 777 /
-    'chmod\s+777\s+/'            # chmod 777 /
-
-    # Remote code execution
-    'curl\s+.*\|\s*(ba)?sh'      # curl ... | sh
-    'wget\s+.*\|\s*(ba)?sh'      # wget ... | sh
-    'curl\s+-s.*\|\s*(ba)?sh'    # curl -s ... | sh
-
-    # System shutdown/reboot
-    'shutdown\s+-h'              # shutdown -h
-    'reboot'                     # reboot
-    'init\s+0'                   # init 0
-
-    # History manipulation (potential covering tracks)
-    'history\s+-c'               # history -c
-    'rm\s+.*\.bash_history'      # rm .bash_history
+	# History manipulation (covering tracks)
+	'history\s+-c'
+	'rm\s+.*\.bash_history'
+	'rm\s+.*\.zsh_history'
 )
 
-# Check each dangerous pattern
 for pattern in "${dangerous_patterns[@]}"; do
-    if echo "$command" | grep -qE "$pattern"; then
-        echo "⛔ 危険なコマンドをブロックしました" >&2
-        echo "   パターン: $pattern" >&2
-        echo "   コマンド: $command" >&2
-        exit 2
-    fi
+	if echo "$command" | grep -qE "$pattern"; then
+		echo "Blocked: dangerous pattern detected: $pattern" >&2
+		echo "Command: $command" >&2
+		exit 2
+	fi
 done
 
-# Command is safe
 exit 0

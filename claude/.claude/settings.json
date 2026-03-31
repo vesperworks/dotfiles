@@ -164,6 +164,62 @@
         "hooks": [
           {
             "type": "command",
+            "if": "Edit(*.sh)",
+            "command": "~/.claude/hooks/auto-format.sh"
+          },
+          {
+            "type": "command",
+            "if": "Write(*.sh)",
+            "command": "~/.claude/hooks/auto-format.sh"
+          },
+          {
+            "type": "command",
+            "if": "Edit(*.ts)",
+            "command": "~/.claude/hooks/auto-format.sh"
+          },
+          {
+            "type": "command",
+            "if": "Edit(*.tsx)",
+            "command": "~/.claude/hooks/auto-format.sh"
+          },
+          {
+            "type": "command",
+            "if": "Edit(*.js)",
+            "command": "~/.claude/hooks/auto-format.sh"
+          },
+          {
+            "type": "command",
+            "if": "Edit(*.jsx)",
+            "command": "~/.claude/hooks/auto-format.sh"
+          },
+          {
+            "type": "command",
+            "if": "Write(*.ts)",
+            "command": "~/.claude/hooks/auto-format.sh"
+          },
+          {
+            "type": "command",
+            "if": "Write(*.tsx)",
+            "command": "~/.claude/hooks/auto-format.sh"
+          },
+          {
+            "type": "command",
+            "if": "Write(*.js)",
+            "command": "~/.claude/hooks/auto-format.sh"
+          },
+          {
+            "type": "command",
+            "if": "Write(*.jsx)",
+            "command": "~/.claude/hooks/auto-format.sh"
+          },
+          {
+            "type": "command",
+            "if": "Edit(*.py)",
+            "command": "~/.claude/hooks/auto-format.sh"
+          },
+          {
+            "type": "command",
+            "if": "Write(*.py)",
             "command": "~/.claude/hooks/auto-format.sh"
           }
         ]
@@ -175,6 +231,12 @@
         "hooks": [
           {
             "type": "command",
+            "if": "Bash(jj *)",
+            "command": "~/.claude/hooks/remove-index-lock.sh"
+          },
+          {
+            "type": "command",
+            "if": "Bash(git *)",
             "command": "~/.claude/hooks/remove-index-lock.sh"
           },
           {
@@ -183,6 +245,12 @@
           },
           {
             "type": "command",
+            "if": "Bash(git commit *)",
+            "command": "~/.claude/hooks/block-author-attribution.sh"
+          },
+          {
+            "type": "command",
+            "if": "Bash(jj commit *)",
             "command": "~/.claude/hooks/block-author-attribution.sh"
           },
           {
@@ -191,6 +259,25 @@
           },
           {
             "type": "command",
+            "if": "Bash(git commit *)",
+            "command": "~/.claude/hooks/pre-commit-lint.sh",
+            "timeout": 60
+          },
+          {
+            "type": "command",
+            "if": "Bash(jj commit *)",
+            "command": "~/.claude/hooks/pre-commit-lint.sh",
+            "timeout": 60
+          },
+          {
+            "type": "command",
+            "if": "Bash(jj split *)",
+            "command": "~/.claude/hooks/pre-commit-lint.sh",
+            "timeout": 60
+          },
+          {
+            "type": "command",
+            "if": "Bash(jj describe *)",
             "command": "~/.claude/hooks/pre-commit-lint.sh",
             "timeout": 60
           }

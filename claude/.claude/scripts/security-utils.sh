@@ -13,7 +13,7 @@
 
 # Only set strict mode when executed directly (not when sourced as library)
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-  set -euo pipefail
+	set -euo pipefail
 fi
 
 # ============================================================
@@ -25,39 +25,39 @@ fi
 # Preserves: alphanumeric, space, newline, common punctuation
 # Usage: safe=$(sanitize_string "$input" [max_length])
 sanitize_string() {
-  local input="$1"
-  local max_length="${2:-4096}"
+	local input="$1"
+	local max_length="${2:-4096}"
 
-  [[ -z "$input" ]] && return 0
+	[[ -z "$input" ]] && return 0
 
-  # Truncate if too long
-  if [[ ${#input} -gt $max_length ]]; then
-    input="${input:0:$max_length}"
-  fi
+	# Truncate if too long
+	if [[ ${#input} -gt $max_length ]]; then
+		input="${input:0:$max_length}"
+	fi
 
-  # Keep only safe characters (including newline for multiline content)
-  printf '%s' "$input" | tr -cd '[:alnum:] _.,:/@#\n-'
+	# Keep only safe characters (including newline for multiline content)
+	printf '%s' "$input" | tr -cd '[:alnum:] _.,:/@#\n-'
 }
 
 # Sanitize log entry (prevent log injection)
 # Removes: ANSI escapes, control characters, normalizes newlines
 # Usage: safe_log=$(sanitize_log "$message")
 sanitize_log() {
-  local input="$1"
+	local input="$1"
 
-  printf '%s' "$input" |
-    sed 's/\x1b\[[0-9;]*[a-zA-Z]//g' |
-    tr -cd '[:print:]' |
-    tr '\n' ' ' |
-    head -c 4096
+	printf '%s' "$input" |
+		sed 's/\x1b\[[0-9;]*[a-zA-Z]//g' |
+		tr -cd '[:print:]' |
+		tr '\n' ' ' |
+		head -c 4096
 }
 
 # Mask sensitive data in strings (for logging)
 # Usage: masked=$(mask_sensitive "$command")
 mask_sensitive() {
-  local input="$1"
+	local input="$1"
 
-  printf '%s' "$input" | sed -E '
+	printf '%s' "$input" | sed -E '
     s/(token|password|secret|api[_-]?key|auth)=[^[:space:]]*/\1=***REDACTED***/gi
     s/(Authorization:[[:space:]]*)(Bearer[[:space:]]+)?[^[:space:]]*/\1***REDACTED***/gi
     s/(ghp_|gho_|ghs_|ghr_)[a-zA-Z0-9]+/***GITHUB_TOKEN***/g
@@ -71,49 +71,49 @@ mask_sensitive() {
 # Validate path is safe (no traversal)
 # Usage: validate_path "/some/path" && echo "safe"
 validate_path() {
-  local path="$1"
+	local path="$1"
 
-  [[ -z "$path" ]] && return 1
-  [[ "$path" == *".."* ]] && return 1
+	[[ -z "$path" ]] && return 1
+	[[ "$path" == *".."* ]] && return 1
 
-  return 0
+	return 0
 }
 
 # Validate GitHub repository format (owner/repo)
 # Usage: validate_repo "owner/repo" && echo "valid"
 validate_repo() {
-  local repo="$1"
-  [[ "$repo" =~ ^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$ ]]
+	local repo="$1"
+	[[ "$repo" =~ ^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$ ]]
 }
 
 # Validate positive integer
 # Usage: validate_number "123" && echo "valid"
 validate_number() {
-  local num="$1"
-  [[ "$num" =~ ^[0-9]+$ ]]
+	local num="$1"
+	[[ "$num" =~ ^[0-9]+$ ]]
 }
 
 # Validate ISO8601 date (YYYY-MM-DD)
 # Usage: validate_date "2025-12-28" && echo "valid"
 validate_date() {
-  local date="$1"
-  [[ "$date" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]
+	local date="$1"
+	[[ "$date" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]
 }
 
 # Validate labels format (alphanumeric, dash, underscore, colon, comma)
 # Usage: validate_labels "bug,priority:high" && echo "valid"
 validate_labels() {
-  local labels="$1"
-  [[ -z "$labels" ]] && return 0
-  [[ "$labels" =~ ^[a-zA-Z0-9_:,\ -]+$ ]]
+	local labels="$1"
+	[[ -z "$labels" ]] && return 0
+	[[ "$labels" =~ ^[a-zA-Z0-9_:,\ -]+$ ]]
 }
 
 # Validate issue type against allowed values
 # Usage: validate_issue_type "task" && echo "valid"
 validate_issue_type() {
-  local type="$1"
-  [[ -z "$type" ]] && return 0
-  [[ "$type" =~ ^(task|bug|feature|epic|story|enhancement|documentation)$ ]]
+	local type="$1"
+	[[ -z "$type" ]] && return 0
+	[[ "$type" =~ ^(task|bug|feature|epic|story|enhancement|documentation)$ ]]
 }
 
 # ============================================================
@@ -125,29 +125,31 @@ validate_issue_type() {
 # Returns: 0 if no sensitive info found, 1 if found (prints details to stdout)
 # Output format: FILE:path:LINE:line_number:CONTENT:matched_content
 check_sensitive_info() {
-  local files=("$@")
-  local username
-  local found=0
+	local files=("$@")
+	local username
+	local found=0
 
-  username=$(whoami)
+	username=$(whoami)
 
-  for file in "${files[@]}"; do
-    [[ ! -f "$file" ]] && continue
+	for file in "${files[@]}"; do
+		[[ ! -f "$file" ]] && continue
 
-    # Check for username
-    if grep -n "$username" "$file" 2>/dev/null | head -5; then
-      echo "TYPE:username:FILE:$file"
-      found=1
-    fi
+		# Check for username
+		if grep -qn "$username" "$file" 2>/dev/null; then
+			grep -n "$username" "$file" 2>/dev/null | head -5
+			echo "TYPE:username:FILE:$file"
+			found=1
+		fi
 
-    # Check for absolute paths (/Users/xxx or /home/xxx)
-    if grep -nE "(/Users/|/home/)[^/]+" "$file" 2>/dev/null | head -5; then
-      echo "TYPE:absolute_path:FILE:$file"
-      found=1
-    fi
-  done
+		# Check for absolute paths (/Users/xxx or /home/xxx)
+		if grep -qnE "(/Users/|/home/)[^/]+" "$file" 2>/dev/null; then
+			grep -nE "(/Users/|/home/)[^/]+" "$file" 2>/dev/null | head -5
+			echo "TYPE:absolute_path:FILE:$file"
+			found=1
+		fi
+	done
 
-  return $found
+	return $found
 }
 
 # Get list of files to be committed
@@ -155,29 +157,29 @@ check_sensitive_info() {
 # git: staged files only
 # Usage: staged_files=$(get_staged_files)
 get_staged_files() {
-  if jj root &>/dev/null; then
-    jj diff --name-only 2>/dev/null
-  else
-    git diff --cached --name-only 2>/dev/null
-  fi
+	if jj root &>/dev/null; then
+		jj diff --name-only 2>/dev/null
+	else
+		git diff --cached --name-only 2>/dev/null
+	fi
 }
 
 # Run sensitive check on staged files
 # Usage: result=$(check_staged_sensitive)
 # Returns: 0 if clean, 1 if sensitive info found
 check_staged_sensitive() {
-  local staged_files
-  staged_files=$(get_staged_files)
+	local staged_files
+	staged_files=$(get_staged_files)
 
-  [[ -z "$staged_files" ]] && return 0
+	[[ -z "$staged_files" ]] && return 0
 
-  # Convert newline-separated list to array
-  local files_array=()
-  while IFS= read -r file; do
-    [[ -n "$file" ]] && files_array+=("$file")
-  done <<< "$staged_files"
+	# Convert newline-separated list to array
+	local files_array=()
+	while IFS= read -r file; do
+		[[ -n "$file" ]] && files_array+=("$file")
+	done <<<"$staged_files"
 
-  check_sensitive_info "${files_array[@]}"
+	check_sensitive_info "${files_array[@]}"
 }
 
 # ============================================================
@@ -189,7 +191,7 @@ check_staged_sensitive() {
 #          security-utils.sh check_staged_sensitive
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-  func="${1:?Usage: security-utils.sh <function_name> [args...]}"
-  shift
-  "$func" "$@"
+	func="${1:?Usage: security-utils.sh <function_name> [args...]}"
+	shift
+	"$func" "$@"
 fi
