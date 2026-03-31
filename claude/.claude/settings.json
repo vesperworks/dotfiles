@@ -280,6 +280,26 @@
             "if": "Bash(jj describe *)",
             "command": "~/.claude/hooks/pre-commit-lint.sh",
             "timeout": 60
+          },
+          {
+            "type": "command",
+            "if": "Bash(git commit *)",
+            "command": "~/.claude/hooks/pre-commit-sensitive-check.sh"
+          },
+          {
+            "type": "command",
+            "if": "Bash(jj commit *)",
+            "command": "~/.claude/hooks/pre-commit-sensitive-check.sh"
+          },
+          {
+            "type": "command",
+            "if": "Bash(jj split *)",
+            "command": "~/.claude/hooks/pre-commit-sensitive-check.sh"
+          },
+          {
+            "type": "command",
+            "if": "Bash(jj describe *)",
+            "command": "~/.claude/hooks/pre-commit-sensitive-check.sh"
           }
         ]
       },
