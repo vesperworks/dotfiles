@@ -1,0 +1,171 @@
+#!/bin/bash
+set -euo pipefail
+
+# diff-tree.sh — GitHub-style file tree with status colors
+# Usage:
+#   diff-tree.sh                    # jj: current change, git: staged+unstaged
+#   diff-tree.sh -r <revset>        # jj: specific revision(s)
+#   diff-tree.sh --from A --to B    # jj/git: range diff
+#   diff-tree.sh HEAD~3..HEAD       # git: range diff
+
+# Colors
+COLOR_RESET="\033[0m"
+COLOR_GREEN="\033[32m"   # A (Added)
+COLOR_YELLOW="\033[33m"  # M (Modified)
+COLOR_RED="\033[31m"     # D (Deleted)
+COLOR_CYAN="\033[36m"    # R (Renamed)
+COLOR_DIM="\033[2m"      # tree lines
+COLOR_BOLD="\033[1m"     # directory names
+
+status_color() {
+  case "$1" in
+    A) printf "%b" "$COLOR_GREEN" ;;
+    M) printf "%b" "$COLOR_YELLOW" ;;
+    D) printf "%b" "$COLOR_RED" ;;
+    R) printf "%b" "$COLOR_CYAN" ;;
+    *) printf "%b" "$COLOR_RESET" ;;
+  esac
+}
+
+detect_vcs() {
+  if command -v jj &>/dev/null && jj root &>/dev/null 2>&1; then
+    echo "jj"
+  elif git rev-parse --git-dir &>/dev/null 2>&1; then
+    echo "git"
+  else
+    echo "none"
+  fi
+}
+
+get_diff_lines() {
+  local vcs
+  vcs=$(detect_vcs)
+
+  if [[ "$vcs" == "jj" ]]; then
+    get_jj_diff "$@"
+  elif [[ "$vcs" == "git" ]]; then
+    get_git_diff "$@"
+  else
+    echo "Error: no VCS detected" >&2
+    exit 1
+  fi
+}
+
+get_jj_diff() {
+  local args=("--summary")
+
+  if [[ $# -eq 0 ]]; then
+    args+=("-r" "@")
+  else
+    args+=("$@")
+  fi
+
+  jj diff "${args[@]}" 2>/dev/null | while read -r status path rest; do
+    echo "${status}	${path}"
+  done
+}
+
+get_git_diff() {
+  if [[ $# -eq 0 ]]; then
+    {
+      git diff --name-status 2>/dev/null
+      git diff --cached --name-status 2>/dev/null
+    } | sort -u -k2,2
+  else
+    git diff --name-status "$@" 2>/dev/null
+  fi | while IFS=$'\t' read -r status from to; do
+    if [[ "$status" == R* ]]; then
+      echo "R	${from} → ${to}"
+    else
+      echo "${status}	${from}"
+    fi
+  done
+}
+
+render_tree() {
+  local prev_dir=""
+  local group_statuses=""
+  local group_files=""
+  local group_count=0
+  local line status path dir file
+
+  while IFS=$'\t' read -r status path; do
+    [[ -z "$status" ]] && continue
+
+    if [[ "$path" == */* ]]; then
+      dir="${path%%/*}"
+      file="${path#*/}"
+    else
+      dir="."
+      file="$path"
+    fi
+
+    if [[ "$dir" != "$prev_dir" ]]; then
+      if [[ -n "$prev_dir" ]]; then
+        print_group "$prev_dir" "$group_count" "$group_statuses" "$group_files"
+      fi
+      group_statuses=""
+      group_files=""
+      group_count=0
+      prev_dir="$dir"
+    fi
+
+    if [[ $group_count -gt 0 ]]; then
+      group_statuses="${group_statuses}|${status}"
+      group_files="${group_files}|${file}"
+    else
+      group_statuses="${status}"
+      group_files="${file}"
+    fi
+    group_count=$((group_count + 1))
+  done
+
+  if [[ -n "$prev_dir" ]]; then
+    print_group "$prev_dir" "$group_count" "$group_statuses" "$group_files"
+  fi
+
+  if [[ -z "$prev_dir" ]]; then
+    printf "%b%s%b\n" "$COLOR_DIM" "(no changes)" "$COLOR_RESET"
+  fi
+}
+
+print_group() {
+  local dir="$1"
+  local count="$2"
+  local statuses_str="$3"
+  local files_str="$4"
+
+  # Directory header
+  if [[ "$dir" == "." ]]; then
+    printf "%b./%b\n" "$COLOR_BOLD" "$COLOR_RESET"
+  else
+    printf "%b%s/%b\n" "$COLOR_BOLD" "$dir" "$COLOR_RESET"
+  fi
+
+  # Split pipe-delimited strings
+  IFS='|' read -ra statuses <<< "$statuses_str"
+  IFS='|' read -ra files <<< "$files_str"
+
+  local i
+  for i in "${!files[@]}"; do
+    local s="${statuses[$i]}"
+    local f="${files[$i]}"
+    local color
+    color=$(status_color "$s")
+
+    local connector
+    if [[ $((i + 1)) -eq $count ]]; then
+      connector="└── "
+    else
+      connector="├── "
+    fi
+
+    printf "%b%s%b%s %b%s%b\n" \
+      "$COLOR_DIM" "$connector" \
+      "$color" "$s" \
+      "$color" "$f" "$COLOR_RESET"
+  done
+}
+
+# --- main ---
+get_diff_lines "$@" | render_tree
