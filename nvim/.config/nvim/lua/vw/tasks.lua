@@ -398,7 +398,8 @@ function M.setup(opts)
 
   -- プレビュー用ハイライト（暗め背景、文字色はそのまま）
   vim.api.nvim_set_hl(0, "PendingTaskPreview", {
-    bg = "#292e42", -- 暗めの背景（tokyonight visual色）
+    bg = "#fab387", -- 実行中オレンジ
+    fg = "#1e1e2e", -- 黒文字（Catppuccin base色）
   })
 
   -- autocmdグループ作成
