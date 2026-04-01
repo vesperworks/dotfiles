@@ -119,7 +119,6 @@
       "Read(*.pem)",
       "Read(*.key)",
       "Write(.env*)",
-      "Bash(ls:*)",
       "Bash(cat:*)",
       "Bash(find:*)",
       "Bash(grep:*)"
@@ -164,62 +163,6 @@
         "hooks": [
           {
             "type": "command",
-            "if": "Edit(*.sh)",
-            "command": "~/.claude/hooks/auto-format.sh"
-          },
-          {
-            "type": "command",
-            "if": "Write(*.sh)",
-            "command": "~/.claude/hooks/auto-format.sh"
-          },
-          {
-            "type": "command",
-            "if": "Edit(*.ts)",
-            "command": "~/.claude/hooks/auto-format.sh"
-          },
-          {
-            "type": "command",
-            "if": "Edit(*.tsx)",
-            "command": "~/.claude/hooks/auto-format.sh"
-          },
-          {
-            "type": "command",
-            "if": "Edit(*.js)",
-            "command": "~/.claude/hooks/auto-format.sh"
-          },
-          {
-            "type": "command",
-            "if": "Edit(*.jsx)",
-            "command": "~/.claude/hooks/auto-format.sh"
-          },
-          {
-            "type": "command",
-            "if": "Write(*.ts)",
-            "command": "~/.claude/hooks/auto-format.sh"
-          },
-          {
-            "type": "command",
-            "if": "Write(*.tsx)",
-            "command": "~/.claude/hooks/auto-format.sh"
-          },
-          {
-            "type": "command",
-            "if": "Write(*.js)",
-            "command": "~/.claude/hooks/auto-format.sh"
-          },
-          {
-            "type": "command",
-            "if": "Write(*.jsx)",
-            "command": "~/.claude/hooks/auto-format.sh"
-          },
-          {
-            "type": "command",
-            "if": "Edit(*.py)",
-            "command": "~/.claude/hooks/auto-format.sh"
-          },
-          {
-            "type": "command",
-            "if": "Write(*.py)",
             "command": "~/.claude/hooks/auto-format.sh"
           }
         ]
@@ -332,6 +275,8 @@
       "jj"
     ]
   },
+  "cleanupPeriodDays": 90,
+  "fastModePerSessionOptIn": true,
   "alwaysThinkingEnabled": true,
   "voiceEnabled": true,
   "skipDangerousModePermissionPrompt": true
