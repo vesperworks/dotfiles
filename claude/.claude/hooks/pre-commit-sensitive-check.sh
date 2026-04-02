@@ -7,9 +7,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# stdin から JSON を読み取り、コマンドを抽出
+# stdin から JSON を読み取り、コマンドと CWD を一括抽出
 INPUT=$(cat)
-COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null)
+read -r COMMAND CWD < <(echo "$INPUT" | jq -r '[(.tool_input.command // ""), (.cwd // "")] | @tsv' 2>/dev/null) || true
 
 [[ -z "$COMMAND" ]] && exit 0
 
@@ -18,8 +18,6 @@ if ! echo "$COMMAND" | grep -qE '(jj (commit|split|describe)|git commit)'; then
 	exit 0
 fi
 
-# CWD を取得
-CWD=$(echo "$INPUT" | jq -r '.cwd // empty' 2>/dev/null)
 if [[ -n "$CWD" ]]; then
 	cd "$CWD" || exit 0
 fi
@@ -30,11 +28,11 @@ fi
 target_files=()
 
 if echo "$COMMAND" | grep -q ' -- '; then
-	# -- 以降のファイル引数を抽出
+	# -- 以降のファイル引数を抽出（スペース入りパス対応）
 	files_part="${COMMAND#*-- }"
-	for file in $files_part; do
-		[[ -f "$file" ]] && target_files+=("$file")
-	done
+	while IFS= read -r file; do
+		[[ -n "$file" && -f "$file" ]] && target_files+=("$file")
+	done < <(xargs -n1 <<<"$files_part")
 fi
 
 # ファイル引数がない場合は全変更ファイル
