@@ -43,7 +43,7 @@ jj bookmark list
 **判定結果を記録**（Step 2 で表示する）:
 - **current**: 現在のブランチにそのまま split する
 - **main**: main の子として配置する（split → rebase）
-- **new:<name>**: 新しいブランチを作成して配置する（split → rebase → bookmark create）
+- **new:<name>**: 新しいブランチを作成して配置する（split → rebase → bookmark create → **Phase C で main にマージ**）
 - **skip**: 今回はコミットしない（開発中の変更）
 
 > **⚠️ ワーキングコピー切り替えの注意**: jj のワーキングコピーは1つしかない。
@@ -303,7 +303,7 @@ TodoWrite([
 
 各グループを順番に処理。VCS によってコマンドが異なる：
 
-#### jj の場合（split → rebase → bookmark）
+#### jj の場合（split → rebase → bookmark → merge）
 
 **Phase A: Split（現在位置で分割）**
 
@@ -346,19 +346,73 @@ jj describe -m "chore: update config"   # 最後の残り
 jj new                                    # 新しいワーキングコピー
 ```
 
+**Phase C: Merge（`→ new:<name>` ブランチを main にマージ）**
+
+`→ new:<name>` のブランチが存在する場合のみ実行。ブランチを分岐→マージコミットの形で main に統合する。
+
+**判定ルール**:
+- `→ current` のみ → Phase C 不要（今のブランチで作業続行）
+- `→ main` のみ → Phase C 不要（main を直列に進めるだけ）
+- **`→ new:<name>` がある** → Phase C でマージコミット作成
+
+**手順**:
+
+1. **main 直系コミット（`→ main`）があれば main を進める**:
+   main 宛のコミットが複数ある場合は直列に rebase してから main を先頭に設定
+   ```bash
+   jj bookmark set main -r <last_main_commit>
+   ```
+
+2. **各ブランチを main にマージ**:
+   ```bash
+   # マージコミットを作成（main とブランチの両方を親に持つ）
+   jj new main <branch_name> -m "merge: <branch_name> into main (<summary>)"
+   # main をマージコミットに進める
+   jj bookmark set main -r @
+   # マージ済みブランチの bookmark を削除
+   jj bookmark delete <branch_name>
+   ```
+
+3. **新しいワーキングコピー**:
+   ```bash
+   jj new  # main の上で新しい作業開始
+   ```
+
 **jj 段階コミットの例（混在する場合）**:
 ```bash
 # Phase A: Split（全て現在位置で直列に分割）
 jj split -m "feat(sheldon): add stow package" -- sheldon/ install.sh
 jj split -m "feat(zsh): add p10k config" -- zsh/
 jj split -m "feat(tmux): add resurrect guard" -- tmux/scripts/guard.sh tmux/tmux.conf
-# → ワーキングコピーには skip した開発中ファイルが残る
 
-# Phase B: Rebase（main 宛のコミットを移動）
+# Phase B: Rebase + Bookmark
 jj rebase -r <sheldon_commit> -d main
-jj rebase -r <zsh_commit> -d main
-jj rebase -r <tmux_commit> -d main
-# → 3つのコミットが main の子として並列に配置される
+jj bookmark create feat/sheldon -r <sheldon_commit>
+jj rebase -r <zsh_commit> -d main    # main 直系
+jj rebase -r <tmux_commit> -d main   # main 直系
+
+# Phase C: Merge
+# まず main 直系コミットを直列にして main を進める
+jj rebase -r <tmux_commit> -d <zsh_commit>
+jj bookmark set main -r <tmux_commit>
+# ブランチを main にマージ
+jj new main feat/sheldon -m "merge: feat/sheldon into main (add stow package)"
+jj bookmark set main -r @
+jj bookmark delete feat/sheldon
+# 新しいワーキングコピー
+jj new
+```
+
+**結果の DAG**:
+```
+@  (empty) ← ワーキングコピー
+○    main  merge: feat/sheldon into main
+├─╮
+│ ○  feat(sheldon): add stow package
+○ │  feat(tmux): add resurrect guard
+○ │  feat(zsh): add p10k config
+├─╯
+◆  main@origin
 ```
 
 #### git の場合（従来動作）
