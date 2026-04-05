@@ -83,12 +83,6 @@ args = ["-y", "@upstash/context7-mcp@latest"]
 command = "/Applications/Pencil.app/Contents/Resources/app.asar.unpacked/out/mcp-server-darwin-arm64"
 args = ["--ws-port", "63922"]
 
-[projects."."]
-trust_level = "trusted"
-
-[notice.model_migrations]
-gpt-5-codex = "gpt-5.4"
-
 [features]
 multi_agent = true
 
