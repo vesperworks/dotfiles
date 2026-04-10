@@ -1,0 +1,27 @@
+# ~/.config/tmux/tmux.conf.local — Machine-specific overrides (not tracked by git)
+# Copy this file to ~/.config/tmux/tmux.conf.local and customize for your machine.
+#
+# Load order:  tmux.conf (plugins, status-right) → tmux.conf.local
+# This file is sourced LAST, so any 'set' here overwrites the defaults.
+# Same option name = last write wins.
+#
+# Usage:
+#   cp ~/dotfiles/tmux/.config/tmux/tmux.conf.local.example ~/.config/tmux/tmux.conf.local
+#   vim ~/.config/tmux/tmux.conf.local
+
+# --- Tokyo Night theme variant ---
+# Available: night (default), storm, day, moon
+# set -g @tokyo-night-tmux_theme 'storm'
+
+# --- Status bar color override ---
+# set -g status-style 'bg=#1a1b26 fg=#c0caf5'
+
+# --- Window status colors ---
+# Active window: highlight color
+# set -g window-status-current-style 'fg=#7aa2f7,bold'
+# Inactive window
+# set -g window-status-style 'fg=#565f89'
+
+# --- Pane border colors ---
+# set -g pane-active-border-style 'fg=#7aa2f7'
+# set -g pane-border-style 'fg=#3b4261'

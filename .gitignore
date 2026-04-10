@@ -4,6 +4,10 @@
 # Secrets
 zsh/.secrets.zsh
 
+# Machine-local overrides (not tracked — see *.local.example for templates)
+zsh/.zshrc.local
+tmux/.config/tmux/tmux.conf.local
+
 # macOS
 .DS_Store
 .localized

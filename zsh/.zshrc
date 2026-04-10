@@ -62,6 +62,9 @@ if command -v uv >/dev/null 2>&1; then
   eval "$(uv generate-shell-completion zsh)"
 fi
 
+# Local machine overrides
+[[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
+
 # Shell options
 setopt auto_pushd pushd_ignore_dups
 setopt print_eight_bit no_flow_control

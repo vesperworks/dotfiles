@@ -1,0 +1,21 @@
+# ~/.zshrc.local — Machine-specific overrides (not tracked by git)
+# Copy this file to ~/.zshrc.local and customize for your machine.
+#
+# Load order:  .p10k.zsh → .zshrc.local → (shell options)
+# This file is sourced AFTER .p10k.zsh, so any typeset -g here
+# overwrites the defaults. Same variable name = last write wins.
+#
+# Usage:
+#   cp ~/dotfiles/zsh/.zshrc.local.example ~/.zshrc.local
+#   vim ~/.zshrc.local
+
+# --- Powerlevel10k prompt customization ---
+# Override the context segment (shown at the left of the prompt)
+# Default in .p10k.zsh: '%n' (username only)
+typeset -g POWERLEVEL9K_CONTEXT_TEMPLATE='mur41'
+
+# --- Machine-specific aliases ---
+# alias myproject='cd ~/Works/my-project'
+
+# --- Machine-specific PATH ---
+# export PATH="$HOME/custom-tools/bin:$PATH"

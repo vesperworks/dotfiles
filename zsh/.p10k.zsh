@@ -932,8 +932,8 @@
   typeset -g POWERLEVEL9K_CONTEXT_ROOT_TEMPLATE='%B%n@%m'
   # Context format when in SSH without privileges: user@hostname.
   typeset -g POWERLEVEL9K_CONTEXT_{REMOTE,REMOTE_SUDO}_TEMPLATE='%n@%m'
-  # Default context format: ⚡mur41
-  typeset -g POWERLEVEL9K_CONTEXT_TEMPLATE='⚡mur41'
+  # Default context format (override in ~/.zshrc.local)
+  typeset -g POWERLEVEL9K_CONTEXT_TEMPLATE='%n'
 
   # Always show context (not just in SSH/root).
   # typeset -g POWERLEVEL9K_CONTEXT_{DEFAULT,SUDO}_{CONTENT,VISUAL_IDENTIFIER}_EXPANSION=
