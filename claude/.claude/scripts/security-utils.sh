@@ -109,11 +109,11 @@ validate_labels() {
 }
 
 # Validate issue type against allowed values
-# Usage: validate_issue_type "task" && echo "valid"
+# Usage: validate_issue_type "Task" && echo "valid"
 validate_issue_type() {
 	local type="$1"
 	[[ -z "$type" ]] && return 0
-	[[ "$type" =~ ^(task|bug|feature|epic|story|enhancement|documentation)$ ]]
+	[[ "${type,,}" =~ ^(task|bug|feature|epic|story|enhancement|documentation)$ ]]
 }
 
 # ============================================================

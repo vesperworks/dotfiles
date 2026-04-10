@@ -1,4 +1,5 @@
 {
+  "cleanupPeriodDays": 90,
   "env": {
     "ENABLE_TOOL_SEARCH": "true",
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
@@ -80,7 +81,6 @@
       "mcp__chrome-devtools__get_network_request",
       "ListMcpResourcesTool",
       "ReadMcpResourceTool",
-
       "Bash(jj *)",
       "Bash(source ~/.claude/scripts/:*)",
       "Bash(~/.claude/scripts/:*)",
@@ -176,13 +176,13 @@
         "hooks": [
           {
             "type": "command",
-            "if": "Bash(jj *)",
-            "command": "~/.claude/hooks/remove-index-lock.sh"
+            "command": "~/.claude/hooks/remove-index-lock.sh",
+            "if": "Bash(jj *)"
           },
           {
             "type": "command",
-            "if": "Bash(git *)",
-            "command": "~/.claude/hooks/remove-index-lock.sh"
+            "command": "~/.claude/hooks/remove-index-lock.sh",
+            "if": "Bash(git *)"
           },
           {
             "type": "command",
@@ -190,13 +190,13 @@
           },
           {
             "type": "command",
-            "if": "Bash(git commit *)",
-            "command": "~/.claude/hooks/block-author-attribution.sh"
+            "command": "~/.claude/hooks/block-author-attribution.sh",
+            "if": "Bash(git commit *)"
           },
           {
             "type": "command",
-            "if": "Bash(jj commit *)",
-            "command": "~/.claude/hooks/block-author-attribution.sh"
+            "command": "~/.claude/hooks/block-author-attribution.sh",
+            "if": "Bash(jj commit *)"
           },
           {
             "type": "command",
@@ -204,47 +204,47 @@
           },
           {
             "type": "command",
+            "command": "~/.claude/hooks/pre-commit-lint.sh",
             "if": "Bash(git commit *)",
-            "command": "~/.claude/hooks/pre-commit-lint.sh",
             "timeout": 60
           },
           {
             "type": "command",
+            "command": "~/.claude/hooks/pre-commit-lint.sh",
             "if": "Bash(jj commit *)",
-            "command": "~/.claude/hooks/pre-commit-lint.sh",
             "timeout": 60
           },
           {
             "type": "command",
+            "command": "~/.claude/hooks/pre-commit-lint.sh",
             "if": "Bash(jj split *)",
-            "command": "~/.claude/hooks/pre-commit-lint.sh",
             "timeout": 60
           },
           {
             "type": "command",
-            "if": "Bash(jj describe *)",
             "command": "~/.claude/hooks/pre-commit-lint.sh",
+            "if": "Bash(jj describe *)",
             "timeout": 60
           },
           {
             "type": "command",
-            "if": "Bash(git commit *)",
-            "command": "~/.claude/hooks/pre-commit-sensitive-check.sh"
+            "command": "~/.claude/hooks/pre-commit-sensitive-check.sh",
+            "if": "Bash(git commit *)"
           },
           {
             "type": "command",
-            "if": "Bash(jj commit *)",
-            "command": "~/.claude/hooks/pre-commit-sensitive-check.sh"
+            "command": "~/.claude/hooks/pre-commit-sensitive-check.sh",
+            "if": "Bash(jj commit *)"
           },
           {
             "type": "command",
-            "if": "Bash(jj split *)",
-            "command": "~/.claude/hooks/pre-commit-sensitive-check.sh"
+            "command": "~/.claude/hooks/pre-commit-sensitive-check.sh",
+            "if": "Bash(jj split *)"
           },
           {
             "type": "command",
-            "if": "Bash(jj describe *)",
-            "command": "~/.claude/hooks/pre-commit-sensitive-check.sh"
+            "command": "~/.claude/hooks/pre-commit-sensitive-check.sh",
+            "if": "Bash(jj describe *)"
           }
         ]
       },
@@ -277,8 +277,8 @@
       "jj"
     ]
   },
-  "cleanupPeriodDays": 90,
-  "fastModePerSessionOptIn": true,
   "alwaysThinkingEnabled": true,
-  "voiceEnabled": true
+  "fastModePerSessionOptIn": true,
+  "voiceEnabled": true,
+  "effortLevel": "high"
 }

@@ -173,7 +173,7 @@ while IFS= read -r issue; do
   # Check checkpoint (idempotency)
   if is_already_created "$CHECKPOINT_FILE" "$title"; then
     print_skip "Skip (exists): $title"
-    ((skipped_count++))
+    skipped_count=$((skipped_count + 1))
     continue
   fi
 
@@ -185,8 +185,7 @@ while IFS= read -r issue; do
   fi
 
   # Build gh issue create arguments
-  args=(--repo "$REPO" --title "$title")
-  [[ -n "$body" ]] && args+=(--body "$body")
+  args=(--repo "$REPO" --title "$title" --body "${body:- }")
 
   # Handle type field based on repository type
   final_labels="$labels"
@@ -232,7 +231,7 @@ while IFS= read -r issue; do
   fi
 
   # Batch delay for rate limit protection
-  ((count++))
+  count=$((count + 1))
   if ((count % BATCH_SIZE == 0)); then
     print_wait "Batch complete ($count issues), waiting ${DELAY_SEC}s..."
     sleep "$DELAY_SEC"
