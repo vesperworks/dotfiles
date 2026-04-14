@@ -1,8 +1,22 @@
+local vault_path = vim.fn.expand(
+  vim.env.OBSIDIAN_VAULT_PATH or "~/Library/Mobile Documents/iCloud~md~obsidian/Documents/MainVault"
+)
+
 return {
   "obsidian-nvim/obsidian.nvim", -- community fork（キャッシュ機能あり）
   version = "*",
   lazy = true,
   ft = "markdown",
+  cond = function()
+    if vim.fn.isdirectory(vault_path) == 1 then
+      return true
+    end
+    vim.notify(
+      ("obsidian.nvim: vault not found at %s\nSet $OBSIDIAN_VAULT_PATH in your shell config"):format(vault_path),
+      vim.log.levels.WARN
+    )
+    return false
+  end,
   dependencies = {
     "nvim-lua/plenary.nvim",
   },
@@ -12,7 +26,7 @@ return {
     workspaces = {
       {
         name = "main",
-        path = vim.env.OBSIDIAN_VAULT_PATH or "~/Library/Mobile Documents/iCloud~md~obsidian/Documents/MainVault",
+        path = vault_path,
       },
     },
 
