@@ -35,6 +35,7 @@ brew "jj"                # Jujutsu VCS
 brew "neovim"            # Editor
 brew "shellcheck"        # Shell linter
 brew "shfmt"             # Shell formatter
+brew "tree-sitter-cli"   # nvim-treesitter parser compiler
 
 # --- macOS Workflow ---
 brew "daipeihust/tap/im-select"
