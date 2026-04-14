@@ -35,19 +35,19 @@ mcp__context7__get-library-docs({
 })
 ```
 
-### Playwright MCP (Browser Automation)
+### Chrome DevTools MCP (Browser Automation)
 
 For E2E testing and web application exploration.
 
 ```javascript
 // Navigation
-mcp__playwright-server__browser_navigate({ url: "http://localhost:3000" })
+mcp__chrome-devtools__navigate_page({ url: "http://localhost:3000" })
 
-// Page snapshot (accessibility tree)
-mcp__playwright-server__browser_snapshot()
+// Page snapshot (DOM tree with uid)
+mcp__chrome-devtools__take_snapshot()
 
-// Element interaction
-mcp__playwright-server__browser_click({ element: "Login button", ref: "btn-login" })
+// Element interaction (uid from snapshot)
+mcp__chrome-devtools__click({ uid: "btn-login" })
 ```
 
 ## Integration Patterns

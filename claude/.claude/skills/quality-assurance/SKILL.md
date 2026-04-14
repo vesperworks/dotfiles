@@ -1,6 +1,6 @@
 ---
 name: quality-assurance
-description: Quality assurance and test verification specialist. Use when validating implementation quality, measuring test coverage, verifying code meets standards, or performing comprehensive quality checks. Specializes in test execution validation, coverage analysis, performance metrics, security scanning, and quality gate enforcement (Lint→Format→Test→Build). Integrates with Playwright/Puppeteer MCP for E2E validation and Context7 for project-specific standards. NOT for feature ideation/requirements definition (use strategic-planning) and NOT for implementing new code (use tdd-implementation/feature-implementation).
+description: Quality assurance and test verification specialist. Use when validating implementation quality, measuring test coverage, verifying code meets standards, or performing comprehensive quality checks. Specializes in test execution validation, coverage analysis, performance metrics, security scanning, and quality gate enforcement (Lint→Format→Test→Build). Integrates with Chrome DevTools MCP for E2E validation and Context7 for project-specific standards. NOT for feature ideation/requirements definition (use strategic-planning) and NOT for implementing new code (use tdd-implementation/feature-implementation).
 ---
 
 # Quality Assurance
@@ -85,14 +85,15 @@ All implementations MUST pass the quality gates in order: **Lint → Format → 
 
 ## MCP Integration for Verification
 
-### Playwright E2E Validation
-```javascript
-// Verify user workflows
-await page.goto('/login');
-await page.fill('[name="email"]', 'test@example.com');
-await page.fill('[name="password"]', 'password');
-await page.click('button[type="submit"]');
-await expect(page).toHaveURL('/dashboard');
+### Chrome DevTools E2E Validation
+```
+// Verify user workflows via Chrome DevTools MCP
+navigate_page({ url: "/login" })
+take_snapshot() → uid取得
+fill({ uid: "email-field", value: "test@example.com" })
+fill({ uid: "password-field", value: "password" })
+click({ uid: "submit-button" })
+take_screenshot() → 結果確認
 ```
 
 ### Performance Testing

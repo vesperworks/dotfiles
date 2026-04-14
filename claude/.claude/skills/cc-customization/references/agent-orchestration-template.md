@@ -149,7 +149,7 @@ color: green
 | **書込** | Write, Edit, MultiEdit | ファイル作成・編集 |
 | **実行** | Bash, BashOutput, KillBash | コマンド実行 |
 | **進捗** | TodoWrite | タスク管理 |
-| **MCP** | mcp__playwright-server__\* | E2Eテスト（Playwright） |
+| **MCP** | mcp__chrome-devtools__\* | E2Eテスト（Chrome DevTools） |
 | **MCP** | mcp__context7__\* | 公式ドキュメント参照 |
 
 ---
