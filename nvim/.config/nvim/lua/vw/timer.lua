@@ -157,6 +157,19 @@ function M.setup_autocmds()
       end)
     end,
   })
+
+  -- ノーマルモードで yy/p してそのまま :w するケースもカバー
+  vim.api.nvim_create_autocmd("BufWritePost", {
+    pattern = "*.md",
+    callback = function()
+      vim.schedule(function()
+        local bufnr = vim.api.nvim_get_current_buf()
+        if vim.bo[bufnr].filetype == 'markdown' then
+          M.auto_restore_timers(bufnr)
+        end
+      end)
+    end,
+  })
 end
 
 -- デバッグ用: 現在のアクティブタイマーを表示
@@ -842,48 +855,87 @@ function M.cancel_all_in_progress_tasks()
   end
 end
 
+-- 同一 content_hash を持つ既存タイマーから start_time を複製
+-- ファイル間コピペで「同じ内容のタスク」を別ファイルに貼った時、
+-- 元のタイマーから経過時間を引き継ぐためのヘルパー
+local function find_inheritable_start_time(target_task_id, saved_timers)
+  local target_hash = display.extract_content_hash(target_task_id)
+  if not target_hash then return nil end
+
+  -- まず active_timers から検索（最新の状態）
+  for existing_id, existing_data in pairs(active_timers) do
+    if existing_id ~= target_task_id
+      and display.extract_content_hash(existing_id) == target_hash then
+      return existing_data.start_time
+    end
+  end
+
+  -- 次に saved_timers から検索（再起動後でも引き継げるように）
+  if saved_timers then
+    for existing_id, existing_data in pairs(saved_timers) do
+      if existing_id ~= target_task_id
+        and display.extract_content_hash(existing_id) == target_hash then
+        return existing_data.start_time
+      end
+    end
+  end
+
+  return nil
+end
+
 -- Insertモードから抜けた時のタイマー自動復元（デバッグ版）
 function M.auto_restore_timers(bufnr)
   local file_path = vim.api.nvim_buf_get_name(bufnr)
   if file_path == "" then return end
 
-  -- デバッグ: 自動復元開始
-
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
   local restored_count = 0
   local new_timer_count = 0
+  local inherited_count = 0
+  local saved_timers = nil  -- 遅延ロード（[>] 行があった時だけ読む）
 
-  for line_num, line in ipairs(lines) do
-    -- 実行中タスクを検出
+  for _, line in ipairs(lines) do
     if line:match('-%s*%[>%]') then
       local task_id = display.generate_task_id(file_path, line)
 
-      -- デバッグ: 実行中タスク発見（ファイルパス付き）
-
-      -- メモリ内にタイマーがない場合、保存済みデータから復元を試みる
       if not active_timers[task_id] then
-        local saved_timers = storage.load_timers()
+        if saved_timers == nil then
+          saved_timers = storage.load_timers()
+        end
+
         if saved_timers[task_id] then
-          -- 保存済みタイマーを復元
+          -- 既存タイマーの復元
           active_timers[task_id] = saved_timers[task_id]
           restored_count = restored_count + 1
         else
-          -- 新規タイマーを開始
-          M.start_timer(task_id, file_path, line)
-          new_timer_count = new_timer_count + 1
+          -- 同一 content_hash を持つ別 task_id から start_time を複製
+          local inherited_start = find_inheritable_start_time(task_id, saved_timers)
+          if inherited_start then
+            active_timers[task_id] = {
+              start_time = inherited_start,
+              file_path = file_path,
+              task_content = line,
+            }
+            storage.save_timer_safe(task_id, active_timers[task_id])
+            inherited_count = inherited_count + 1
+          else
+            -- 完全新規
+            M.start_timer(task_id, file_path, line)
+            new_timer_count = new_timer_count + 1
+          end
         end
-      else
       end
     end
   end
 
-  -- デバッグ: 結果ログ
-
-  -- 表示を更新
-  if restored_count > 0 or new_timer_count > 0 then
+  if restored_count > 0 or new_timer_count > 0 or inherited_count > 0 then
     display.update_buffer_display(bufnr, active_timers)
-    -- サイレントに復元（通知はオプション）
-    -- vim.notify(string.format("📊 %d個のタイマーを自動復元しました", restored_count), vim.log.levels.INFO)
+    if inherited_count > 0 then
+      vim.notify(
+        string.format("📊 %d個のタイマーをコピー元から引き継ぎました", inherited_count),
+        vim.log.levels.INFO
+      )
+    end
   end
 end
 

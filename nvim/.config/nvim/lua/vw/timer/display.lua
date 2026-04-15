@@ -48,6 +48,12 @@ function M.generate_task_id(file_path, task_content)
   return string.format("%s::%s", file_name, content_hash:sub(1, 12))
 end
 
+-- task_id から content_hash 部分（::以降）を抽出
+-- ファイル間コピペ時の start_time 複製判定に使用
+function M.extract_content_hash(task_id)
+  return task_id:match("::(.+)$")
+end
+
 -- タスクを文字列で検索する新機能
 function M.find_task_by_content(bufnr, target_task_id)
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
