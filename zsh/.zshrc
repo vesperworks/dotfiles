@@ -158,6 +158,7 @@ alias gl='git pull'
 alias gp='git push'
 alias gst='git status'
 alias glog='git log --oneline --decorate --graph'
+alias df='difftree && jj diff'
 
 # y: yazi で終了時の cwd を引き継ぐ（公式 shell wrapper）
 # yy = cd 連動なしの素の yazi
