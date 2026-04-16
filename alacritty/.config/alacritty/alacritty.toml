@@ -44,6 +44,12 @@ key = "T"
 mods = "Control|Shift"
 chars = "\u001b[84;5u"
 
+# Ctrl+; → 補完トリガー用（CSI u 形式で ; を送信）
+[[keyboard.bindings]]
+key = "Semicolon"
+mods = "Control"
+chars = "\u001b[59;5u"
+
 # Ctrl+hjkl → mini.move（行/選択範囲移動）用
 [[keyboard.bindings]]
 key = "H"
