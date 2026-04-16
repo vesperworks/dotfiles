@@ -18,6 +18,7 @@ require('vw.list').setup()
 require('vw.extract').setup()
 require('vw.header').setup()
 require('vw.migemo').setup()
+require('vw.typewriter').setup()
 
 local ok_fold, vw_fold = pcall(require, 'vw.fold')
 if ok_fold then vw_fold.setup() end

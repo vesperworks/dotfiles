@@ -59,7 +59,7 @@ return {
 
     -- 補完設定
     completion = {
-      nvim_cmp = true,
+      blink = true,
       min_chars = 0, -- [[だけで補完開始
       create_new = false, -- 補完から新規ノート作成を無効化
     },
