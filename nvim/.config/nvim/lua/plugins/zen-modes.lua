@@ -61,7 +61,6 @@ return {
   -- zen-mode.nvim - 安定したZenモード
   {
     "folke/zen-mode.nvim",
-    dependencies = { "joshuadanpeterson/typewriter.nvim" },
     keys = {
       { "<leader>z", function()
         -- Zen Mode + Typewriter を同時トグル
@@ -185,19 +184,12 @@ return {
   -- twilight.nvim ─ 周辺減光
   { "folke/twilight.nvim", opts = { context = 1, dimming = { alpha = 0.5 } } },
 
-  -- typewriter.nvim ─ カーソル常時センター
+  -- vw.typewriter ─ カーソル常時センター（typewriter.nvim の自前代替）
+  -- init.lua で setup 済み。キーマップのみここで定義
   {
-    "joshuadanpeterson/typewriter.nvim",
-    dependencies = {
-      { "nvim-treesitter/nvim-treesitter", build = ":TSUpdate" },
-    },
+    dir = vim.fn.stdpath("config") .. "/lua/vw",
     keys = {
-      { "<leader>zt", "<cmd>TWToggle<cr>", desc = "Typewriter トグル" },
-    },
-    opts = {
-      keep_cursor_position = true,
-      enable_notifications = false,
-      enable_horizontal_scroll = false, -- 横軸の動きを無効化
+      { "<leader>zt", function() require("vw.typewriter").toggle() end, desc = "Typewriter トグル" },
     },
   },
 }
