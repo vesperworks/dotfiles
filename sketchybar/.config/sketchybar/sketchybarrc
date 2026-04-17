@@ -226,8 +226,9 @@ for i in 1 2 3; do
 done
 
 # CodexBar Usage (Codex / Claude usage %, colored by max; click for details)
+# Matches CodexBar.app's own 5-minute poll cadence. Clicks read cache only.
 sketchybar --add item codex_usage right \
-           --set codex_usage update_freq=120 \
+           --set codex_usage update_freq=300 \
                              padding_left=6 \
                              padding_right=6 \
                              icon.color=$GREEN \

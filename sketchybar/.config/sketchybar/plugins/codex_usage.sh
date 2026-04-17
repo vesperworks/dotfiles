@@ -1,16 +1,26 @@
 #!/bin/bash
 
 # CodexBar Usage Plugin for SketchyBar
-# Bar: icon colored by max usage% / Popup: per-provider session/week/opus usage
+# Bar: icon colored by max usage% (polled every update_freq=300s)
+# Popup: per-provider session/week/opus usage, served from cache for zero-lag click
+#
+# Design: sketchybar polls this script on a 5-minute cadence (matching CodexBar's
+# own refresh rate). Each poll fetches codex+claude, writes the normalized JSON
+# to a cache dir, and repaints the bar. A click reads the cache only — it does
+# not call codexbar, so the popup appears instantly even if the CLI is slow or
+# rate-limited.
 #
 # Requires CodexBar.app running (for keychain access) and codexbar CLI in PATH.
 # Cursor provider is skipped because it crashes the CLI on v0.20.
-# Fetches are capped at 10s per provider to avoid blocking when an upstream
-# rate-limits (e.g. claude.ai returning "rate limited right now").
 
 source "$CONFIG_DIR/colors.sh"
 
 export PATH="$HOME/.nodebrew/current/bin:$HOME/.local/bin:$HOME/.bun/bin:/opt/homebrew/bin:$PATH"
+
+CACHE_DIR="${TMPDIR:-/tmp}/sketchybar_codex_usage"
+CODEX_CACHE="$CACHE_DIR/codex.json"
+CLAUDE_CACHE="$CACHE_DIR/claude.json"
+mkdir -p "$CACHE_DIR"
 
 ICON_AI="󰧑" # nf-md-robot
 
@@ -31,10 +41,8 @@ get_color() {
 	fi
 }
 
-# Runs `codexbar usage --provider <p>` with a 10s timeout.
-# Output normalized to a single JSON object (first result, even if the CLI
-# emits multiple arrays for auto+cli fallback). Returns "{}" on any failure
-# so downstream jq extraction cleanly falls back to "-" / 0.
+# Fetch and normalize one provider. 10s timeout guards against rate-limit
+# hangs. Returns a single JSON object ({} on any error or empty response).
 fetch_provider() {
 	local provider="$1" raw
 	raw=$(timeout 10 codexbar usage --provider "$provider" --format json --no-color 2>/dev/null)
@@ -49,11 +57,15 @@ fetch_provider() {
   ' 2>/dev/null || echo "{}"
 }
 
+read_cache() {
+	local path="$1"
+	[ -s "$path" ] && cat "$path" || echo "{}"
+}
+
 format_reset() {
 	# Claude style:   "Resets1pm(Asia/Tokyo)" → "1pm"
 	#                 "ResetsApr24at8am(Asia/Tokyo)" → "Apr24 8am"
 	# Codex style:    "2026年4月24日 11:54" → keep as-is
-	# Fallback dash:  "-" → keep
 	echo "$1" | sed -E 's/^Resets//; s/at/ /; s/\(Asia\/Tokyo\)//; s/ +$//'
 }
 
@@ -61,11 +73,15 @@ pct_or_zero() { echo "$1" | jq -r "$2 // 0"; }
 pct_or_dash() { echo "$1" | jq -r "$2 // \"-\""; }
 str_or_dash() { echo "$1" | jq -r "$2 // \"-\""; }
 
-update_bar() {
-	local codex_json claude_json codex_pri claude_pri claude_sec claude_ter max_pct color
+# Called on timer / forced / custom refresh events.
+poll_and_paint_bar() {
+	local codex_json claude_json
 	codex_json=$(fetch_provider codex)
 	claude_json=$(fetch_provider claude)
+	echo "$codex_json" >"$CODEX_CACHE"
+	echo "$claude_json" >"$CLAUDE_CACHE"
 
+	local codex_pri claude_pri claude_sec claude_ter max_pct color
 	codex_pri=$(pct_or_zero "$codex_json" '.usage.primary.usedPercent')
 	claude_pri=$(pct_or_zero "$claude_json" '.usage.primary.usedPercent')
 	claude_sec=$(pct_or_zero "$claude_json" '.usage.secondary.usedPercent')
@@ -78,10 +94,11 @@ update_bar() {
 	sketchybar --set "$NAME" icon="$ICON_AI" icon.color="$color" label="${max_pct}%"
 }
 
-update_popup() {
+# Called on mouse.clicked. Reads only the cache, so it is instant.
+paint_popup_from_cache() {
 	local codex_json claude_json
-	codex_json=$(fetch_provider codex)
-	claude_json=$(fetch_provider claude)
+	codex_json=$(read_cache "$CODEX_CACHE")
+	claude_json=$(read_cache "$CLAUDE_CACHE")
 
 	local codex_pri codex_sec codex_pri_reset codex_sec_reset
 	codex_pri=$(pct_or_dash "$codex_json" '.usage.primary.usedPercent')
@@ -112,13 +129,13 @@ update_popup() {
 
 case "$SENDER" in
 "mouse.clicked")
-	update_popup
+	paint_popup_from_cache
 	sketchybar --set "$NAME" popup.drawing=toggle
 	;;
 "mouse.exited.global")
 	sketchybar --set "$NAME" popup.drawing=off
 	;;
 *)
-	update_bar
+	poll_and_paint_bar
 	;;
 esac
