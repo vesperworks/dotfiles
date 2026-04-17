@@ -5,29 +5,31 @@
 
 source "$CONFIG_DIR/colors.sh"
 
-get_batt() { pmset -g batt; }
-
-# Reads percentage, charging/charged state, and pmset's time-remaining field
-# from a single `pmset -g batt` call to avoid racing the hardware state.
+# Returns "<pct>|<charging>|<charged>|<time>" from a single pmset call so
+# callers don't race the hardware state across multiple reads. Empty string
+# for any field that can't be extracted.
 parse_batt() {
-  local info
-  info=$(get_batt)
-  PCT=$(echo "$info" | grep -Eo '[0-9]+%' | cut -d% -f1)
-  CHARGING=$(echo "$info" | grep 'AC Power')
-  CHARGED=$(echo "$info" | grep 'charged')
-  TIME_REMAINING=$(echo "$info" | awk -F';' '/InternalBattery/{gsub(/^[ \t]+/, "", $3); print $3}' | awk '{print $1}')
+  local info pct charging charged time_remaining
+  info=$(pmset -g batt)
+  pct=$(echo "$info" | grep -Eo '[0-9]+%' | cut -d% -f1)
+  echo "$info" | grep -q 'AC Power' && charging=1
+  echo "$info" | grep -q 'charged' && charged=1
+  time_remaining=$(echo "$info" |
+    awk -F';' '/InternalBattery/{gsub(/^[ \t]+/, "", $3); print $3}' |
+    awk '{print $1}')
+  printf '%s|%s|%s|%s\n' "$pct" "${charging:-}" "${charged:-}" "$time_remaining"
 }
 
 update_bar() {
-  local PCT CHARGING CHARGED TIME_REMAINING icon color
-  parse_batt
-  [ -z "$PCT" ] && exit 0
+  local pct charging _charged _time icon color
+  IFS='|' read -r pct charging _charged _time <<<"$(parse_batt)"
+  [ -z "$pct" ] && exit 0
 
-  if [ -n "$CHARGING" ]; then
+  if [ -n "$charging" ]; then
     icon="􀢋"
     color="$GREEN"
   else
-    case "${PCT}" in
+    case "$pct" in
     9[0-9] | 100)
       icon="􀛨"
       color="$GREEN"
@@ -55,26 +57,28 @@ update_bar() {
 }
 
 update_popup() {
-  local PCT CHARGING CHARGED TIME_REMAINING source status_label time_label
-  parse_batt
+  local pct charging charged time source status_label time_label
+  IFS='|' read -r pct charging charged time <<<"$(parse_batt)"
 
-  if [ -n "$CHARGED" ]; then
+  if [ -n "$charged" ]; then
     source="AC Power"
     status_label="Charged"
     time_label="Full"
-  elif [ -n "$CHARGING" ]; then
-    source="AC Power"
-    status_label="Charging"
-    time_label="${TIME_REMAINING:-calculating}"
-    [ "$time_label" = "(no" ] && time_label="calculating"
   else
-    source="Battery"
-    status_label="Discharging"
-    time_label="${TIME_REMAINING:-calculating}"
+    # pmset renders "(no estimate)" during initial sampling; collapse that
+    # and any empty value into "calculating" so the popup never shows "(no".
+    time_label="${time:-calculating}"
     [ "$time_label" = "(no" ] && time_label="calculating"
+    if [ -n "$charging" ]; then
+      source="AC Power"
+      status_label="Charging"
+    else
+      source="Battery"
+      status_label="Discharging"
+    fi
   fi
 
-  sketchybar --set battery.1 icon="󱐋" label="Level: ${PCT}%" drawing=on \
+  sketchybar --set battery.1 icon="󱐋" label="Level: ${pct}%" drawing=on \
     --set battery.2 icon="󰔛" label="Time: $time_label" drawing=on \
     --set battery.3 icon="󰚥" label="$source ($status_label)" drawing=on
 }
