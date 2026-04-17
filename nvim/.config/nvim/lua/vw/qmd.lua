@@ -11,9 +11,6 @@ if qmd_bin == "" then qmd_bin = vim.fn.expand("~/.bun/bin/qmd") end
 local collection_cache = {}
 local preview_cache = {}
 
--- チャンクハイライト（default=true でカラースキームで上書き可）
-vim.api.nvim_set_hl(0, "QmdChunk", { bg = "#4a5080", default = true })
-
 -- ソース別の表示設定
 local SOURCE_CONFIG = {
   rg     = { label = "RG",  hl = "DiagnosticInfo" },  -- 青
@@ -82,15 +79,13 @@ local function resolve_qmd_uri(uri)
   local stem = rel:match("([^/]+)%.md$")
   if stem then
     local norm = stem:gsub("%-", "_"):gsub("_$", "")
-    local p = io.popen('ls "' .. dir .. '" 2>/dev/null')
-    if p then
-      for line in p:lines() do
-        if line:gsub("%.md$", ""):gsub("%-", "_"):gsub("_$", "") == norm then
-          p:close()
-          return dir .. "/" .. line
+    local ok, files = pcall(vim.fn.readdir, dir)
+    if ok then
+      for _, fname in ipairs(files) do
+        if fname:gsub("%.md$", ""):gsub("%-", "_"):gsub("_$", "") == norm then
+          return dir .. "/" .. fname
         end
       end
-      p:close()
     end
   end
   return nil
@@ -202,7 +197,11 @@ local function normalize_rg(data)
       end
     end
   end
-  if #entries > 20 then entries = { unpack(entries, 1, 20) } end
+  if #entries > 20 then
+    local trimmed = {}
+    for i = 1, 20 do trimmed[i] = entries[i] end
+    entries = trimmed
+  end
   return entries
 end
 
@@ -248,7 +247,7 @@ end
 -- Telescope: エントリメーカー・プレビュワー
 -------------------------------------------------------------------------------
 
-local function make_entry_maker(current_query)
+local function make_entry_maker()
   local entry_display = require("telescope.pickers.entry_display")
   local displayer = entry_display.create({
     separator = " ",
@@ -375,10 +374,6 @@ function M.search()
     if jobs[key] then pcall(vim.fn.jobstop, jobs[key]); jobs[key] = nil end
   end
 
-  local function stop_all()
-    stop_job("rg"); stop_job("bm25"); stop_job("hybrid")
-  end
-
   -- picker 前方宣言
   local picker
 
@@ -404,7 +399,7 @@ function M.search()
     local merged = merge_results(results.rg, results.bm25, results.hybrid)
     pcall(picker.refresh, picker, finders.new_table({
       results = merged,
-      entry_maker = make_entry_maker(current_query),
+      entry_maker = make_entry_maker(),
     }), { reset_prompt = false })
   end
 
@@ -612,6 +607,7 @@ function M.search()
 end
 
 function M.setup()
+  vim.api.nvim_set_hl(0, "QmdChunk", { bg = "#4a5080", default = true })
   vim.keymap.set("n", "<leader>q", M.search, { desc = "QMD セマンティック検索" })
 end
 
