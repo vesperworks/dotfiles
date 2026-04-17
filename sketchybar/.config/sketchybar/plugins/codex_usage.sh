@@ -1,158 +1,235 @@
 #!/bin/bash
 
 # CodexBar Usage Plugin for SketchyBar
-# Bar: icon colored by max usage% (polled every update_freq=300s)
-# Popup: per-provider session/week/opus usage, served from cache for zero-lag click
 #
-# Design: sketchybar polls this script on a 5-minute cadence (matching CodexBar's
-# own refresh rate). Each poll fetches codex+claude, writes the normalized JSON
-# to a cache dir, and repaints the bar. A click reads the cache only — it does
-# not call codexbar, so the popup appears instantly even if the CLI is slow or
-# rate-limited.
+# Why the split: a click must feel instant. Calling `codexbar usage` on click
+# blocks the popup for up to $TIMEOUT_SEC. Instead the timer tick polls both
+# providers, writes normalized JSON to a cache dir, and the click path only
+# reads the cache. $UPDATE_SEC matches CodexBar.app's own poll cadence.
 #
-# Requires CodexBar.app running (for keychain access) and codexbar CLI in PATH.
-# Cursor provider is skipped because it crashes the CLI on v0.20.
+# Requires CodexBar.app running (keychain access) and codexbar CLI in PATH.
+# Cursor provider is disabled upstream (~/.codexbar/config.json) because
+# CodexBar v0.20 crashes in CursorStatusProbe on fetch.
 
 source "$CONFIG_DIR/colors.sh"
 
+# PATH augmentation: GUI-launched sketchybar does not inherit the login
+# shell's PATH, so node / bun / local bin must be surfaced explicitly.
 export PATH="$HOME/.nodebrew/current/bin:$HOME/.local/bin:$HOME/.bun/bin:/opt/homebrew/bin:$PATH"
 
+TIMEOUT_SEC=10
 CACHE_DIR="${TMPDIR:-/tmp}/sketchybar_codex_usage"
 CODEX_CACHE="$CACHE_DIR/codex.json"
 CLAUDE_CACHE="$CACHE_DIR/claude.json"
 mkdir -p "$CACHE_DIR"
 
-ICON_AI="󰧑" # nf-md-robot
+ICON_AI="󰧑"        # nf-md-robot
+ICON_PRIMARY="󱙷"   # nf-md-timer_sand (session window)
+ICON_SECONDARY="󰸗" # nf-md-calendar_week
+ICON_OPUS="󰓎"      # nf-md-star
 
-# Color by REMAINING percent (0-100). Low remaining = warning.
+# Color by REMAINING percent. Low remaining = warning.
 get_color() {
-	local pct=$1
-	if [ -z "$pct" ] || [ "$pct" = "null" ] || [ "$pct" = "-" ]; then
-		echo "$GREY"
-		return
-	fi
-	if [ "$pct" -le 20 ]; then
-		echo "$RED"
-	elif [ "$pct" -le 50 ]; then
-		echo "$ORANGE"
-	elif [ "$pct" -le 75 ]; then
-		echo "$YELLOW"
-	else
-		echo "$GREEN"
-	fi
+  local pct=$1
+  if [ -z "$pct" ] || [ "$pct" = "null" ] || [ "$pct" = "-" ]; then
+    echo "$GREY"
+    return
+  fi
+  if [ "$pct" -le 20 ]; then
+    echo "$RED"
+  elif [ "$pct" -le 50 ]; then
+    echo "$ORANGE"
+  elif [ "$pct" -le 75 ]; then
+    echo "$YELLOW"
+  else
+    echo "$GREEN"
+  fi
 }
 
-# Convert usedPercent → remaining ("-" if missing).
 to_remaining() {
-	case "$1" in
-	"-" | "null" | "") echo "-" ;;
-	*) echo $((100 - $1)) ;;
-	esac
+  case "$1" in
+  "-" | "null" | "") echo "-" ;;
+  *) echo $((100 - $1)) ;;
+  esac
 }
 
-# Fetch and normalize one provider. 10s timeout guards against rate-limit
-# hangs. Returns a single JSON object ({} on any error or empty response).
+# Fetch one provider with a bounded wall-clock budget.
+#
+# Output contract (single JSON object on stdout):
+#   {usage: {...}}                           — success
+#   {"__err":"timeout"}                      — killed by `timeout`
+#   {"__err":"rate_limited"}                 — upstream rate limit
+#   {"__err":"no_data"}                      — empty / non-JSON output
+#
+# The __err marker is preserved in the cache so the popup can show "why"
+# instead of silent dashes.
 fetch_provider() {
-	local provider="$1" raw
-	raw=$(timeout 10 codexbar usage --provider "$provider" --format json --no-color 2>/dev/null)
-	[ -z "$raw" ] && {
-		echo "{}"
-		return
-	}
-	echo "$raw" | jq -s -r '
-    [.[] | if type=="array" then .[] else . end]
-    | map(select(.error | not))
-    | (.[0] // {})
-  ' 2>/dev/null || echo "{}"
+  local provider="$1" raw rc obj
+  raw=$(timeout "$TIMEOUT_SEC" codexbar usage --provider "$provider" --format json --no-color 2>/dev/null)
+  rc=$?
+  if [ "$rc" = 124 ]; then
+    echo '{"__err":"timeout"}'
+    return
+  fi
+  if [ -z "$raw" ]; then
+    echo '{"__err":"no_data"}'
+    return
+  fi
+  # The CLI emits one JSON value per attempted source (auto + cli fallback).
+  # Keep the first one without an `error` field; fall back to __err with the
+  # upstream's hint if all failed.
+  obj=$(echo "$raw" | jq -s -r '
+    [.[] | if type=="array" then .[] else . end] as $all
+    | ($all | map(select(.error | not)) | .[0]) as $ok
+    | if $ok then $ok
+      else (
+        ($all[0].error.message // "unknown") as $msg
+        | if ($msg | ascii_downcase | contains("rate limit")) then
+            {"__err":"rate_limited"}
+          else {"__err":"no_data","__msg":$msg} end
+      ) end
+  ' 2>/dev/null) || obj='{"__err":"no_data"}'
+  echo "$obj"
 }
 
 read_cache() {
-	local path="$1"
-	[ -s "$path" ] && cat "$path" || echo "{}"
+  local path="$1"
+  [ -s "$path" ] && cat "$path" || echo '{"__err":"no_cache"}'
 }
 
+# Maps an __err marker to a short label shown in place of "X%".
+err_label() {
+  case "$1" in
+  timeout) echo "timeout" ;;
+  rate_limited) echo "rate-limited" ;;
+  no_data | no_cache) echo "no data" ;;
+  *) echo "-" ;;
+  esac
+}
+
+# Claude resetDescription comes as a single smashed string; Codex's is
+# already human-friendly.
 format_reset() {
-	# Claude style:   "Resets1pm(Asia/Tokyo)" → "1pm"
-	#                 "ResetsApr24at8am(Asia/Tokyo)" → "Apr24 8am"
-	# Codex style:    "2026年4月24日 11:54" → keep as-is
-	echo "$1" | sed -E 's/^Resets//; s/at/ /; s/\(Asia\/Tokyo\)//; s/ +$//'
+  echo "$1" | sed -E 's/^Resets//; s/at/ /; s/\(Asia\/Tokyo\)//; s/ +$//'
 }
 
 pct_or_zero() { echo "$1" | jq -r "$2 // 0"; }
 pct_or_dash() { echo "$1" | jq -r "$2 // \"-\""; }
 str_or_dash() { echo "$1" | jq -r "$2 // \"-\""; }
+err_code() { echo "$1" | jq -r '.__err // ""'; }
 
-# Called on timer / forced / custom refresh events.
 poll_and_paint_bar() {
-	local codex_json claude_json
-	codex_json=$(fetch_provider codex)
-	claude_json=$(fetch_provider claude)
-	echo "$codex_json" >"$CODEX_CACHE"
-	echo "$claude_json" >"$CLAUDE_CACHE"
+  local codex_json claude_json
+  codex_json=$(fetch_provider codex)
+  claude_json=$(fetch_provider claude)
+  echo "$codex_json" >"$CODEX_CACHE"
+  echo "$claude_json" >"$CLAUDE_CACHE"
 
-	# Bar label is the LOWEST remaining window across Codex+Claude, colored
-	# by that remaining percent (low = red).
-	local codex_pri claude_pri claude_sec claude_ter min_remaining color
-	codex_pri=$(pct_or_zero "$codex_json" '.usage.primary.usedPercent')
-	claude_pri=$(pct_or_zero "$claude_json" '.usage.primary.usedPercent')
-	claude_sec=$(pct_or_zero "$claude_json" '.usage.secondary.usedPercent')
-	claude_ter=$(pct_or_zero "$claude_json" '.usage.tertiary.usedPercent')
+  # Min remaining across all windows. Providers with an __err are skipped
+  # so one broken upstream doesn't turn the whole bar red.
+  local codex_pri claude_pri claude_sec claude_ter min_remaining color
+  codex_pri=$(pct_or_zero "$codex_json" '.usage.primary.usedPercent')
+  claude_pri=$(pct_or_zero "$claude_json" '.usage.primary.usedPercent')
+  claude_sec=$(pct_or_zero "$claude_json" '.usage.secondary.usedPercent')
+  claude_ter=$(pct_or_zero "$claude_json" '.usage.tertiary.usedPercent')
 
-	min_remaining=$(printf '%s\n' "$codex_pri" "$claude_pri" "$claude_sec" "$claude_ter" |
-		awk 'BEGIN {min=100} {r=100-($1+0); if (r<min) min=r} END {print min}')
-	color=$(get_color "$min_remaining")
+  local -a candidates=()
+  [ "$(err_code "$codex_json")" = "" ] && candidates+=("$codex_pri")
+  if [ "$(err_code "$claude_json")" = "" ]; then
+    candidates+=("$claude_pri" "$claude_sec" "$claude_ter")
+  fi
 
-	sketchybar --set "$NAME" icon="$ICON_AI" icon.color="$color" label="${min_remaining}%"
+  if [ ${#candidates[@]} -eq 0 ]; then
+    sketchybar --set "$NAME" icon="$ICON_AI" icon.color="$GREY" label="err"
+    return
+  fi
+
+  min_remaining=$(printf '%s\n' "${candidates[@]}" |
+    awk 'BEGIN {min=100} {r=100-($1+0); if (r<min) min=r} END {print min}')
+  color=$(get_color "$min_remaining")
+
+  sketchybar --set "$NAME" icon="$ICON_AI" icon.color="$color" label="${min_remaining}%"
 }
 
-# Called on mouse.clicked. Reads only the cache, so it is instant.
+# Writes one popup row, picking remaining % or an error label.
+set_row() {
+  local item=$1 icon=$2 prefix=$3 remaining=$4 reset=$5 err=$6
+  local label color
+  if [ -n "$err" ]; then
+    label="$prefix: $(err_label "$err")"
+    color="$GREY"
+  else
+    label="$prefix: ${remaining}% left (reset ${reset})"
+    color="$(get_color "$remaining")"
+  fi
+  sketchybar --set "$item" icon="$icon" icon.color="$color" label="$label" drawing=on
+}
+
 paint_popup_from_cache() {
-	local codex_json claude_json
-	codex_json=$(read_cache "$CODEX_CACHE")
-	claude_json=$(read_cache "$CLAUDE_CACHE")
+  local codex_json claude_json
+  codex_json=$(read_cache "$CODEX_CACHE")
+  claude_json=$(read_cache "$CLAUDE_CACHE")
 
-	local codex_pri codex_sec codex_pri_rem codex_sec_rem codex_pri_reset codex_sec_reset
-	codex_pri=$(pct_or_dash "$codex_json" '.usage.primary.usedPercent')
-	codex_sec=$(pct_or_dash "$codex_json" '.usage.secondary.usedPercent')
-	codex_pri_rem=$(to_remaining "$codex_pri")
-	codex_sec_rem=$(to_remaining "$codex_sec")
-	codex_pri_reset=$(format_reset "$(str_or_dash "$codex_json" '.usage.primary.resetDescription')")
-	codex_sec_reset=$(format_reset "$(str_or_dash "$codex_json" '.usage.secondary.resetDescription')")
+  local codex_err claude_err
+  codex_err=$(err_code "$codex_json")
+  claude_err=$(err_code "$claude_json")
 
-	local claude_pri claude_sec claude_ter claude_pri_rem claude_sec_rem claude_ter_rem
-	local claude_pri_reset claude_sec_reset claude_ter_reset
-	claude_pri=$(pct_or_dash "$claude_json" '.usage.primary.usedPercent')
-	claude_sec=$(pct_or_dash "$claude_json" '.usage.secondary.usedPercent')
-	claude_ter=$(pct_or_dash "$claude_json" '.usage.tertiary.usedPercent')
-	claude_pri_rem=$(to_remaining "$claude_pri")
-	claude_sec_rem=$(to_remaining "$claude_sec")
-	claude_ter_rem=$(to_remaining "$claude_ter")
-	claude_pri_reset=$(format_reset "$(str_or_dash "$claude_json" '.usage.primary.resetDescription')")
-	claude_sec_reset=$(format_reset "$(str_or_dash "$claude_json" '.usage.secondary.resetDescription')")
-	claude_ter_reset=$(format_reset "$(str_or_dash "$claude_json" '.usage.tertiary.resetDescription')")
+  local codex_pri_rem codex_sec_rem codex_pri_reset codex_sec_reset
+  codex_pri_rem=$(to_remaining "$(pct_or_dash "$codex_json" '.usage.primary.usedPercent')")
+  codex_sec_rem=$(to_remaining "$(pct_or_dash "$codex_json" '.usage.secondary.usedPercent')")
+  codex_pri_reset=$(format_reset "$(str_or_dash "$codex_json" '.usage.primary.resetDescription')")
+  codex_sec_reset=$(format_reset "$(str_or_dash "$codex_json" '.usage.secondary.resetDescription')")
 
-	sketchybar \
-		--set codex_usage.1 icon="󱙷" icon.color="$(get_color "$codex_pri_rem")" \
-		label="Codex 5h: ${codex_pri_rem}% left (reset ${codex_pri_reset})" drawing=on \
-		--set codex_usage.2 icon="󰸗" icon.color="$(get_color "$codex_sec_rem")" \
-		label="Codex wk: ${codex_sec_rem}% left (reset ${codex_sec_reset})" drawing=on \
-		--set codex_usage.3 icon="󱙷" icon.color="$(get_color "$claude_pri_rem")" \
-		label="Claude 5h: ${claude_pri_rem}% left (reset ${claude_pri_reset})" drawing=on \
-		--set codex_usage.4 icon="󰸗" icon.color="$(get_color "$claude_sec_rem")" \
-		label="Claude wk: ${claude_sec_rem}% left (reset ${claude_sec_reset})" drawing=on \
-		--set codex_usage.5 icon="󰓎" icon.color="$(get_color "$claude_ter_rem")" \
-		label="Claude Opus: ${claude_ter_rem}% left (reset ${claude_ter_reset})" drawing=on
+  local claude_pri_rem claude_sec_rem claude_ter_rem
+  local claude_pri_reset claude_sec_reset claude_ter_reset
+  claude_pri_rem=$(to_remaining "$(pct_or_dash "$claude_json" '.usage.primary.usedPercent')")
+  claude_sec_rem=$(to_remaining "$(pct_or_dash "$claude_json" '.usage.secondary.usedPercent')")
+  claude_ter_rem=$(to_remaining "$(pct_or_dash "$claude_json" '.usage.tertiary.usedPercent')")
+  claude_pri_reset=$(format_reset "$(str_or_dash "$claude_json" '.usage.primary.resetDescription')")
+  claude_sec_reset=$(format_reset "$(str_or_dash "$claude_json" '.usage.secondary.resetDescription')")
+  claude_ter_reset=$(format_reset "$(str_or_dash "$claude_json" '.usage.tertiary.resetDescription')")
+
+  set_row codex_usage.1 "$ICON_PRIMARY" "Codex 5h" "$codex_pri_rem" "$codex_pri_reset" "$codex_err"
+  set_row codex_usage.2 "$ICON_SECONDARY" "Codex wk" "$codex_sec_rem" "$codex_sec_reset" "$codex_err"
+  set_row codex_usage.3 "$ICON_PRIMARY" "Claude 5h" "$claude_pri_rem" "$claude_pri_reset" "$claude_err"
+  set_row codex_usage.4 "$ICON_SECONDARY" "Claude wk" "$claude_sec_rem" "$claude_sec_reset" "$claude_err"
+  set_row codex_usage.5 "$ICON_OPUS" "Claude Opus" "$claude_ter_rem" "$claude_ter_reset" "$claude_err"
 }
 
-case "$SENDER" in
-"mouse.clicked")
-	paint_popup_from_cache
-	sketchybar --set "$NAME" popup.drawing=toggle
-	;;
-"mouse.exited.global")
-	sketchybar --set "$NAME" popup.drawing=off
-	;;
-*)
-	poll_and_paint_bar
-	;;
-esac
+CACHE_TTL_SEC=300
+
+update_bar() {
+  # If the cache is fresh (polled within the last $CACHE_TTL_SEC), don't
+  # refetch on forced/timer triggers; just repaint from cache. The item's
+  # update_freq is 60s so reload renders quickly, but actual CLI calls are
+  # amortized to once every 5 minutes — matching CodexBar.app's own cadence.
+  if [ -s "$CODEX_CACHE" ] && [ -s "$CLAUDE_CACHE" ]; then
+    local age now mtime
+    now=$(date +%s)
+    mtime=$(stat -f %m "$CODEX_CACHE" 2>/dev/null || echo 0)
+    age=$((now - mtime))
+    if [ "$age" -lt "$CACHE_TTL_SEC" ]; then
+      # Paint bar from cached JSON without new fetch.
+      local codex_json claude_json
+      codex_json=$(cat "$CODEX_CACHE")
+      claude_json=$(cat "$CLAUDE_CACHE")
+      local codex_pri claude_pri claude_sec claude_ter min_remaining color
+      codex_pri=$(pct_or_zero "$codex_json" '.usage.primary.usedPercent')
+      claude_pri=$(pct_or_zero "$claude_json" '.usage.primary.usedPercent')
+      claude_sec=$(pct_or_zero "$claude_json" '.usage.secondary.usedPercent')
+      claude_ter=$(pct_or_zero "$claude_json" '.usage.tertiary.usedPercent')
+      min_remaining=$(printf '%s\n' "$codex_pri" "$claude_pri" "$claude_sec" "$claude_ter" |
+        awk 'BEGIN {min=100} {r=100-($1+0); if (r<min) min=r} END {print min}')
+      color=$(get_color "$min_remaining")
+      sketchybar --set "$NAME" icon="$ICON_AI" icon.color="$color" label="${min_remaining}%"
+      return
+    fi
+  fi
+  poll_and_paint_bar
+}
+
+update_popup() {
+  paint_popup_from_cache
+}
+
+source "$CONFIG_DIR/plugins/lib/popup_dispatch.sh"
