@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # SketchyBar Configuration
 # Inspired by FelixKratz/dotfiles
 # https://github.com/FelixKratz/dotfiles
@@ -18,15 +19,15 @@ source "$CONFIG_DIR/colors.sh"
 # https://felixkratz.github.io/SketchyBar/config/tricks#color-picker
 
 sketchybar --bar position=top \
-                 height=39 \
-                 blur_radius=0 \
-                 color=$TRANSPARENT \
-                 corner_radius=0 \
-                 margin=8 \
-                 y_offset=0 \
-                 shadow=off \
-                 display=all \
-                 topmost=window
+  height=39 \
+  blur_radius=0 \
+  color="$TRANSPARENT" \
+  corner_radius=0 \
+  margin=8 \
+  y_offset=0 \
+  shadow=off \
+  display=all \
+  topmost=window
 
 ##### Changing Defaults #####
 # We now change some default values, which are applied to all further items.
@@ -38,17 +39,58 @@ default=(
   padding_right=5
   icon.font="Hack Nerd Font:Bold:16.0"
   label.font="Hack Nerd Font:Bold:13.0"
-  icon.color=$ICON_COLOR
-  label.color=$LABEL_COLOR
+  icon.color="$ICON_COLOR"
+  label.color="$LABEL_COLOR"
   icon.padding_left=8
   icon.padding_right=6
   label.padding_left=6
   label.padding_right=8
-  background.color=$BACKGROUND_1
+  background.color="$BACKGROUND_1"
   background.corner_radius=5
   background.height=26
 )
 sketchybar --default "${default[@]}"
+
+##### Helpers #####
+# Register N popup-row items under `popup.<parent>` with the shared styling
+# used throughout this bar. Pass `off` as the 3rd arg for popups whose rows
+# are toggled individually by the plugin (e.g. aerospace_session).
+add_popup_rows() {
+  local parent=$1 count=$2 initial_drawing=${3:-on} i
+  for i in $(seq 1 "$count"); do
+    sketchybar --add item "${parent}.${i}" "popup.${parent}" \
+      --set "${parent}.${i}" \
+      icon.font="Hack Nerd Font:Bold:13.0" \
+      icon.color="$WHITE" \
+      icon.padding_left=8 \
+      icon.padding_right=4 \
+      label.font="Hack Nerd Font:Regular:13.0" \
+      label.color="$WHITE" \
+      label.padding_right=8 \
+      background.color="$TRANSPARENT" \
+      background.corner_radius=0 \
+      background.height=24 \
+      drawing="$initial_drawing"
+  done
+}
+
+# Shared popup container styling (dark rounded card with blur). Change here
+# to restyle every popup on the bar.
+popup_style=(
+  popup.background.color="$BACKGROUND"
+  popup.background.corner_radius=10
+  popup.background.border_width=1
+  popup.background.border_color="$SURFACE1"
+  popup.blur_radius=50
+)
+
+# Attributes for every member of the status_group bracket so the bracket's
+# own background is the only visible rectangle in that cluster.
+status_item=(
+  padding_left=3
+  padding_right=3
+  background.drawing=off
+)
 
 ##### Adding AeroSpace Workspace Indicators #####
 # AeroSpace workspaces (replaces Mission Control spaces)
@@ -64,16 +106,16 @@ for workspace in "${WORKSPACES[@]}"; do
     icon="$workspace"
     icon.padding_left=12
     icon.padding_right=8
-    icon.highlight_color=$MAGENTA
-    background.color=$BLACK
+    icon.highlight_color="$MAGENTA"
+    background.color="$BLACK"
     background.border_width=1
-    background.border_color=$BLACK
+    background.border_color="$BLACK"
     background.corner_radius=5
     background.height=26
     background.drawing=off
     label.drawing=on
     label.font="sketchybar-app-font:Regular:14.0"
-    label.color=$APP_ICON_COLOR
+    label.color="$APP_ICON_COLOR"
     label.padding_right=12
     script="$PLUGIN_DIR/aerospace.sh"
     click_script="aerospace workspace $workspace"
@@ -82,13 +124,13 @@ for workspace in "${WORKSPACES[@]}"; do
 
   # Bracket (outer border) for double border effect
   sketchybar --add bracket "space_bracket.$workspace" "space.$workspace" \
-             --set "space_bracket.$workspace" \
-                   background.color=$TRANSPARENT \
-                   background.border_color=$BACKGROUND_2 \
-                   background.border_width=1 \
-                   background.corner_radius=5 \
-                   background.height=26 \
-                   background.drawing=off
+    --set "space_bracket.$workspace" \
+    background.color="$TRANSPARENT" \
+    background.border_color="$BACKGROUND_2" \
+    background.border_width=1 \
+    background.corner_radius=5 \
+    background.height=26 \
+    background.drawing=off
 done
 
 # Subscribe to aerospace workspace changes
@@ -102,175 +144,151 @@ done
 # only the properties deviating from the current defaults need to be set
 
 sketchybar --add item chevron left \
-           --set chevron icon=">" label.drawing=off icon.color=$BACKGROUND_1 icon.font="Hack Nerd Font:Bold:18.0" background.drawing=off \
-           --add item front_app left \
-           --set front_app icon.font="sketchybar-app-font:Regular:16.0" \
-                           icon.color=$WHITE \
-                           script="$PLUGIN_DIR/front_app.sh" \
-           --subscribe front_app front_app_switched
+  --set chevron icon=">" label.drawing=off icon.color="$BACKGROUND_1" icon.font="Hack Nerd Font:Bold:18.0" background.drawing=off \
+  --add item front_app left \
+  --set front_app icon.font="sketchybar-app-font:Regular:16.0" \
+  icon.color="$WHITE" \
+  script="$PLUGIN_DIR/front_app.sh" \
+  --subscribe front_app front_app_switched
 
-##### Adding Right Items #####
-# In the same way as the left items we can add items to the right side.
-# Additional position (e.g. center) are available, see:
-# https://felixkratz.github.io/SketchyBar/config/items#adding-items-to-sketchybar
+##### Adding Right Items — status_group cluster #####
+# clock / keyboard / volume / battery / wifi share the status_group bracket
+# background; individual backgrounds are suppressed via $status_item.
 
 # Clock
 sketchybar --add item clock right \
-           --set clock update_freq=10 \
-                       padding_left=6 \
-                       padding_right=6 \
-                       icon.drawing=off \
-                       script="$PLUGIN_DIR/clock.sh"
+  --set clock update_freq=10 \
+  "${status_item[@]}" \
+  icon.drawing=off \
+  script="$PLUGIN_DIR/clock.sh"
 
 # IME/Keyboard Layout (A / あ)
 sketchybar --add item keyboard right \
-           --set keyboard padding_left=6 \
-                          padding_right=6 \
-                          icon.drawing=off \
-                          label.color=$WHITE \
-                          script="$PLUGIN_DIR/keyboard.sh" \
-           --add event keyboard_change "AppleSelectedInputSourcesChangedNotification" \
-           --subscribe keyboard keyboard_change
+  --set keyboard "${status_item[@]}" \
+  icon.drawing=off \
+  label.color="$WHITE" \
+  script="$PLUGIN_DIR/keyboard.sh" \
+  --add event keyboard_change "AppleSelectedInputSourcesChangedNotification" \
+  --subscribe keyboard keyboard_change
 
-# Volume (icon + percentage)
+# Volume (icon only - click for details popup)
 sketchybar --add item volume right \
-           --set volume script="$PLUGIN_DIR/volume.sh" \
-                        update_freq=0 \
-                        padding_left=6 \
-                        padding_right=6 \
-                        icon=󰕾 \
-                        icon.color=$GREEN \
-                        icon.padding_right=6 \
-                        label.color=$WHITE \
-           --subscribe volume volume_change
+  --set volume script="$PLUGIN_DIR/volume.sh" \
+  update_freq=0 \
+  "${status_item[@]}" \
+  icon=󰕾 \
+  icon.color="$GREEN" \
+  icon.padding_right=3 \
+  label.drawing=off \
+  "${popup_style[@]}" \
+  --subscribe volume volume_change mouse.clicked mouse.exited.global
 
-# Battery (SF Symbols - frame-style gauge)
+add_popup_rows volume 2
+
+# Battery (icon only - click for details popup)
 sketchybar --add item battery right \
-           --set battery update_freq=120 \
-                         padding_left=6 \
-                         padding_right=6 \
-                         icon.font="SF Pro:Regular:18.0" \
-                         label.drawing=off \
-                         script="$PLUGIN_DIR/battery.sh" \
-           --subscribe battery system_woke power_source_change
+  --set battery update_freq=120 \
+  "${status_item[@]}" \
+  icon.font="SF Pro:Regular:18.0" \
+  label.drawing=off \
+  "${popup_style[@]}" \
+  script="$PLUGIN_DIR/battery.sh" \
+  --subscribe battery system_woke power_source_change mouse.clicked mouse.exited.global
 
-# WiFi
+add_popup_rows battery 3
+
+# WiFi (icon only - click for details popup)
 sketchybar --add item wifi right \
-           --set wifi update_freq=30 \
-                      padding_left=6 \
-                      padding_right=6 \
-                      icon.color=$GREEN \
-                      icon.padding_right=6 \
-                      script="$PLUGIN_DIR/wifi.sh" \
-                      click_script="open 'x-apple.systempreferences:com.apple.wifi-settings-extension'" \
-           --subscribe wifi wifi_change system_woke
+  --set wifi update_freq=30 \
+  "${status_item[@]}" \
+  icon.color="$GREEN" \
+  icon.padding_right=3 \
+  label.drawing=off \
+  "${popup_style[@]}" \
+  script="$PLUGIN_DIR/wifi.sh" \
+  --subscribe wifi wifi_change system_woke mouse.clicked mouse.exited.global
 
-# Pomodoro Timer (nvim task timer integration) - left of WiFi
+add_popup_rows wifi 3
+
+# Unify the five items above into a single rounded background.
+sketchybar --add bracket status_group wifi battery volume keyboard clock \
+  --set status_group background.color="$BACKGROUND_1" \
+  background.corner_radius=5 \
+  background.height=26
+
+##### Adding Right Items — standalone popups #####
+
+# CodexBar Usage (Codex / Claude remaining % colored by min; click for popup)
+# Script ticks every 60s so the bar renders quickly on reload, but the script
+# itself refetches from the CLI only when its cache is >5min old (= CodexBar's
+# native cadence). Clicks read cache only — they never spawn codexbar.
+sketchybar --add item codex_usage right \
+  --set codex_usage update_freq=60 \
+  padding_left=6 \
+  padding_right=6 \
+  icon.color="$GREEN" \
+  icon.padding_right=4 \
+  label.color="$WHITE" \
+  "${popup_style[@]}" \
+  script="$PLUGIN_DIR/codex_usage.sh" \
+  --subscribe codex_usage mouse.clicked mouse.exited.global
+
+add_popup_rows codex_usage 5
+
+# Pomodoro Timer (nvim task timer integration) - hidden until started
 sketchybar --add item pomodoro right \
-           --set pomodoro update_freq=1 \
-                          padding_left=6 \
-                          padding_right=6 \
-                          icon.color=$GREEN \
-                          icon.padding_right=4 \
-                          label.color=$WHITE \
-                          drawing=off \
-                          script="$PLUGIN_DIR/pomodoro.sh" \
-           --subscribe pomodoro mouse.clicked
+  --set pomodoro update_freq=1 \
+  padding_left=6 \
+  padding_right=6 \
+  icon.color="$GREEN" \
+  icon.padding_right=4 \
+  label.color="$WHITE" \
+  drawing=off \
+  script="$PLUGIN_DIR/pomodoro.sh" \
+  --subscribe pomodoro mouse.clicked
 
 # Top CPU Process
 sketchybar --add item top_cpu right \
-           --set top_cpu update_freq=5 \
-                         padding_left=6 \
-                         padding_right=6 \
-                         icon.color=$GREEN \
-                         icon.padding_right=4 \
-                         label.color=$WHITE \
-                         popup.background.color=$BACKGROUND \
-                         popup.background.corner_radius=10 \
-                         popup.background.border_width=1 \
-                         popup.background.border_color=$SURFACE1 \
-                         popup.blur_radius=50 \
-                         script="$PLUGIN_DIR/top_cpu.sh" \
-           --subscribe top_cpu mouse.clicked mouse.exited.global
+  --set top_cpu update_freq=5 \
+  padding_left=6 \
+  padding_right=6 \
+  icon.color="$GREEN" \
+  icon.padding_right=4 \
+  label.color="$WHITE" \
+  "${popup_style[@]}" \
+  script="$PLUGIN_DIR/top_cpu.sh" \
+  --subscribe top_cpu mouse.clicked mouse.exited.global
 
-for i in $(seq 1 5); do
-  sketchybar --add item "top_cpu.$i" popup.top_cpu \
-             --set "top_cpu.$i" \
-                   icon.font="Hack Nerd Font:Bold:13.0" \
-                   icon.color=$WHITE \
-                   icon.padding_left=8 \
-                   icon.padding_right=4 \
-                   label.font="Hack Nerd Font:Regular:13.0" \
-                   label.color=$WHITE \
-                   label.padding_right=8 \
-                   background.color=$TRANSPARENT \
-                   background.corner_radius=0 \
-                   background.height=24
-done
+add_popup_rows top_cpu 5
 
 # Top Memory Process
 sketchybar --add item top_mem right \
-           --set top_mem update_freq=10 \
-                         padding_left=6 \
-                         padding_right=6 \
-                         icon.color=$GREEN \
-                         icon.padding_right=4 \
-                         label.color=$WHITE \
-                         popup.background.color=$BACKGROUND \
-                         popup.background.corner_radius=10 \
-                         popup.background.border_width=1 \
-                         popup.background.border_color=$SURFACE1 \
-                         popup.blur_radius=50 \
-                         script="$PLUGIN_DIR/top_mem.sh" \
-           --subscribe top_mem mouse.clicked mouse.exited.global
+  --set top_mem update_freq=10 \
+  padding_left=6 \
+  padding_right=6 \
+  icon.color="$GREEN" \
+  icon.padding_right=4 \
+  label.color="$WHITE" \
+  "${popup_style[@]}" \
+  script="$PLUGIN_DIR/top_mem.sh" \
+  --subscribe top_mem mouse.clicked mouse.exited.global
 
-for i in $(seq 1 5); do
-  sketchybar --add item "top_mem.$i" popup.top_mem \
-             --set "top_mem.$i" \
-                   icon.font="Hack Nerd Font:Bold:13.0" \
-                   icon.color=$WHITE \
-                   icon.padding_left=8 \
-                   icon.padding_right=4 \
-                   label.font="Hack Nerd Font:Regular:13.0" \
-                   label.color=$WHITE \
-                   label.padding_right=8 \
-                   background.color=$TRANSPARENT \
-                   background.corner_radius=0 \
-                   background.height=24
-done
+add_popup_rows top_mem 5
 
 # AeroSpace Session (layout save age + click to restore with popup log)
 sketchybar --add item aerospace_session right \
-           --set aerospace_session update_freq=30 \
-                                   padding_left=6 \
-                                   padding_right=6 \
-                                   icon=󰑓 \
-                                   icon.color=$YELLOW \
-                                   icon.padding_right=4 \
-                                   label.color=$WHITE \
-                                   popup.background.color=$BACKGROUND \
-                                   popup.background.corner_radius=10 \
-                                   popup.background.border_width=1 \
-                                   popup.background.border_color=$SURFACE1 \
-                                   popup.blur_radius=50 \
-                                   script="$PLUGIN_DIR/aerospace_session.sh" \
-           --subscribe aerospace_session mouse.clicked mouse.exited.global
+  --set aerospace_session update_freq=30 \
+  padding_left=6 \
+  padding_right=6 \
+  icon=󰑓 \
+  icon.color="$YELLOW" \
+  icon.padding_right=4 \
+  label.color="$WHITE" \
+  "${popup_style[@]}" \
+  script="$PLUGIN_DIR/aerospace_session.sh" \
+  --subscribe aerospace_session mouse.clicked mouse.exited.global
 
-for i in $(seq 1 12); do
-  sketchybar --add item "aerospace_session.$i" popup.aerospace_session \
-             --set "aerospace_session.$i" \
-                   icon.font="Hack Nerd Font:Bold:13.0" \
-                   icon.color=$WHITE \
-                   icon.padding_left=8 \
-                   icon.padding_right=4 \
-                   label.font="Hack Nerd Font:Regular:13.0" \
-                   label.color=$WHITE \
-                   label.padding_right=8 \
-                   background.color=$TRANSPARENT \
-                   background.corner_radius=0 \
-                   background.height=24 \
-                   drawing=off
-done
+add_popup_rows aerospace_session 12 off
 
 ##### Force all scripts to run the first time (never do this in a script) #####
 sketchybar --update

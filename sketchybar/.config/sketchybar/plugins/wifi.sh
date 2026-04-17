@@ -1,57 +1,81 @@
 #!/bin/bash
 
 # WiFi Plugin for SketchyBar
-# Displays current WiFi network name and signal strength
-# Compatible with macOS Sequoia (airport deprecated)
+# Bar: icon only / Popup: SSID / IP / RSSI on click
+# Compatible with macOS Sequoia (airport deprecated).
 
 source "$CONFIG_DIR/colors.sh"
 
-# Icon settings (Nerd Font)
 ICON_WIFI_OFF="󰤭"
 ICON_WIFI_CONNECTED="󰤨"
-
-# Check WiFi interface status
 INTERFACE="en0"
-WIFI_STATUS=$(/sbin/ifconfig "$INTERFACE" 2>/dev/null | awk '/status:/ {print $2}')
+SSID_CACHE="${TMPDIR:-/tmp}/sketchybar_wifi_ssid"
+SSID_CACHE_AGE=60
 
-if [ "$WIFI_STATUS" = "active" ]; then
-  # WiFi is connected - get SSID from system_profiler (cached approach)
-  # Use a cache file to avoid slow system_profiler calls
-  CACHE_FILE="/tmp/sketchybar_wifi_ssid"
-  CACHE_AGE=60  # seconds
+# system_profiler SPAirPortDataType is slow (~1s). Cache the SSID between
+# calls so the 30s-tick bar update stays cheap. The cache is only consulted
+# while the interface is active — callers are responsible for checking the
+# connection state first, so we never print a stale SSID after disconnect.
+get_ssid() {
+	local age=$((SSID_CACHE_AGE + 1)) mtime ssid
+	if [ -s "$SSID_CACHE" ]; then
+		mtime=$(stat -f %m "$SSID_CACHE" 2>/dev/null || echo 0)
+		age=$(($(date +%s) - mtime))
+	fi
 
-  # Check if cache exists and is fresh
-  if [ -f "$CACHE_FILE" ]; then
-    CACHE_MTIME=$(stat -f %m "$CACHE_FILE" 2>/dev/null || echo 0)
-    NOW=$(date +%s)
-    AGE=$((NOW - CACHE_MTIME))
-  else
-    AGE=$((CACHE_AGE + 1))  # Force refresh
-  fi
+	if [ "$age" -le "$SSID_CACHE_AGE" ]; then
+		cat "$SSID_CACHE"
+		return
+	fi
 
-  if [ "$AGE" -gt "$CACHE_AGE" ]; then
-    # Refresh cache - extract SSID from system_profiler
-    SSID=$(/usr/sbin/system_profiler SPAirPortDataType 2>/dev/null | \
-           awk '/Current Network Information:/{found=1; next} found && /^ +[^ ]/{gsub(/:$/, ""); print $1; exit}')
-    if [ -n "$SSID" ]; then
-      echo "$SSID" > "$CACHE_FILE"
-    fi
-  else
-    SSID=$(cat "$CACHE_FILE" 2>/dev/null)
-  fi
+	# Cache expired: re-scan. Only touch the cache when we get a real SSID so
+	# transient system_profiler failures don't reset the TTL.
+	ssid=$(/usr/sbin/system_profiler SPAirPortDataType 2>/dev/null |
+		awk '/Current Network Information:/{found=1; next} found && /^ +[^ ]/{gsub(/:$/, ""); print $1; exit}')
+	if [ -n "$ssid" ]; then
+		printf '%s' "$ssid" >"$SSID_CACHE"
+		printf '%s' "$ssid"
+	elif [ -s "$SSID_CACHE" ]; then
+		cat "$SSID_CACHE"
+	fi
+}
 
-  # Fallback if SSID is empty
-  if [ -z "$SSID" ]; then
-    SSID="Connected"
-  fi
+get_rssi() {
+	/usr/sbin/system_profiler SPAirPortDataType 2>/dev/null |
+		awk '/Signal \/ Noise:/ {print $4, $5, $6, $7; exit}'
+}
 
-  ICON="$ICON_WIFI_CONNECTED"
-  LABEL="$SSID"
-  ICON_CLR="$GREEN"
-else
-  ICON="$ICON_WIFI_OFF"
-  LABEL="Disconnected"
-  ICON_CLR="$RED"
-fi
+update_bar() {
+	local status
+	status=$(/sbin/ifconfig "$INTERFACE" 2>/dev/null | awk '/status:/ {print $2}')
 
-sketchybar --set "$NAME" icon="$ICON" icon.color="$ICON_CLR" label="$LABEL"
+	if [ "$status" = "active" ]; then
+		sketchybar --set "$NAME" icon="$ICON_WIFI_CONNECTED" icon.color="$GREEN"
+	else
+		sketchybar --set "$NAME" icon="$ICON_WIFI_OFF" icon.color="$RED"
+	fi
+}
+
+update_popup() {
+	local status ssid ip rssi
+	status=$(/sbin/ifconfig "$INTERFACE" 2>/dev/null | awk '/status:/ {print $2}')
+
+	if [ "$status" = "active" ]; then
+		ssid=$(get_ssid)
+		[ -z "$ssid" ] && ssid="Connected"
+		ip=$(/sbin/ifconfig "$INTERFACE" 2>/dev/null | awk '/inet /{print $2; exit}')
+		[ -z "$ip" ] && ip="-"
+		rssi=$(get_rssi)
+		[ -z "$rssi" ] && rssi="-"
+	else
+		ssid="Disconnected"
+		ip="-"
+		rssi="-"
+	fi
+
+	sketchybar --set wifi.1 icon="󰖩" label="SSID: $ssid" drawing=on \
+		--set wifi.2 icon="󰩟" label="IP: $ip" drawing=on \
+		--set wifi.3 icon="󰠁" label="RSSI: $rssi" drawing=on
+}
+
+source "$CONFIG_DIR/plugins/lib/popup_dispatch.sh"
