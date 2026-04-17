@@ -225,6 +225,37 @@ for i in 1 2 3; do
                    background.height=24
 done
 
+# CodexBar Usage (Codex / Claude usage %, colored by max; click for details)
+sketchybar --add item codex_usage right \
+           --set codex_usage update_freq=120 \
+                             padding_left=6 \
+                             padding_right=6 \
+                             icon.color=$GREEN \
+                             icon.padding_right=4 \
+                             label.color=$WHITE \
+                             popup.background.color=$BACKGROUND \
+                             popup.background.corner_radius=10 \
+                             popup.background.border_width=1 \
+                             popup.background.border_color=$SURFACE1 \
+                             popup.blur_radius=50 \
+                             script="$PLUGIN_DIR/codex_usage.sh" \
+           --subscribe codex_usage mouse.clicked mouse.exited.global
+
+for i in $(seq 1 5); do
+  sketchybar --add item "codex_usage.$i" popup.codex_usage \
+             --set "codex_usage.$i" \
+                   icon.font="Hack Nerd Font:Bold:13.0" \
+                   icon.color=$WHITE \
+                   icon.padding_left=8 \
+                   icon.padding_right=4 \
+                   label.font="Hack Nerd Font:Regular:13.0" \
+                   label.color=$WHITE \
+                   label.padding_right=8 \
+                   background.color=$TRANSPARENT \
+                   background.corner_radius=0 \
+                   background.height=24
+done
+
 # Pomodoro Timer (nvim task timer integration) - left of WiFi
 sketchybar --add item pomodoro right \
            --set pomodoro update_freq=1 \
@@ -334,3 +365,10 @@ done
 
 ##### Force all scripts to run the first time (never do this in a script) #####
 sketchybar --update
+
+# codex_usage uses update_freq=120 to reduce CLI calls, so the first render
+# would otherwise be delayed. Re-assigning the script after the bar finishes
+# (re)loading forces a SENDER=forced run. Detached via nohup+disown so it
+# survives the restart of the sketchybar process.
+nohup bash -c "sleep 2 && sketchybar --set codex_usage script='$PLUGIN_DIR/codex_usage.sh'" >/dev/null 2>&1 &
+disown
