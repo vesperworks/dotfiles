@@ -114,20 +114,22 @@ sketchybar --add item chevron left \
 # Additional position (e.g. center) are available, see:
 # https://felixkratz.github.io/SketchyBar/config/items#adding-items-to-sketchybar
 
-# Clock
+# Clock (part of status_group bracket)
 sketchybar --add item clock right \
            --set clock update_freq=10 \
-                       padding_left=6 \
-                       padding_right=6 \
+                       padding_left=3 \
+                       padding_right=3 \
                        icon.drawing=off \
+                       background.drawing=off \
                        script="$PLUGIN_DIR/clock.sh"
 
 # IME/Keyboard Layout (A / あ)
 sketchybar --add item keyboard right \
-           --set keyboard padding_left=6 \
-                          padding_right=6 \
+           --set keyboard padding_left=3 \
+                          padding_right=3 \
                           icon.drawing=off \
                           label.color=$WHITE \
+                          background.drawing=off \
                           script="$PLUGIN_DIR/keyboard.sh" \
            --add event keyboard_change "AppleSelectedInputSourcesChangedNotification" \
            --subscribe keyboard keyboard_change
@@ -136,12 +138,13 @@ sketchybar --add item keyboard right \
 sketchybar --add item volume right \
            --set volume script="$PLUGIN_DIR/volume.sh" \
                         update_freq=0 \
-                        padding_left=6 \
-                        padding_right=6 \
+                        padding_left=3 \
+                        padding_right=3 \
                         icon=󰕾 \
                         icon.color=$GREEN \
-                        icon.padding_right=6 \
+                        icon.padding_right=3 \
                         label.drawing=off \
+                        background.drawing=off \
                         popup.background.color=$BACKGROUND \
                         popup.background.corner_radius=10 \
                         popup.background.border_width=1 \
@@ -167,10 +170,11 @@ done
 # Battery (icon only - click for details popup)
 sketchybar --add item battery right \
            --set battery update_freq=120 \
-                         padding_left=6 \
-                         padding_right=6 \
+                         padding_left=3 \
+                         padding_right=3 \
                          icon.font="SF Pro:Regular:18.0" \
                          label.drawing=off \
+                         background.drawing=off \
                          popup.background.color=$BACKGROUND \
                          popup.background.corner_radius=10 \
                          popup.background.border_width=1 \
@@ -197,11 +201,12 @@ done
 # WiFi (icon only - click for details popup)
 sketchybar --add item wifi right \
            --set wifi update_freq=30 \
-                      padding_left=6 \
-                      padding_right=6 \
+                      padding_left=3 \
+                      padding_right=3 \
                       icon.color=$GREEN \
-                      icon.padding_right=6 \
+                      icon.padding_right=3 \
                       label.drawing=off \
+                      background.drawing=off \
                       popup.background.color=$BACKGROUND \
                       popup.background.corner_radius=10 \
                       popup.background.border_width=1 \
@@ -224,6 +229,13 @@ for i in 1 2 3; do
                    background.corner_radius=0 \
                    background.height=24
 done
+
+# Group wifi/battery/volume/keyboard/clock under a single background square.
+# Individual items keep background.drawing=off so only this bracket paints.
+sketchybar --add bracket status_group wifi battery volume keyboard clock \
+           --set status_group background.color=$BACKGROUND_1 \
+                              background.corner_radius=5 \
+                              background.height=26
 
 # CodexBar Usage (Codex / Claude usage %, colored by max; click for details)
 # Matches CodexBar.app's own 5-minute poll cadence. Clicks read cache only.

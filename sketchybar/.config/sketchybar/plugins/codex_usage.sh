@@ -24,21 +24,30 @@ mkdir -p "$CACHE_DIR"
 
 ICON_AI="󰧑" # nf-md-robot
 
+# Color by REMAINING percent (0-100). Low remaining = warning.
 get_color() {
 	local pct=$1
 	if [ -z "$pct" ] || [ "$pct" = "null" ] || [ "$pct" = "-" ]; then
 		echo "$GREY"
 		return
 	fi
-	if [ "$pct" -ge 80 ]; then
+	if [ "$pct" -le 20 ]; then
 		echo "$RED"
-	elif [ "$pct" -ge 50 ]; then
+	elif [ "$pct" -le 50 ]; then
 		echo "$ORANGE"
-	elif [ "$pct" -ge 25 ]; then
+	elif [ "$pct" -le 75 ]; then
 		echo "$YELLOW"
 	else
 		echo "$GREEN"
 	fi
+}
+
+# Convert usedPercent → remaining ("-" if missing).
+to_remaining() {
+	case "$1" in
+	"-" | "null" | "") echo "-" ;;
+	*) echo $((100 - $1)) ;;
+	esac
 }
 
 # Fetch and normalize one provider. 10s timeout guards against rate-limit
@@ -81,17 +90,19 @@ poll_and_paint_bar() {
 	echo "$codex_json" >"$CODEX_CACHE"
 	echo "$claude_json" >"$CLAUDE_CACHE"
 
-	local codex_pri claude_pri claude_sec claude_ter max_pct color
+	# Bar label is the LOWEST remaining window across Codex+Claude, colored
+	# by that remaining percent (low = red).
+	local codex_pri claude_pri claude_sec claude_ter min_remaining color
 	codex_pri=$(pct_or_zero "$codex_json" '.usage.primary.usedPercent')
 	claude_pri=$(pct_or_zero "$claude_json" '.usage.primary.usedPercent')
 	claude_sec=$(pct_or_zero "$claude_json" '.usage.secondary.usedPercent')
 	claude_ter=$(pct_or_zero "$claude_json" '.usage.tertiary.usedPercent')
 
-	max_pct=$(printf '%s\n' "$codex_pri" "$claude_pri" "$claude_sec" "$claude_ter" |
-		awk '{if ($1+0 > max) max=$1+0} END {print max+0}')
-	color=$(get_color "$max_pct")
+	min_remaining=$(printf '%s\n' "$codex_pri" "$claude_pri" "$claude_sec" "$claude_ter" |
+		awk 'BEGIN {min=100} {r=100-($1+0); if (r<min) min=r} END {print min}')
+	color=$(get_color "$min_remaining")
 
-	sketchybar --set "$NAME" icon="$ICON_AI" icon.color="$color" label="${max_pct}%"
+	sketchybar --set "$NAME" icon="$ICON_AI" icon.color="$color" label="${min_remaining}%"
 }
 
 # Called on mouse.clicked. Reads only the cache, so it is instant.
@@ -100,31 +111,37 @@ paint_popup_from_cache() {
 	codex_json=$(read_cache "$CODEX_CACHE")
 	claude_json=$(read_cache "$CLAUDE_CACHE")
 
-	local codex_pri codex_sec codex_pri_reset codex_sec_reset
+	local codex_pri codex_sec codex_pri_rem codex_sec_rem codex_pri_reset codex_sec_reset
 	codex_pri=$(pct_or_dash "$codex_json" '.usage.primary.usedPercent')
 	codex_sec=$(pct_or_dash "$codex_json" '.usage.secondary.usedPercent')
+	codex_pri_rem=$(to_remaining "$codex_pri")
+	codex_sec_rem=$(to_remaining "$codex_sec")
 	codex_pri_reset=$(format_reset "$(str_or_dash "$codex_json" '.usage.primary.resetDescription')")
 	codex_sec_reset=$(format_reset "$(str_or_dash "$codex_json" '.usage.secondary.resetDescription')")
 
-	local claude_pri claude_sec claude_ter claude_pri_reset claude_sec_reset claude_ter_reset
+	local claude_pri claude_sec claude_ter claude_pri_rem claude_sec_rem claude_ter_rem
+	local claude_pri_reset claude_sec_reset claude_ter_reset
 	claude_pri=$(pct_or_dash "$claude_json" '.usage.primary.usedPercent')
 	claude_sec=$(pct_or_dash "$claude_json" '.usage.secondary.usedPercent')
 	claude_ter=$(pct_or_dash "$claude_json" '.usage.tertiary.usedPercent')
+	claude_pri_rem=$(to_remaining "$claude_pri")
+	claude_sec_rem=$(to_remaining "$claude_sec")
+	claude_ter_rem=$(to_remaining "$claude_ter")
 	claude_pri_reset=$(format_reset "$(str_or_dash "$claude_json" '.usage.primary.resetDescription')")
 	claude_sec_reset=$(format_reset "$(str_or_dash "$claude_json" '.usage.secondary.resetDescription')")
 	claude_ter_reset=$(format_reset "$(str_or_dash "$claude_json" '.usage.tertiary.resetDescription')")
 
 	sketchybar \
-		--set codex_usage.1 icon="󱙷" icon.color="$(get_color "$codex_pri")" \
-		label="Codex 5h: ${codex_pri}% (reset ${codex_pri_reset})" drawing=on \
-		--set codex_usage.2 icon="󰸗" icon.color="$(get_color "$codex_sec")" \
-		label="Codex wk: ${codex_sec}% (reset ${codex_sec_reset})" drawing=on \
-		--set codex_usage.3 icon="󱙷" icon.color="$(get_color "$claude_pri")" \
-		label="Claude 5h: ${claude_pri}% (reset ${claude_pri_reset})" drawing=on \
-		--set codex_usage.4 icon="󰸗" icon.color="$(get_color "$claude_sec")" \
-		label="Claude wk: ${claude_sec}% (reset ${claude_sec_reset})" drawing=on \
-		--set codex_usage.5 icon="󰓎" icon.color="$(get_color "$claude_ter")" \
-		label="Claude Opus: ${claude_ter}% (reset ${claude_ter_reset})" drawing=on
+		--set codex_usage.1 icon="󱙷" icon.color="$(get_color "$codex_pri_rem")" \
+		label="Codex 5h: ${codex_pri_rem}% left (reset ${codex_pri_reset})" drawing=on \
+		--set codex_usage.2 icon="󰸗" icon.color="$(get_color "$codex_sec_rem")" \
+		label="Codex wk: ${codex_sec_rem}% left (reset ${codex_sec_reset})" drawing=on \
+		--set codex_usage.3 icon="󱙷" icon.color="$(get_color "$claude_pri_rem")" \
+		label="Claude 5h: ${claude_pri_rem}% left (reset ${claude_pri_reset})" drawing=on \
+		--set codex_usage.4 icon="󰸗" icon.color="$(get_color "$claude_sec_rem")" \
+		label="Claude wk: ${claude_sec_rem}% left (reset ${claude_sec_reset})" drawing=on \
+		--set codex_usage.5 icon="󰓎" icon.color="$(get_color "$claude_ter_rem")" \
+		label="Claude Opus: ${claude_ter_rem}% left (reset ${claude_ter_reset})" drawing=on
 }
 
 case "$SENDER" in
