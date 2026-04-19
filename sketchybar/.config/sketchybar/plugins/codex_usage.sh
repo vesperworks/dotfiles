@@ -17,7 +17,7 @@ source "$CONFIG_DIR/colors.sh"
 # shell's PATH, so node / bun / local bin must be surfaced explicitly.
 export PATH="$HOME/.nodebrew/current/bin:$HOME/.local/bin:$HOME/.bun/bin:/opt/homebrew/bin:$PATH"
 
-TIMEOUT_SEC=10
+TIMEOUT_SEC=25
 CACHE_DIR="${TMPDIR:-/tmp}/sketchybar_codex_usage"
 CODEX_CACHE="$CACHE_DIR/codex.json"
 CLAUDE_CACHE="$CACHE_DIR/claude.json"
