@@ -83,6 +83,10 @@ alias lt='eza --tree --color=always --icons --level=2'
 alias ccm='ccmanager --multi-project'
 alias ch='claude-history'
 
+# tmux-top: tmux セッション別 CPU/MEM/idle 集計（detached で重い/古いセッションのケアに使う）
+alias tmux-top='~/.config/tmux/scripts/tmux-top.sh'
+alias tmux-top-idle='~/.config/tmux/scripts/tmux-top.sh --idle'
+
 # Git aliases (migrated from Oh My Zsh git plugin)
 alias g='git'
 alias ga='git add'
