@@ -288,6 +288,7 @@
   "alwaysThinkingEnabled": true,
   "effortLevel": "high",
   "fastModePerSessionOptIn": true,
+  "skipAutoPermissionPrompt": true,
   "voiceEnabled": true,
-  "skipAutoPermissionPrompt": true
+  "advisorModel": "opus"
 }
