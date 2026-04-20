@@ -287,8 +287,14 @@
   },
   "alwaysThinkingEnabled": true,
   "effortLevel": "high",
+  "advisorModel": "opus",
   "fastModePerSessionOptIn": true,
   "skipAutoPermissionPrompt": true,
   "voiceEnabled": true,
-  "advisorModel": "opus"
+  "theme": "dark-daltonized",
+  "editorMode": "vim",
+  "preferredNotifChannel": "terminal_bell",
+  "autoCompactEnabled": false,
+  "teammateMode": "auto",
+  "agentPushNotifEnabled": false
 }
