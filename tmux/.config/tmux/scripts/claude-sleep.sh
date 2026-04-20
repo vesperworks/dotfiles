@@ -6,6 +6,7 @@
 #   claude-sleep.sh --all           全候補を一斉スリープ + 記録
 #   claude-sleep.sh --count         候補件数のみ stdout（同期計測）
 #   claude-sleep.sh --count-cached  キャッシュ値を即時返す + bg 更新（picker 用）
+#   claude-sleep.sh --list-sessions 候補 tmux session 名のみ改行区切り（picker マーカー用）
 #   IDLE_HOURS=4 claude-sleep.sh --all   閾値変更
 #
 # 「スリープ」と呼ぶ理由: kill するが Claude のセッション履歴は
@@ -29,14 +30,15 @@ IDLE_HOURS=${IDLE_HOURS:-2}
 CACHE_TTL=${CLAUDE_SLEEP_CACHE_TTL:-60}
 CACHE_FILE="${HOME}/.cache/claude-sleep-count"
 
-MODE="list" # list | all | count | count-cached
+MODE="list" # list | all | count | count-cached | list-sessions
 case "${1:-}" in
 --all) MODE=all ;;
 --count) MODE=count ;;
 --count-cached) MODE=count-cached ;;
+--list-sessions) MODE=list-sessions ;;
 --list | "") MODE=list ;;
 *)
-	echo "Usage: $0 [--list|--all|--count|--count-cached]" >&2
+	echo "Usage: $0 [--list|--all|--count|--count-cached|--list-sessions]" >&2
 	exit 2
 	;;
 esac
@@ -97,6 +99,10 @@ while IFS='|' read -r session attach win pane cmd pid pwd activity; do
 	count=$((count + 1))
 
 	[ "$MODE" = "count" ] && continue
+	if [ "$MODE" = "list-sessions" ]; then
+		echo "$session"
+		continue
+	fi
 
 	# Claude Code の project hash 規約: スラッシュをハイフンに置換
 	path_hash="${pwd//\//-}"

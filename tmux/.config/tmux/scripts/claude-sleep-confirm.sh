@@ -30,7 +30,7 @@ y | Y | yes)
 	# キャッシュ無効化（次回 picker で 0 表示に）
 	rm -f "${HOME}/.cache/claude-sleep-count"
 	echo ""
-	echo "Done. Resume any with: ^w in sesh picker (claude-wake)"
+	echo "Done. Resume: Enter on 💤 session in sesh picker"
 	read -r -p "Press Enter to close..."
 	;;
 *)

@@ -11,43 +11,53 @@ CC_PREVIEW=~/.config/tmux/scripts/cc-question-preview.sh
 CC_ANSWER=~/.config/tmux/scripts/cc-wait-answer.sh
 CLAUDE_SLEEP=~/.config/tmux/scripts/claude-sleep.sh
 CLAUDE_SLEEP_CONFIRM=~/.config/tmux/scripts/claude-sleep-confirm.sh
-CLAUDE_WAKE=~/.config/tmux/scripts/claude-wake.sh
+SLEEP_LOG="$HOME/.claude/closed-sessions.jsonl"
 KEY_MARKER="${TMPDIR:-/tmp}/sesh-picker-key-$$-$RANDOM"
 SLEEP_MARKER="${TMPDIR:-/tmp}/sesh-picker-sleep-$$-$RANDOM"
-WAKE_MARKER="${TMPDIR:-/tmp}/sesh-picker-wake-$$-$RANDOM"
-trap 'rm -f "$KEY_MARKER" "$SLEEP_MARKER" "$WAKE_MARKER"' EXIT
+trap 'rm -f "$KEY_MARKER" "$SLEEP_MARKER"' EXIT
 
-# 💤 idle Claude 候補数（キャッシュ即時、bg 更新）— picker 起動を遅延させない
-sleep_count=$("$CLAUDE_SLEEP" --count-cached 2>/dev/null || echo "?")
-if [ "$sleep_count" != "0" ] && [ "$sleep_count" != "?" ]; then
-	sleep_badge="💤 $sleep_count idle  "
-else
-	sleep_badge=""
-fi
-
-# 直近24h で sleep されたセッション集合（attached なら除外）
-SLEEP_LOG="$HOME/.claude/closed-sessions.jsonl"
+# 💤 Sleep 中セッション（claude kill 済、JSONL 記録あり）
+# 直近24h で sleep されたセッション集合から、今 attach 中のものを除外
 sleeping_sessions=""
 if [ -s "$SLEEP_LOG" ] && command -v jq >/dev/null 2>&1; then
 	cutoff=$(($(date +%s) - 86400))
-	# closed-sessions から最近24hのsession名を抽出
 	closed_recent=$(jq -r --argjson c "$cutoff" 'select(.closed_at >= $c) | .session' "$SLEEP_LOG" 2>/dev/null | sort -u)
-	# attach 中のセッション名（再起動済みなので除外）
 	attached_now=$(tmux list-sessions -F '#{?session_attached,#{session_name},}' 2>/dev/null | grep -v '^$' | sort -u)
-	# 差集合: 最近 closed かつ 今 detached
 	sleeping_sessions=$(comm -23 <(echo "$closed_recent") <(echo "$attached_now") 2>/dev/null)
 fi
+if [ -z "$sleeping_sessions" ]; then
+	sleeping_count=0
+else
+	sleeping_count=$(echo "$sleeping_sessions" | grep -c . 2>/dev/null || echo 0)
+fi
 
-# sesh-sessions.sh の出力を後処理: sleeping セッション行頭に "💤 " を挿入
-# それ以外は "   " で揃える（バッジ幅 4 と整合）
+# 💡 Sleep 候補セッション（idle だがまだ claude 生存）
+# --count-cached はキャッシュ即時返却、bg で更新（picker 起動を遅延させない）
+candidate_count=$("$CLAUDE_SLEEP" --count-cached 2>/dev/null || echo "?")
+candidate_sessions=$("$CLAUDE_SLEEP" --list-sessions 2>/dev/null || true)
+
+# バッジ構築: 💤 sleeping + 💡 candidate
+sleep_badge=""
+if [ "$sleeping_count" != "0" ] 2>/dev/null; then
+	sleep_badge="${sleep_badge}💤 $sleeping_count sleeping  "
+fi
+if [ "$candidate_count" != "0" ] && [ "$candidate_count" != "?" ]; then
+	sleep_badge="${sleep_badge}💡 $candidate_count candidate  "
+fi
+
+# sesh-sessions.sh の出力を後処理: 行頭に状態マーカーを挿入
+#   💤 = Sleep 中（claude kill 済、closed-sessions.jsonl に記録あり）
+#   💡 = Sleep 候補（idle だがまだ claude 生存）
+#   "   " = 通常（バッジ幅 4 と整合）
+# 優先度: 💤 > 💡 > 無印
 # ENVIRON 経由で渡す（-v sleeping="..." だと改行を含む変数が壊れる）
-# 注: bash の "VAR=x cmd1 | cmd2" は VAR を cmd1 にしか渡さないので、
-# パイプの後 (awk の直前) で再度 SLEEPING= を指定する必要がある
 sesh_output_filtered() {
-	"$SESH_SESSIONS" "$@" | SLEEPING="$sleeping_sessions" awk '
+	"$SESH_SESSIONS" "$@" | SLEEPING="$sleeping_sessions" CANDIDATE="$candidate_sessions" awk '
 		BEGIN {
 			n = split(ENVIRON["SLEEPING"], arr, "\n")
-			for (i=1; i<=n; i++) if (arr[i] != "") s[arr[i]] = 1
+			for (i=1; i<=n; i++) if (arr[i] != "") sleeping[arr[i]] = 1
+			m = split(ENVIRON["CANDIDATE"], arr2, "\n")
+			for (i=1; i<=m; i++) if (arr2[i] != "") candidate[arr2[i]] = 1
 		}
 		{
 			# ANSI 色 + 先頭の Nerd Font アイコン + 空白を除去 → 最初の単語が session 名
@@ -57,7 +67,8 @@ sesh_output_filtered() {
 			sub(/^[^a-zA-Z0-9_-]+/, "", plain)               # 先頭のアイコン + 空白除去
 			n = split(plain, fields, " ")
 			name = (n > 0) ? fields[1] : ""
-			if (name in s) print "💤 " $0
+			if (name in sleeping) print "💤 " $0
+			else if (name in candidate) print "💡 " $0
 			else print "   " $0
 		}
 	'
@@ -66,7 +77,7 @@ sesh_output_filtered() {
 result=$(sesh_output_filtered -t | fzf-tmux -p 65%,65% \
 	--layout=reverse \
 	--no-sort --ansi --border-label "  sesh " --prompt "  " \
-	--header "${sleep_badge}^a all  ^t tmux  ^x zoxide  ^d kill  ^o move  ^e edit  ^y yes  ^s sleep  ^w wake" \
+	--header "${sleep_badge}^a all  ^t tmux  ^x zoxide  ^d kill  ^o move  ^e edit  ^y yes  ^s sleep" \
 	--header-first \
 	--padding 0,1 \
 	--print-query \
@@ -78,11 +89,10 @@ result=$(sesh_output_filtered -t | fzf-tmux -p 65%,65% \
 	--bind "ctrl-a:change-prompt(  )+reload($SESH_SESSIONS)" \
 	--bind "ctrl-t:change-prompt(  )+reload($SESH_SESSIONS -t)" \
 	--bind "ctrl-x:change-prompt(  )+reload(sesh list -z -i)" \
-	--bind "ctrl-d:execute-silent(tmux kill-session -t \$(echo {} | sed 's/^💤 //;s/^   //' | awk '{print \$2}'))+change-prompt(  )+reload($SESH_SESSIONS -t)" \
+	--bind "ctrl-d:execute-silent(tmux kill-session -t \$(echo {} | sed 's/^💤 //;s/^💡 //;s/^   //' | awk '{print \$2}'))+change-prompt(  )+reload($SESH_SESSIONS -t)" \
 	--bind "ctrl-e:execute-silent(touch $KEY_MARKER)+accept" \
-	--bind "ctrl-y:execute-silent(tmux send-keys -t \$(echo {} | sed 's/^💤 //;s/^   //' | awk '{print \$2}') Enter)+reload($SESH_SESSIONS -t)" \
-	--bind "ctrl-s:execute-silent(touch $SLEEP_MARKER)+accept" \
-	--bind "ctrl-w:execute-silent(touch $WAKE_MARKER)+accept")
+	--bind "ctrl-y:execute-silent(tmux send-keys -t \$(echo {} | sed 's/^💤 //;s/^💡 //;s/^   //' | awk '{print \$2}') Enter)+reload($SESH_SESSIONS -t)" \
+	--bind "ctrl-s:execute-silent(touch $SLEEP_MARKER)+accept")
 
 # --expect と --print-query の出力:
 # Line 1: query (入力テキスト)
@@ -99,24 +109,19 @@ if [ -f "$KEY_MARKER" ]; then
 	key="ctrl-e"
 fi
 
-# alt-s / alt-w: fzf-tmux popup を抜けた後（= fzf-tmux の親 tmux に戻った後）に
+# ^s: fzf-tmux popup を抜けた後（= fzf-tmux の親 tmux に戻った後）に
 # tmux display-popup を呼ぶ。fzf-tmux 内から入れ子で popup を出すと表示されない。
 if [ -f "$SLEEP_MARKER" ]; then
 	rm -f "$SLEEP_MARKER"
 	tmux display-popup -E -w 70% -h 70% -T ' 💤 Claude Sleep ' "$CLAUDE_SLEEP_CONFIRM"
 	exit 0
 fi
-if [ -f "$WAKE_MARKER" ]; then
-	rm -f "$WAKE_MARKER"
-	tmux display-popup -E -w 80% -h 60% -T ' 🌅 Claude Wake ' "$CLAUDE_WAKE"
-	exit 0
-fi
 
 if [ -n "$selection" ]; then
-	# 行頭に "💤 " (emoji+space, 5byte) or "   " (3space) のプレフィックス。
+	# 行頭に "💤 " / "💡 " (emoji+space, 5byte) or "   " (3space) のプレフィックス。
 	# emoji は awk の field 1 にカウントされるが空白は無視されるため、
 	# 単純に sed で剥がしてから print $2 に統一する。
-	session=$(echo "$selection" | sed 's/^💤 //;s/^   //' | awk '{print $2}')
+	session=$(echo "$selection" | sed 's/^💤 //;s/^💡 //;s/^   //' | awk '{print $2}')
 
 	case "$key" in
 	ctrl-o)
@@ -133,6 +138,28 @@ if [ -n "$selection" ]; then
 	*)
 		# Enter: 通常のセッション接続
 		sesh connect "$session"
+
+		# 💤 付きの行（Sleep 中セッション）なら、attach 後に claude --resume を自動送信
+		if [[ "$selection" == 💤* ]] && [ -s "$SLEEP_LOG" ] && command -v jq >/dev/null 2>&1; then
+			# closed-sessions.jsonl から該当 session の最新エントリを引く
+			resume_info=$(jq -r --arg s "$session" \
+				'select(.session == $s) | [(.claude_session_id // ""), (.pwd // "")] | @tsv' \
+				"$SLEEP_LOG" 2>/dev/null | tail -1)
+			session_id=$(echo "$resume_info" | awk -F'\t' '{print $1}')
+			pwd_path=$(echo "$resume_info" | awk -F'\t' '{print $2}')
+
+			if [ -n "$session_id" ]; then
+				resume_cmd="claude --resume $session_id"
+			else
+				resume_cmd="claude"
+			fi
+			if [ -n "$pwd_path" ] && [ -d "$pwd_path" ]; then
+				resume_cmd="cd '$pwd_path' && $resume_cmd"
+			fi
+
+			# 該当 session のアクティブ pane に送信（zsh プロンプト待ち前提）
+			tmux send-keys -t "$session" "$resume_cmd" Enter 2>/dev/null || true
+		fi
 		;;
 	esac
 elif [ -n "$query" ]; then
