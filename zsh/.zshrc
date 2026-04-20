@@ -68,6 +68,11 @@ fi
 # Shell options
 setopt auto_pushd pushd_ignore_dups
 setopt print_eight_bit no_flow_control
+# tty レベルでも XON/XOFF を切る（C-s/C-q をアプリに届ける。fzf 等で必須）
+stty -ixon 2>/dev/null
+# C-w を tty の werase（単語削除）から解放してアプリに届ける
+# zsh 内の C-w は bindkey -e の backward-kill-word が引き続き動く
+stty werase undef 2>/dev/null
 HISTFILE=~/.zsh_history
 HISTSIZE=1000000
 SAVEHIST=1000000
@@ -87,54 +92,13 @@ alias ch='claude-history'
 alias tmux-top='~/.config/tmux/scripts/tmux-top.sh'
 alias tmux-top-idle='~/.config/tmux/scripts/tmux-top.sh --idle'
 
-# idle-claude-check / kill: detached + idle な claude プロセスを検出/終了
-# 文脈ロスゼロ — Claude のセッション履歴は ~/.claude/projects/ に保存され続けるので
-# kill 後も claude-resume-recent で復帰可能
-alias idle-claude-check='~/.config/tmux/scripts/idle-claude-cleaner.sh'
-alias idle-claude-kill='~/.config/tmux/scripts/idle-claude-cleaner.sh --kill'
-
-# claude-resume-recent: ~/.claude/closed-sessions.jsonl から fzf picker で resume
-# idle-claude-cleaner --kill が記録した「閉じたセッション」一覧から選択 →
-# 元の作業ディレクトリに cd して claude --resume <id> を実行
-claude-resume-recent() {
-  local log="$HOME/.claude/closed-sessions.jsonl"
-  if [ ! -s "$log" ]; then
-    echo "No closed sessions yet. Run idle-claude-kill to populate."
-    return 1
-  fi
-
-  local selected
-  selected=$(tail -r "$log" | head -50 | jq -r '
-    [(.closed_at | tostring), .session, .pwd, (.claude_session_id // "?"), (.idle_hours | tostring)] | @tsv
-  ' | awk -F'\t' '{
-    cmd="date -r " $1 " +\"%m/%d %H:%M\""
-    cmd | getline d; close(cmd)
-    printf "%s\t%s\t%s\t%s\tidle %sh\n", d, $2, $3, $4, $5
-  }' | column -t -s $'\t' | fzf --layout=reverse --height=50% \
-    --prompt='resume closed claude> ' \
-    --header='WHEN  TMUX_SESSION  PWD  CLAUDE_SESSION_ID  IDLE')
-
-  [ -z "$selected" ] && return 1
-
-  # column -t は連続スペースで区切るので awk で抽出
-  local pwd_path session_id
-  pwd_path=$(echo "$selected" | awk '{print $4}')
-  session_id=$(echo "$selected" | awk '{print $5}')
-
-  if [ ! -d "$pwd_path" ]; then
-    echo "PWD does not exist: $pwd_path"
-    return 1
-  fi
-  cd "$pwd_path" || return 1
-
-  if [ "$session_id" = "?" ] || [ -z "$session_id" ]; then
-    echo "No session_id recorded — starting fresh claude in $pwd_path"
-    claude
-  else
-    echo "Resuming claude session $session_id in $pwd_path"
-    claude --resume "$session_id"
-  fi
-}
+# claude-sleep / wake: detached + idle な claude プロセスをスリープ（=kill）/ 復帰
+# Claude のセッション履歴は ~/.claude/projects/ に保存され続けるので、スリープ後も
+# claude-wake で文脈ロスゼロで復帰可能
+# 通常は sesh picker (C-t) のヘッダー [💤 N idle] と ^s/^w で操作する想定
+alias claude-sleep-list='~/.config/tmux/scripts/claude-sleep.sh'
+alias claude-sleep-all='~/.config/tmux/scripts/claude-sleep.sh --all'
+alias claude-wake='~/.config/tmux/scripts/claude-wake.sh'
 
 # Git aliases (migrated from Oh My Zsh git plugin)
 alias g='git'
