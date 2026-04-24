@@ -16,9 +16,9 @@ function M.toggle_as_task()
   for _, line in ipairs(lines) do
     local new_line
 
-    if string.match(line, "^%s*[%*%-]%s*%[[ x%-/>v]%]%s") then
+    if string.match(line, "^%s*[%*%-]%s*%[[ x%-/>v@]%]%s") then
       -- 既にチェックボックスがある場合は削除
-      new_line = string.gsub(line, "^(%s*)[%*%-]%s*%[[ x%-/>v]%]%s*", "%1")
+      new_line = string.gsub(line, "^(%s*)[%*%-]%s*%[[ x%-/>v@]%]%s*", "%1")
     elseif string.match(line, "^%s*-%s") then
       -- 既存の "- 項目" を "- [ ] 項目" に置き換え
       new_line = string.gsub(line, "^(%s*)-%s", "%1- [ ] ")
@@ -42,7 +42,7 @@ function M.toggle_as_task()
   end
 end
 
---- チェックボックスの完了状態を切り替える（未完了 → 実行中 → 成功 → 中断 → 失敗 → 未完了）
+--- チェックボックスの完了状態を切り替える（未完了 → 実行中 → AI委譲 → 成功 → 中断 → 失敗 → 未完了）
 function M.toggle_checkbox_state()
   local start_row, end_row = util.get_visual_range()
   if not start_row then return end
@@ -60,7 +60,9 @@ function M.toggle_checkbox_state()
     if string.match(line, "^%s*[%*%-]%s*%[%s%]") then
       new_line = string.gsub(line, "(%[)%s(%])", "%1>%2")
     elseif string.match(line, "^%s*[%*%-]%s*%[>%]") then
-      new_line = string.gsub(line, "(%[)>(%])", "%1v%2")
+      new_line = string.gsub(line, "(%[)>(%])", "%1@%2")
+    elseif string.match(line, "^%s*[%*%-]%s*%[@%]") then
+      new_line = string.gsub(line, "(%[)@(%])", "%1v%2")
     elseif string.match(line, "^%s*[%*%-]%s*%[v%]") then
       new_line = string.gsub(line, "(%[)v(%])", "%1/%2")
     elseif string.match(line, "^%s*[%*%-]%s*%[/%]") then
@@ -73,8 +75,8 @@ function M.toggle_checkbox_state()
 
     -- タイマー統合: 状態変更を検出してタイマーに通知
     if old_line ~= new_line then
-      local old_state = old_line:match('%[([%s%->vx/])%]')
-      local new_state = new_line:match('%[([%s%->vx/])%]')
+      local old_state = old_line:match('%[([%s%->vx/@])%]')
+      local new_state = new_line:match('%[([%s%->vx/@])%]')
 
       if old_state and new_state then
         local normalized_old = old_state == ' ' and ' ' or old_state

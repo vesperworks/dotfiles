@@ -1,12 +1,13 @@
 -- lua/vw/tasks.lua
--- 現在のファイル内の「- [>]」行をフローティングウィンドウに表示
+-- 現在のファイル内の「- [>]」「- [@]」「- [/]」行をフローティングウィンドウに表示
 
 local M = {}
 
 -- 設定
 M.config = {
   pattern_in_progress = "^%s*%-%s*%[>%]", -- "- [>]" 実行中
-  pattern_paused = "^%s*%-%s*%[/%]",      -- "- [/]" 中断中
+  pattern_ai          = "^%s*%-%s*%[@%]", -- "- [@]" AI委譲中
+  pattern_paused      = "^%s*%-%s*%[/%]", -- "- [/]" 中断中
   max_items = 7, -- 最大表示件数
   min_height = 1, -- 最小高さ
   border = "rounded", -- ボーダースタイル
@@ -41,12 +42,13 @@ local function get_parent_heading(lines, task_lnum)
   return nil -- 見出しなし
 end
 
--- 現在のバッファから "- [>]" と "- [/]" 行を収集（タイマー連携付き）
+-- 現在のバッファから "- [>]" "- [@]" "- [/]" 行を収集（タイマー連携付き）
 function M.collect_pending_tasks()
   local bufnr = vim.api.nvim_get_current_buf()
   local file_path = vim.api.nvim_buf_get_name(bufnr)
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
   local tasks_in_progress = {}
+  local tasks_ai = {}
   local tasks_paused = {}
 
   -- task-timer連携
@@ -59,12 +61,13 @@ function M.collect_pending_tasks()
 
   for lnum, line in ipairs(lines) do
     local is_in_progress = line:match(M.config.pattern_in_progress)
+    local is_ai = line:match(M.config.pattern_ai)
     local is_paused = line:match(M.config.pattern_paused)
 
-    if is_in_progress or is_paused then
+    if is_in_progress or is_ai or is_paused then
       -- チェックボックス以降のテキストを抽出
-      local text = line:gsub("^%s*%-%s*%[[>/]%]%s*", "")
-      local status = is_in_progress and ">" or "/"
+      local text = line:gsub("^%s*%-%s*%[[>/@]%]%s*", "")
+      local status = is_in_progress and ">" or (is_ai and "@" or "/")
 
       local task = {
         lnum = lnum,
@@ -76,7 +79,7 @@ function M.collect_pending_tasks()
         heading = get_parent_heading(lines, lnum),
       }
 
-      -- タイマー情報を取得（実行中のみ）
+      -- タイマー情報を取得（実行中のみ — AI委譲中 [@] は timer を動かさない）
       if is_in_progress and ok_display and file_path ~= "" then
         local task_id = timer_display.generate_task_id(file_path, line)
         if active_timers[task_id] then
@@ -87,6 +90,8 @@ function M.collect_pending_tasks()
 
       if is_in_progress then
         table.insert(tasks_in_progress, task)
+      elseif is_ai then
+        table.insert(tasks_ai, task)
       else
         table.insert(tasks_paused, task)
       end
@@ -106,14 +111,22 @@ function M.collect_pending_tasks()
     end
   end)
 
+  -- AI委譲中をソート（行番号順）
+  table.sort(tasks_ai, function(a, b)
+    return a.lnum < b.lnum
+  end)
+
   -- 中断中をソート（行番号順）
   table.sort(tasks_paused, function(a, b)
     return a.lnum < b.lnum
   end)
 
-  -- 実行中を優先して結合
+  -- 実行中 → AI委譲中 → 中断中 の順で結合
   local tasks = {}
   for _, task in ipairs(tasks_in_progress) do
+    table.insert(tasks, task)
+  end
+  for _, task in ipairs(tasks_ai) do
     table.insert(tasks, task)
   end
   for _, task in ipairs(tasks_paused) do
@@ -174,7 +187,12 @@ function M.render_window()
   local highlight_info = {} -- { heading_start, heading_end, heading_level, status } or nil
   for i, task in ipairs(tasks) do
     local time_str = task.elapsed_text or ""
-    local status_str = "[" .. task.status .. "] "
+    local status_str
+    if task.status == "@" then
+      status_str = "[󰚩] "  -- AI委譲中はロボアイコン表示
+    else
+      status_str = "[" .. task.status .. "] "
+    end
     local heading_str = ""
     if task.heading then
       heading_str = task.heading.prefix .. " " .. task.heading.text .. " > "
@@ -206,7 +224,14 @@ function M.render_window()
   for i, info in ipairs(highlight_info) do
     local line_idx = i - 1
     -- ステータスに応じたハイライト色
-    local status_hl = info.status == ">" and "TaskStatusInProgress" or "TaskStatusPaused"
+    local status_hl
+    if info.status == ">" then
+      status_hl = "TaskStatusInProgress"
+    elseif info.status == "@" then
+      status_hl = "TaskStatusAI"
+    else
+      status_hl = "TaskStatusPaused"
+    end
 
     if info.heading_level then
       -- 見出し部分: Treesitterの見出し色
@@ -242,7 +267,7 @@ function M.render_window()
     col = 0,
     style = "minimal",
     border = M.config.border,
-    title = " タスク [>]/[/]  (/ で一括中止) ",
+    title = " タスク [>]/[󰚩]/[/]  (/ で一括中止) ",
     title_pos = "center",
   })
   M.state.win = win
