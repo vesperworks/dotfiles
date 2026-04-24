@@ -66,7 +66,13 @@ return {
         fg = '#f9e2af',
         strikethrough = true,
       })
-      
+
+      -- AI委譲中 [@] - mauve + italic
+      vim.api.nvim_set_hl(0, 'TaskStatusAI', {
+        fg = '#cba6f7',
+        italic = true,
+      })
+
       -- Callout用のハイライトグループを定義
       vim.api.nvim_set_hl(0, 'RenderMarkdownInfo', { fg = '#89b4fa', bold = true })
       vim.api.nvim_set_hl(0, 'RenderMarkdownWarn', { fg = '#f9e2af', bold = true })
@@ -135,6 +141,8 @@ return {
             hl_group = 'TaskStatusFailed'
           elseif line:match('^%s*[*-]%s*%[%-%]') then
             hl_group = 'TaskStatusCancelled'
+          elseif line:match('^%s*[*-]%s*%[@%]') then
+            hl_group = 'TaskStatusAI'
           end
 
           if hl_group then
@@ -144,6 +152,20 @@ return {
               hl_mode = 'replace',  -- 既存のハイライトを完全に置き換え
               priority = 10000,
             })
+          end
+
+          -- [@] を [󰚩] に表示置換（conceal + inline: 幅ズレを回避、保存形式は [@] のまま）
+          if line:match('^%s*[*-]%s*%[@%]') then
+            local at_bracket_s = line:find('%[@%]')
+            if at_bracket_s then
+              vim.api.nvim_buf_set_extmark(bufnr, ns_id, lnum - 1, at_bracket_s - 1, {
+                end_col = at_bracket_s + 2,  -- [@] の3バイトを conceal 対象に
+                conceal = '',  -- 実テキストを完全に隠す（conceallevel=2 前提）
+                virt_text = { { '[󰚩]', 'TaskStatusAI' } },
+                virt_text_pos = 'inline',  -- 同位置に [󰚩] を挿入（幅は自動、後続を食わない）
+                priority = 10001,
+              })
+            end
           end
 
           -- タグハイライト: #teco 部分のみ反転ハイライト
