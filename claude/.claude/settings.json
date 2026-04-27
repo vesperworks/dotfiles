@@ -278,7 +278,7 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "npx -y @owloops/claude-powerline@latest"
+    "command": "claude-powerline"
   },
   "enabledPlugins": {
     "commit-commands@claude-code-plugins": true,
