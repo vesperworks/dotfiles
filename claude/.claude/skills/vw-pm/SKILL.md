@@ -73,10 +73,12 @@ AskUserQuestion:
           description: "カスタムフィールドとビューを自動作成"
         - label: "現状のIssue整理"
           description: "既存Issueの分析・改善提案"
+        - label: "スプリントプランニング & レビュー"
+          description: "先週の Done 整理 + 今週の Sprint 計画。コミット/PR履歴から Done 候補をサジェストし、担当者別 tree で表示"
 ```
 
 ### If argument provided:
-1. Check if it's a command keyword: 「初期設定」「setup」「整理」「analyze」
+1. Check if it's a command keyword: 「初期設定」「setup」「整理」「analyze」「スプリント」「sprint」「レビュー」「review」「プランニング」「planning」
 2. If command → Execute corresponding flow
 3. If text → Treat as meeting notes → Parse and structure
 
@@ -249,14 +251,19 @@ Script references (use `${CLAUDE_SKILL_DIR}/scripts/` prefix):
 - `${CLAUDE_SKILL_DIR}/scripts/pm-link-hierarchy.sh` - 階層関係設定
 - `${CLAUDE_SKILL_DIR}/scripts/pm-project-fields.sh` - Projectsフィールド設定
 - `${CLAUDE_SKILL_DIR}/scripts/pm-setup-labels.sh` - ラベル作成
+- `${CLAUDE_SKILL_DIR}/scripts/pm-cascade-iteration.sh` - 親→子のIteration伝播
+- `${CLAUDE_SKILL_DIR}/scripts/pm-distribute-iterations.sh` - 子の複数Iteration分散
+- `${CLAUDE_SKILL_DIR}/scripts/pm-sprint-review.sh` - Sprint Review データ収集（commit/PR/Project Item）
+- `${CLAUDE_SKILL_DIR}/scripts/pm-sprint-plan.sh` - Sprint Plan データ収集（carryover/backlog/byAssignee）
 - `${CLAUDE_SKILL_DIR}/GRAPHQL.md` - GraphQL API リファレンス
 
-## Phase 3B/3C/4: Other Operations
+## Phase 3B/3C/4/5: Other Operations
 
-For setup, analysis, or Kanban status operations, read the corresponding file:
+For setup, analysis, status, or sprint operations, read the corresponding file:
 - **初期セットアップ**: `${CLAUDE_SKILL_DIR}/SETUP.md`
 - **Issue 分析**: `${CLAUDE_SKILL_DIR}/ANALYSIS.md`
 - **Kanban Status 更新**: `${CLAUDE_SKILL_DIR}/STATUS.md`
+- **スプリント Planning & Review**: `${CLAUDE_SKILL_DIR}/SPRINT.md`
 
 </workflow>
 
