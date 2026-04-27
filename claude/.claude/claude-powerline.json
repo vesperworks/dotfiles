@@ -1,0 +1,24 @@
+{
+  "theme": "nord",
+  "display": {
+    "style": "minimal",
+    "charset": "unicode",
+    "padding": 1,
+    "autoWrap": false,
+    "lines": [
+      {
+        "segments": {
+          "directory": { "enabled": true, "style": "fish" },
+          "git": { "enabled": true, "showSha": true },
+          "model": { "enabled": true }
+        }
+      },
+      {
+        "segments": {
+          "session": { "enabled": true, "type": "tokens" },
+          "context": { "enabled": true, "displayStyle": "bar" }
+        }
+      }
+    ]
+  }
+}

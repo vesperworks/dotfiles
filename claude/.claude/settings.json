@@ -2,8 +2,7 @@
   "cleanupPeriodDays": 90,
   "env": {
     "ENABLE_TOOL_SEARCH": "true",
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
-    "CLAUDE_CODE_NO_FLICKER": "1"
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   },
   "attribution": {
     "commit": "",
@@ -269,7 +268,7 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "npx -y @owloops/claude-powerline@latest --theme=nord --style=minimal"
+    "command": "npx -y @owloops/claude-powerline@latest"
   },
   "enabledPlugins": {
     "commit-commands@claude-code-plugins": true,
@@ -296,5 +295,18 @@
   "preferredNotifChannel": "terminal_bell",
   "autoCompactEnabled": false,
   "teammateMode": "auto",
-  "agentPushNotifEnabled": false
+  "agentPushNotifEnabled": false,
+  "tui": "fullscreen",
+  "fileCheckpointingEnabled": true,
+  "showThinkingSummaries": true,
+  "autoMemoryEnabled": true,
+  "inputNeededNotifEnabled": true,
+  "showTurnDuration": true,
+  "terminalProgressBarEnabled": true,
+  "worktree": {
+    "symlinkDirectories": [
+      "node_modules",
+      ".cache"
+    ]
+  }
 }
