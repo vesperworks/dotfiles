@@ -9,14 +9,14 @@
       {
         "segments": {
           "directory": { "enabled": true, "style": "fish" },
-          "git": { "enabled": true, "showSha": true },
-          "model": { "enabled": true }
+          "context": { "enabled": true, "displayStyle": "bar" },
+          "session": { "enabled": true, "type": "tokens" }
         }
       },
       {
         "segments": {
-          "session": { "enabled": true, "type": "tokens" },
-          "context": { "enabled": true, "displayStyle": "bar" }
+          "git": { "enabled": true, "showSha": true },
+          "model": { "enabled": true }
         }
       }
     ]
