@@ -160,13 +160,4 @@ git subtree add --prefix=<package>/.config/<app> <source-repo> <branch>
 | `.brain/dotfiles/prp/cancel/` | キャンセル |
 | `.brain/dotfiles/prp/tbd/` | 保留（要件不明確・意思決定待ち） |
 
-### 現在の PRP
-
-| PRP | 内容 | 状態 |
-|-----|------|------|
-| PRP-001 | dotfiles プロジェクト構築（マスタープラン） | ほぼ完了（残: PRP-020 codex） |
-| PRP-002 | GitHub リモートリポジトリ登録 | done |
-| PRP-017 | vw:commit git/jj 両対応 | Part 1 完了 / Part 2 中止 |
-| PRP-018 | nvim リファクタリング | done |
-| PRP-019 | nvim vw.* 化 | done |
-| PRP-020 | codex 標準作法移行 | アクティブ |
+PRP の状態は **ファイル位置** が正（`.brain/dotfiles/prp/{,done,cancel,tbd}/` のどこにあるか）。個別の進捗管理は MEMORY.md（auto-memory、git 管理外）と各 PRP ファイル内のメタデータを参照。
