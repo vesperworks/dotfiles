@@ -25,3 +25,14 @@
 # --- Pane border colors ---
 # set -g pane-active-border-style 'fg=#7aa2f7'
 # set -g pane-border-style 'fg=#3b4261'
+
+# --- Zen Mode target width ---
+# prefix + Z で左右に空ペインを挟んで中央寄せ。マシンの解像度に合わせて調整
+# set -g @zen-target-width 120
+
+# --- Zen Mode auto-toggle ---
+# ウィンドウ幅で自動 ON/OFF。off にすると prefix + Z だけで動く
+# set -g @zen-auto off
+# しきい値（既定: target+60 で ON / target+20 で OFF。ヒステリシス）
+# set -g @zen-auto-on-width 180
+# set -g @zen-auto-off-width 130
