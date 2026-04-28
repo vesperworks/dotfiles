@@ -122,35 +122,75 @@ pct_or_dash() { echo "$1" | jq -r "$2 // \"-\""; }
 str_or_dash() { echo "$1" | jq -r "$2 // \"-\""; }
 err_code() { echo "$1" | jq -r '.__err // ""'; }
 
+# Returns "1h51m" / "51m" / "0m" for the gap between now and an ISO 8601 UTC
+# timestamp (e.g. "2026-04-29T05:22:37Z"). Empty input or an unparseable date
+# yields empty stdout so callers can decide to omit the suffix.
+time_until() {
+	local target=$1 epoch now diff h m
+	[ -z "$target" ] || [ "$target" = "null" ] && return 0
+	epoch=$(date -j -u -f "%Y-%m-%dT%H:%M:%SZ" "$target" +%s 2>/dev/null) || return 0
+	now=$(date +%s)
+	diff=$((epoch - now))
+	((diff < 0)) && diff=0
+	h=$((diff / 3600))
+	m=$(((diff % 3600) / 60))
+	if [ "$h" -gt 0 ]; then
+		printf '%dh%dm' "$h" "$m"
+	else
+		printf '%dm' "$m"
+	fi
+}
+
 # Paints the bar from already-loaded JSON (no I/O). Providers with an __err
 # are skipped so one broken upstream doesn't push the whole bar into red or
 # show an inflated (0% used → 100% left) remaining.
 paint_bar_from_json() {
 	local codex_json=$1 claude_json=$2
-	local -a candidates=()
+	local -a used_arr=() reset_arr=()
+
+	add_cand() {
+		local json=$1 path=$2
+		used_arr+=("$(echo "$json" | jq -r "(${path}.usedPercent // 0)")")
+		reset_arr+=("$(echo "$json" | jq -r "(${path}.resetsAt // \"\")")")
+	}
 
 	if [ "$(err_code "$codex_json")" = "" ]; then
-		candidates+=("$(pct_or_zero "$codex_json" '.usage.primary.usedPercent')")
+		add_cand "$codex_json" '.usage.primary'
 	fi
 	if [ "$(err_code "$claude_json")" = "" ]; then
-		candidates+=(
-			"$(pct_or_zero "$claude_json" '.usage.primary.usedPercent')"
-			"$(pct_or_zero "$claude_json" '.usage.secondary.usedPercent')"
-			"$(pct_or_zero "$claude_json" '.usage.tertiary.usedPercent')"
-		)
+		add_cand "$claude_json" '.usage.primary'
+		add_cand "$claude_json" '.usage.secondary'
+		add_cand "$claude_json" '.usage.tertiary'
 	fi
 
-	if [ ${#candidates[@]} -eq 0 ]; then
+	if [ ${#used_arr[@]} -eq 0 ]; then
 		sketchybar --set "$NAME" icon="$ICON_AI" icon.color="$GREY" label="err"
 		return
 	fi
 
-	local min_remaining color
-	min_remaining=$(printf '%s\n' "${candidates[@]}" |
-		awk 'BEGIN {min=100} {r=100-($1+0); if (r<0) r=0; if (r<min) min=r} END {print min}')
-	color=$(get_color "$min_remaining")
+	# Pick the window with the most usage (= least remaining); on ties the
+	# first wins, which is fine — they all reset around the same time.
+	local best_used=-1 best_reset="" i
+	for ((i = 0; i < ${#used_arr[@]}; i++)); do
+		if [ "${used_arr[$i]}" -gt "$best_used" ]; then
+			best_used="${used_arr[$i]}"
+			best_reset="${reset_arr[$i]}"
+		fi
+	done
 
-	sketchybar --set "$NAME" icon="$ICON_AI" icon.color="$color" label="${min_remaining}%"
+	local remaining=$((100 - best_used))
+	((remaining < 0)) && remaining=0
+
+	local label="${remaining}%"
+	if [ "$remaining" -eq 0 ]; then
+		local left
+		left=$(time_until "$best_reset")
+		[ -n "$left" ] && label="${remaining}% (${left})"
+	fi
+
+	local color
+	color=$(get_color "$remaining")
+	sketchybar --set "$NAME" icon="$ICON_AI" icon.color="$color" label="$label"
 }
 
 # Writes one popup row, picking remaining % or an error label.
