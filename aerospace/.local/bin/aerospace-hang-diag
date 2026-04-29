@@ -1,0 +1,93 @@
+#!/bin/bash
+# aerospace-hang-diag - Detect AeroSpace hang and capture diagnostic dump.
+#
+# Background:
+#   AeroSpace's main thread blocks on synchronous AX/LaunchServices/XPC
+#   calls (see GitHub issue #391). When a tracked app stops responding,
+#   AeroSpace's CLI starts returning "The server is not running" even
+#   though the process is still alive. This script captures the stack
+#   trace and process snapshot so the offending app can be identified.
+#
+# Output:
+#   ~/Library/Logs/aerospace-hang/<timestamp>/
+#     ├── sample.txt   # stack trace via `sample <pid> 5 -mayDie`
+#     └── ps.txt       # process list with state column (R/S/U/Z)
+#
+# Usage:
+#   aerospace-hang-diag [options]
+#
+# Options:
+#   -f, --force         Capture diagnostic even if server is responsive
+#   -q, --quiet         Suppress notification on healthy/missing AeroSpace
+#   -t, --timeout SEC   Health check timeout (default: 3)
+#   -h, --help          Show this help message
+#
+# Exit codes:
+#   0  AeroSpace healthy or not running
+#   1  AeroSpace hung — diagnostic captured
+#   2  Invalid arguments
+
+set -euo pipefail
+
+readonly OUT_BASE="${HOME}/Library/Logs/aerospace-hang"
+readonly AEROSPACE_BIN="/opt/homebrew/bin/aerospace"
+readonly NOTIFIER="/opt/homebrew/bin/terminal-notifier"
+readonly GTIMEOUT="/opt/homebrew/bin/gtimeout"
+TIMEOUT_SEC=3
+FORCE=false
+QUIET=false
+
+usage() {
+  sed -n '2,/^set -euo/p' "$0" | sed '$d' | sed 's/^# \{0,1\}//'
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -f|--force) FORCE=true; shift ;;
+    -q|--quiet) QUIET=true; shift ;;
+    -t|--timeout) TIMEOUT_SEC="$2"; shift 2 ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "unknown argument: $1" >&2; usage >&2; exit 2 ;;
+  esac
+done
+
+notify() {
+  local title="$1"
+  local message="$2"
+  if [[ "$QUIET" == "true" && "$title" != "AeroSpace HUNG" ]]; then
+    return 0
+  fi
+  "$NOTIFIER" \
+    -title "$title" \
+    -message "$message" \
+    -group "aerospace-hang-diag" \
+    >/dev/null 2>&1 || true
+}
+
+pid=$(/usr/bin/pgrep -x AeroSpace || true)
+if [[ -z "$pid" ]]; then
+  echo "AeroSpace is not running"
+  notify "AeroSpace Diagnostic" "Not running"
+  exit 0
+fi
+
+if [[ "$FORCE" != "true" ]]; then
+  if "$GTIMEOUT" "$TIMEOUT_SEC" "$AEROSPACE_BIN" list-workspaces --focused >/dev/null 2>&1; then
+    echo "AeroSpace (pid $pid) is responsive"
+    notify "AeroSpace Diagnostic" "Healthy (pid $pid)"
+    exit 0
+  fi
+fi
+
+ts=$(date +%Y%m%d_%H%M%S)
+out_dir="${OUT_BASE}/${ts}"
+mkdir -p "$out_dir"
+
+echo "AeroSpace (pid $pid) appears HUNG — capturing diagnostics to ${out_dir}" >&2
+
+/usr/bin/sample "$pid" 5 -mayDie > "${out_dir}/sample.txt" 2>&1 || true
+/bin/ps -axo pid,pcpu,pmem,etime,state,command > "${out_dir}/ps.txt" 2>&1 || true
+
+notify "AeroSpace HUNG" "Diagnostic saved: ${ts}"
+echo "Captured: ${out_dir}/{sample,ps}.txt"
+exit 1
