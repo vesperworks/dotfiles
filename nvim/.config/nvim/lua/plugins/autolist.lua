@@ -29,10 +29,13 @@ return {
       -- Normal-mode
       map("n", "o",  "o<cmd>AutolistNewBullet<CR>")
       map("n", "O",  "O<cmd>AutolistNewBulletBefore<CR>")
-      -- Enterキーで3状態循環（独自機能）
+      -- Enterキーで状態循環（独自機能）
       map("n", "<CR>", function() require('vw.checkbox').toggle_checkbox_state() end)
-      -- Visual modeでも3状態循環対応
+      -- Visual modeでも対応
       map("v", "<CR>", function() require('vw.checkbox').toggle_checkbox_state() end)
+      -- Shift+Enter で逆サイクル（Alacritty側で CSIu [13;2u を送る設定が必要）
+      map("n", "<S-CR>", function() require('vw.checkbox').toggle_checkbox_state_reverse() end)
+      map("v", "<S-CR>", function() require('vw.checkbox').toggle_checkbox_state_reverse() end)
       map("n", "<leader>r", "<cmd>AutolistRecalculate<CR>")
       -- 再計算系
       map("n", ">>", ">><cmd>AutolistRecalculate<CR>")

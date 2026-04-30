@@ -44,6 +44,12 @@ key = "T"
 mods = "Control|Shift"
 chars = "\u001b[84;5u"
 
+# Shift+Enter → nvim でチェックボックス逆サイクル用（CSI u 13;2u）
+[[keyboard.bindings]]
+key = "Return"
+mods = "Shift"
+chars = "\u001b[13;2u"
+
 # Ctrl+; → 補完トリガー用（CSI u 形式で ; を送信）
 [[keyboard.bindings]]
 key = "Semicolon"
