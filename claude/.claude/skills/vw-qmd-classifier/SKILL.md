@@ -2,28 +2,50 @@
 name: vw-qmd-classifier
 description: |
   ディレクトリ内のファイルパスとファイル名のみから qmd collection 設計を推論し、
-  既存 index.yml を破壊しない `qmd collection add` / `qmd context add` の適用コマンド列を生成する。
-  本文を読まないためトークン消費が小さい。
-  ファイル数に応じて階層サンプリングを自動適用するため大規模ディレクトリでも精度を保つ。
-  <example>
-  Context: 大量の Markdown を qmd で検索可能にしたい
-  user: "/qmd-classify ~/Documents/notes"
-  assistant: "ファイル本文を読まずにパスとディレクトリ構造だけで collection 設計を提案します"
-  </example>
-tools: Bash, Glob, TodoWrite
+  既存 `~/.config/qmd/index.yml` を破壊しない `qmd collection add` / `qmd context add` の
+  適用コマンド列を生成するスキル。本文は一切読まないためトークン消費が小さい。
+  ファイル数に応じて階層サンプリングを自動適用するため大規模ディレクトリ（500+/5000+）でも
+  精度を保つ。Use when the user says 「qmd 分類して」「qmd で検索可能にして」「qmd collection 作って」
+  「/vw-qmd-classifier」等。NOT for ファイル本文の意味解析（読まない設計）and NOT for
+  qmd CLI を自動実行すること（CLI コマンド列の出力までで止める）。
+disable-model-invocation: true
+argument-hint: <directory path>
+allowed-tools: Bash, Glob, TodoWrite
 model: sonnet
-color: cyan
 ---
 
+<role>
 You design qmd collections from filenames and paths only — never reading file bodies.
 Output: ready-to-run `qmd collection add` + `qmd context add` commands. Never YAML to be pasted.
+</role>
 
-## MUST: Language Requirements
+<language>
+- Think: 日本語
+- Communicate: 日本語（ナレーション・コメント）
+- CLI commands / arguments: English
+- context strings (qmd context add の引数): English（LLM が検索結果を解釈しやすい）
+</language>
 
-- **思考言語**: 日本語
-- **コマンド・引数**: 英語（CLI 構文に従う）
-- **context 文字列**: 英語（LLM が検索結果を解釈しやすい）
-- **ナレーション・コメント**: 日本語
+# vw-qmd-classifier — qmd 自動分類スキル
+
+ローカル Markdown 検索ツール `qmd` の collection 設計を、ファイル本文を読まずに推論する。出力は `qmd collection add` / `qmd context add` の実行可能 CLI コマンド列で、既存 `index.yml` を破壊せず、必要なら `qmd collection remove` でロールバック可能。
+
+## 背景（なぜこのスキルが必要か）
+
+- qmd は path / pattern ベースで collection を定義し、context（人間記述のサマリー）を付けて検索品質を上げる
+- 数千ファイル規模の Vault を手作業で classify するのは非現実的
+- 一方で、ファイル本文を全部 LLM に読ませると context window もコストも破綻する
+- **解決**: ディレクトリ階層 + ファイル名 + 命名統計だけで semantic クラスタリングは 90% 以上達成できる
+- 出力を **YAML 直編集ではなく CLI コマンド列**にすることで、既存 collection を破壊せず、ロールバック容易
+
+## トリガー
+
+ユーザーの発話例:
+
+- 「qmd 分類して」「qmd で検索可能にして」
+- 「qmd の collection 作って」「qmd collection 設計して」
+- 「`/vw-qmd-classifier ~/path`」「`/vw-qmd-classifier`」（引数なし → AskUserQuestion で対象収集）
+- 「このディレクトリを qmd に登録したい」
 
 ## ABSOLUTE RULES
 
@@ -108,7 +130,7 @@ fd -e md --type f . <dir> -x basename \
 
 #### When COUNT > 5,000 — recursive
 
-Suggest the user run `/qmd-classify` separately for each top-level subdirectory
+Suggest the user run `/vw-qmd-classifier` separately for each top-level subdirectory
 returned by `tree -L 1 -d --noreport <dir>`.
 
 ### Step 3: Analyze patterns from observations
@@ -205,3 +227,12 @@ When sampling was used (>500 files), prepend a NOTE comment block:
 - Show file counts in CLI comments for sanity-check (`# files: N`).
 - If a directory has < 20 files, suggest a single collection (don't over-engineer).
 - For sampling-based runs, explicitly say "based on N samples of M total files".
+
+## 標準起動フロー
+
+引数なしで起動された場合（例: `/vw-qmd-classifier` のみ）、`AskUserQuestion` で対象ディレクトリを収集する：
+
+1. 「対象ディレクトリのパスを教えてください」（自由入力）
+2. （任意）「既存 collection を破棄して再構築しますか？」（破棄なし / collection_X だけ削除 / 既存維持で追加）
+
+引数ありで起動された場合（例: `/vw-qmd-classifier ~/Documents/notes`）、即座に Step 0 から実行。
