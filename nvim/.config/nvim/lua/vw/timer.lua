@@ -883,7 +883,10 @@ local function find_inheritable_start_time(target_task_id, saved_timers)
   return nil
 end
 
--- Insertモードから抜けた時のタイマー自動復元（デバッグ版）
+-- Insertモードから抜けた時のタイマー自動復元 + stale エントリのリコンサイル
+-- リコンサイル: 直接テキスト編集 (r@, 検索置換, paste 等) で [>] が他状態に
+-- 変わった時、on_checkbox_change が発火せず JSON に残る問題を解消する。
+-- AI 委譲 [@] / 中断 [/] / 完了 [v] / 失敗 [x] / 削除 など何になっても完了扱い。
 function M.auto_restore_timers(bufnr)
   local file_path = vim.api.nvim_buf_get_name(bufnr)
   if file_path == "" then return end
@@ -892,11 +895,14 @@ function M.auto_restore_timers(bufnr)
   local restored_count = 0
   local new_timer_count = 0
   local inherited_count = 0
-  local saved_timers = nil  -- 遅延ロード（[>] 行があった時だけ読む）
+  local stale_count = 0
+  local saved_timers = nil
+  local current_active_ids = {}
 
   for _, line in ipairs(lines) do
     if line:match('-%s*%[>%]') then
       local task_id = display.generate_task_id(file_path, line)
+      current_active_ids[task_id] = true
 
       if not active_timers[task_id] then
         if saved_timers == nil then
@@ -928,7 +934,23 @@ function M.auto_restore_timers(bufnr)
     end
   end
 
-  if restored_count > 0 or new_timer_count > 0 or inherited_count > 0 then
+  -- このファイルに紐づく JSON エントリのうち、buffer 内に [>] として
+  -- 残っていないものを完了扱いで除去
+  if saved_timers == nil then
+    saved_timers = storage.load_timers()
+  end
+  for task_id, timer_data in pairs(saved_timers) do
+    if timer_data.file_path == file_path and not current_active_ids[task_id] then
+      if active_timers[task_id] then
+        M.stop_timer(task_id)
+      else
+        storage.remove_timer_safe(task_id)
+      end
+      stale_count = stale_count + 1
+    end
+  end
+
+  if restored_count > 0 or new_timer_count > 0 or inherited_count > 0 or stale_count > 0 then
     display.update_buffer_display(bufnr, active_timers)
     if inherited_count > 0 then
       vim.notify(

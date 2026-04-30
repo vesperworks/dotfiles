@@ -96,6 +96,59 @@ function M.toggle_checkbox_state()
   vim.api.nvim_win_set_cursor(0, {start_row, 0})
 end
 
+--- チェックボックスの完了状態を逆方向に切り替える（未完了 → 失敗 → 中断 → 成功 → AI委譲 → 実行中 → 未完了）
+function M.toggle_checkbox_state_reverse()
+  local start_row, end_row = util.get_visual_range()
+  if not start_row then return end
+
+  local file_path = vim.api.nvim_buf_get_name(0)
+
+  local lines = vim.api.nvim_buf_get_lines(0, start_row - 1, end_row, false)
+  local new_lines = {}
+
+  for i, line in ipairs(lines) do
+    local line_number = start_row + i - 1
+    local old_line = line
+    local new_line
+
+    if string.match(line, "^%s*[%*%-]%s*%[%s%]") then
+      new_line = string.gsub(line, "(%[)%s(%])", "%1x%2")
+    elseif string.match(line, "^%s*[%*%-]%s*%[x%]") then
+      new_line = string.gsub(line, "(%[)x(%])", "%1/%2")
+    elseif string.match(line, "^%s*[%*%-]%s*%[/%]") then
+      new_line = string.gsub(line, "(%[)/(%])", "%1v%2")
+    elseif string.match(line, "^%s*[%*%-]%s*%[v%]") then
+      new_line = string.gsub(line, "(%[)v(%])", "%1@%2")
+    elseif string.match(line, "^%s*[%*%-]%s*%[@%]") then
+      new_line = string.gsub(line, "(%[)@(%])", "%1>%2")
+    elseif string.match(line, "^%s*[%*%-]%s*%[>%]") then
+      new_line = string.gsub(line, "(%[)>(%])", "%1 %2")
+    else
+      new_line = line
+    end
+
+    if old_line ~= new_line then
+      local old_state = old_line:match('%[([%s%->vx/@])%]')
+      local new_state = new_line:match('%[([%s%->vx/@])%]')
+
+      if old_state and new_state then
+        local normalized_old = old_state == ' ' and ' ' or old_state
+        local normalized_new = new_state == ' ' and ' ' or new_state
+
+        local ok, timer = pcall(require, 'vw.timer')
+        if ok then
+          timer.on_checkbox_change(file_path, line_number, normalized_old, normalized_new, new_line)
+        end
+      end
+    end
+
+    table.insert(new_lines, new_line)
+  end
+
+  vim.api.nvim_buf_set_lines(0, start_row - 1, end_row, false, new_lines)
+  vim.api.nvim_win_set_cursor(0, {start_row, 0})
+end
+
 --- キーマップとautocmd を設定
 function M.setup()
   local opts = { noremap = true, silent = true }
