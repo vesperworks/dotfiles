@@ -167,7 +167,7 @@ PRS_JSON=$(gh pr list --repo "$REPO" --state merged --search "$PR_QUERY" --limit
       author: .author.login,
       mergedAt: (.mergedAt | split("T")[0]),
       headRefName: .headRefName,
-      closes: [.body // "" | scan("(?:close[sd]?|fixe?[sd]?|resolve[sd]?|refs?)\\s*#(\\d+)"; "i") | tonumber]
+      closes: [.body // "" | scan("(?:close[sd]?|fixe?[sd]?|resolve[sd]?|refs?)\\s*#(\\d+)"; "i") | .[0] | tonumber]
     }]')
 
 # 4. Collect Project items in this Sprint (paginated)
