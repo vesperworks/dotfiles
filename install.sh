@@ -105,6 +105,27 @@ install_tmux_plugins() {
 	fi
 }
 
+# --- codex user-level config bootstrap ---
+# user 層 config (~/.codex/config.toml) は個人マシン固有のため git 管理外。
+# 新マシン初回セットアップ時に config.toml.example を実ファイルとしてコピーする。
+# 既存マシン（既に config.toml がある場合）は何もしない。
+bootstrap_codex_config() {
+	local target="$HOME/.codex/config.toml"
+	local example="$HOME/.codex/config.toml.example"
+
+	if [[ -f "$target" ]]; then
+		return 0
+	fi
+	if [[ ! -f "$example" ]]; then
+		warn "codex example not found ($example). Skipping bootstrap."
+		return 0
+	fi
+
+	mkdir -p "$(dirname "$target")"
+	log "Bootstrapping ~/.codex/config.toml from example..."
+	cp "$example" "$target"
+}
+
 # --- Main ---
 log "dotfiles setup starting..."
 
@@ -116,5 +137,6 @@ brew_bundle
 install_uv
 install_yazi_plugins
 install_tmux_plugins
+bootstrap_codex_config
 
 log "Done! Restart your shell or run: source ~/.zshrc"
