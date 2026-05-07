@@ -82,37 +82,80 @@ AskUserQuestion:
 2. If command → Execute corresponding flow
 3. If text → Treat as meeting notes → Parse and structure
 
-## Phase 2: Authentication & Repository Check
+## Phase 2: Authentication, Project & SCOPE_REPOS Resolution
 
-Before any GitHub operation:
+### Step 2.1: Authentication
+
 ```bash
 gh auth status
 ```
-
-### Repository Type Detection
-
-```bash
-REPO=$(git remote get-url origin | sed -E 's#^(git@github\.com:|https://github\.com/)##; s#\.git$##')
-OWNER="${REPO%%/*}"
-OWNER_TYPE=$(gh api "users/$OWNER" --jq '.type' 2>/dev/null)
-
-if [[ "$OWNER_TYPE" == "Organization" ]]; then
-  echo "📋 組織リポジトリ: Issue Typesを使用"
-else
-  echo "👤 個人リポジトリ: type:*ラベルを使用"
-fi
-```
-
-| Repository Type | type分類 | priority |
-|-----------------|----------|----------|
-| 組織 | Issue Types（GitHub組み込み） | Projects V2 Fieldで管理 |
-| 個人 | type:*ラベル | Projects V2 Fieldで管理 |
 
 If authentication fails:
 ```
 ⚠️ GitHub認証に問題があります。
 以下を実行してください: gh auth refresh -s project
 ```
+
+### Step 2.2: 動的 Scope 解決（設定ファイルなし）
+
+cwd の repo から所属 Project を GraphQL で逆引きし、Project が束ねている全 repo (`SCOPE_REPOS`) とメインリポジトリ (`MAIN_REPO`) を取得する。**設定ファイルは持たず、毎回動的に解決する**。
+
+```bash
+SCOPE_JSON=$(${CLAUDE_SKILL_DIR}/scripts/pm-resolve-scope.sh)
+EXIT=$?
+MODE=$(echo "$SCOPE_JSON" | jq -r .mode)
+```
+
+#### Mode 別の挙動
+
+| mode | exit | 意味 | アクション |
+|------|------|------|-----------|
+| `single` | 0 | Project 紐付きなし | `SCOPE_REPOS = [cwd_repo]` で従来通りの単一 repo モード |
+| `multi` | 0 | Project 1個に絞れた | `scopeRepos` / `mainRepo` / `project` が確定 → マルチリポモード |
+| `ambiguous` | 2 | Project 複数候補 | `candidates` から AskUserQuestion で選択 → `--project-id <ID>` で再実行 |
+
+#### Mode handling パターン
+
+```bash
+case "$MODE" in
+  single)
+    SCOPE_REPOS=$(echo "$SCOPE_JSON" | jq -c .scopeRepos)
+    MAIN_REPO=$(echo "$SCOPE_JSON" | jq -r .mainRepo)
+    echo "📦 単一 repo モード: $MAIN_REPO"
+    ;;
+  multi)
+    SCOPE_REPOS=$(echo "$SCOPE_JSON" | jq -c .scopeRepos)
+    MAIN_REPO=$(echo "$SCOPE_JSON" | jq -r .mainRepo)
+    PROJECT_TITLE=$(echo "$SCOPE_JSON" | jq -r .project.title)
+    echo "🎯 マルチリポモード: $PROJECT_TITLE"
+    echo "   SCOPE_REPOS = $(echo "$SCOPE_REPOS" | jq -r 'join(", ")')"
+    echo "   MAIN_REPO   = $MAIN_REPO"
+    ;;
+  ambiguous)
+    # AskUserQuestion で candidates から選択させる
+    CANDIDATES=$(echo "$SCOPE_JSON" | jq -c .candidates)
+    # → ユーザー選択後:
+    # SCOPE_JSON=$(${CLAUDE_SKILL_DIR}/scripts/pm-resolve-scope.sh --project-id <selected_id>)
+    ;;
+esac
+```
+
+### Step 2.3: Repository Type Detection（各 SCOPE_REPOS について）
+
+`SCOPE_REPOS` の各 repo ごとに org / user 判定を行い、Issue Types vs ラベル戦略を決定する。**混在（org + user）は警告を出して続行**。
+
+```bash
+for repo in $(echo "$SCOPE_REPOS" | jq -r '.[]'); do
+  OWNER="${repo%%/*}"
+  OWNER_TYPE=$(gh api "users/$OWNER" --jq '.type' 2>/dev/null)
+  echo "  $repo → $OWNER_TYPE"
+done
+```
+
+| Repository Type | type分類 | priority |
+|-----------------|----------|----------|
+| 組織 | Issue Types（GitHub組み込み）をREST API で設定 | Projects V2 Fieldで管理 |
+| 個人 | `type:*` ラベルを Issue 作成時に付与 | Projects V2 Fieldで管理 |
 
 ## Phase 3A: Meeting Notes → Tasks (Main Flow)
 
@@ -194,7 +237,66 @@ Epic (if date mentioned)
         └── Task/Bug (implementation items)
 ```
 
-### Step 3A.3: Present Proposal
+### Step 3A.3: Per-Task Repo Assignment（マルチリポモード時のみ）
+
+`SCOPE_REPOS` が 2 個以上ある場合、各 Task の作成先 repo を以下のロジックで決定する。`MODE=single` または `SCOPE_REPOS` が 1 件のときはスキップして Step 3A.4 へ。
+
+#### A. 各 SCOPE_REPOS のカテゴリを取得
+
+```bash
+REPO_CATS=$(${CLAUDE_SKILL_DIR}/scripts/pm-categorize.sh --batch \
+  $(echo "$SCOPE_REPOS" | jq -r '.[]'))
+# 出力例: {"a/frontend": "dev", "a/wiki": "other"}
+```
+
+#### B. 各 Task のカテゴリを LLM が判定（辞書は持たない）
+
+**Claude 自身が議事録パース時に各 Task 文言を見て判定**する:
+
+| カテゴリ | 該当例 |
+|---------|--------|
+| `dev` | コード変更を伴う実装作業（実装 / 修正 / リファクタ / バグ / デプロイ など） |
+| `other` | ドキュメント・企画・議事録メモ・方針決定など |
+| `unknown` | どちらとも言い切れない |
+
+文脈・敬語・遠回しな表現にも対応すること（例: 「〜していただけると助かります」→ Bug 判定）。
+
+#### C. マッピングと AskUserQuestion バッチ
+
+```
+for each task:
+  task_cat = LLM_classify(task.title + task.body)
+  candidates = [r for r in SCOPE_REPOS if repo_cats[r] == task_cat]
+
+  if task_cat in {dev, other} and len(candidates) == 1:
+    target_repo = candidates[0]                  # 自動確定
+  elif task_cat in {dev, other} and len(candidates) >= 2:
+    queue_for_user_question(task)                # バッチに追加
+  else:
+    # task_cat == unknown OR 合致 repo が 0 件
+    target_repo = MAIN_REPO                      # メインリポへ静かに fallback
+```
+
+`queue_for_user_question` に積まれた Task は **5 件単位でバッチ化** して AskUserQuestion に渡す（最大 4 問/回 × 複数バッチ）:
+
+```yaml
+AskUserQuestion:
+  questions:
+    - question: "Task『XXX』はどの repo に作成しますか？"
+      header: "repo 振り分け"
+      multiSelect: false
+      options:
+        - label: "owner/repo-frontend"
+          description: "dev カテゴリ"
+        - label: "owner/repo-backend"
+          description: "dev カテゴリ"
+```
+
+#### D. 結果を repo 別の issues.json に振り分け
+
+各 Task に `repo` プロパティを付与し、Step 3A.5 (Create Issues) で repo 別に分けて `pm-bulk-issues.sh` を呼ぶ。
+
+### Step 3A.4: Present Proposal
 
 ```markdown
 ## 提案されたタスク構造
@@ -233,28 +335,42 @@ AskUserQuestion:
           description: "作成を中止"
 ```
 
-### Step 3A.4: Create Issues
+### Step 3A.5: Create Issues
 
 If user approves:
 
 **CRITICAL**: 複数Issue作成時は必ずスクリプトを使用すること。
 
-1. リポジトリ確認: `git remote get-url origin`
-2. ラベル準備（個人リポジトリの場合）: `pm-setup-labels.sh`
+1. SCOPE_REPOS 確認（Step 2.2 で取得済み）
+2. ラベル準備:
+   - 単一 repo モード: `pm-setup-labels.sh`
+   - マルチリポモード: `pm-setup-labels.sh --all-repos`（全 SCOPE_REPOS にラベル展開）
 3. Milestone作成（日付がある場合）
-4. issues.json 生成 → `pm-bulk-issues.sh` で一括作成
+4. issues.json 生成（マルチリポモードでは Step 3A.3.D の `repo` プロパティでグループ化）→ `pm-bulk-issues.sh` で一括作成
 5. 階層関係設定: `pm-link-hierarchy.sh`
+   - cross-repo の親子関係（例: 親 dev repo / 子 other repo）が必要な場合は **その時点でユーザーに相談**（GitHub 制約により sub-issue API は同一 repo 内のみ）
 6. Projects V2フィールド設定: `pm-project-fields.sh --bulk`
 
 Script references (use `${CLAUDE_SKILL_DIR}/scripts/` prefix):
-- `${CLAUDE_SKILL_DIR}/scripts/pm-bulk-issues.sh` - Issue一括作成
-- `${CLAUDE_SKILL_DIR}/scripts/pm-link-hierarchy.sh` - 階層関係設定
+
+**Scope 解決 / 分類（マルチリポ対応）:**
+- `${CLAUDE_SKILL_DIR}/scripts/pm-resolve-scope.sh` - cwd / `--project` から SCOPE_REPOS と MAIN_REPO を解決（mode: single/multi/ambiguous を JSON で返す）
+- `${CLAUDE_SKILL_DIR}/scripts/pm-categorize.sh` - repo カテゴリ判定（dev/other/unknown）。`--batch` で複数 repo を一括判定、`--main` でメインリポ特定
+
+**Issue / Project 操作:**
+- `${CLAUDE_SKILL_DIR}/scripts/pm-bulk-issues.sh` - Issue一括作成（repo 別 issues.json 対応）
+- `${CLAUDE_SKILL_DIR}/scripts/pm-link-hierarchy.sh` - 階層関係設定（同一 repo 内のみ）
 - `${CLAUDE_SKILL_DIR}/scripts/pm-project-fields.sh` - Projectsフィールド設定
-- `${CLAUDE_SKILL_DIR}/scripts/pm-setup-labels.sh` - ラベル作成
+- `${CLAUDE_SKILL_DIR}/scripts/pm-setup-labels.sh` - ラベル作成（`--all-repos` で全 SCOPE_REPOS に展開）
 - `${CLAUDE_SKILL_DIR}/scripts/pm-cascade-iteration.sh` - 親→子のIteration伝播
 - `${CLAUDE_SKILL_DIR}/scripts/pm-distribute-iterations.sh` - 子の複数Iteration分散
 - `${CLAUDE_SKILL_DIR}/scripts/pm-sprint-review.sh` - Sprint Review データ収集（commit/PR/Project Item）
 - `${CLAUDE_SKILL_DIR}/scripts/pm-sprint-plan.sh` - Sprint Plan データ収集（carryover/backlog/byAssignee）
+
+**内部ユーティリティ（直接呼ばない、他のスクリプトが source する）:**
+- `${CLAUDE_SKILL_DIR}/scripts/pm-utils.sh` - 共通関数（GraphQL 逆引き、キャッシュ、分類など）
+
+**リファレンス:**
 - `${CLAUDE_SKILL_DIR}/GRAPHQL.md` - GraphQL API リファレンス
 
 ## Phase 3B/3C/4/5: Other Operations
@@ -304,7 +420,10 @@ For setup, analysis, status, or sprint operations, read the corresponding file:
 - **最重要**: gh コマンド（gh auth, gh issue, gh project, gh api 等）を Bash で実行する際は、**必ず `dangerouslyDisableSandbox: true` を指定すること**。サンドボックスが macOS Keychain へのアクセスをブロックし認証が失敗するため。
 - **必須**: すべての操作で `AskUserQuestion` ツールを使用してユーザー確認を取る（例外: ユーザーが明示的に操作を指示した場合は省略可）
 - **必須**: 認証確認（gh auth status）を実行前に行う
-- **必須**: リポジトリタイプ（組織/個人）を判定してから処理を分岐する
+- **必須**: Scope 解決は `pm-resolve-scope.sh` を呼んで動的に行う。**設定ファイルを作成しない**
+- **必須**: SCOPE_REPOS の各 repo についてリポジトリタイプ（組織/個人）を判定する。混在時は警告して続行
+- **必須**: マルチリポモードでは Step 3A.3 の振り分けロジックに従う。判別不能時（task カテゴリ unknown / 合致 repo 0 件）はメインリポ (`MAIN_REPO`) へ静かに fallback、ユーザーに聞かない
+- **必須**: AskUserQuestion を出す場面（Project 複数 / 同カテゴリ repo 複数 / cross-repo sub-issue 発生）に限定する。バッチ化して 5 件単位でまとめる
 - **必須**: 複数Issue作成時は `pm-bulk-issues.sh` スクリプトを使用する
 - **必須**: priorityはProjects V2 Fieldで管理（`pm-project-fields.sh --bulk`使用）
 
@@ -314,6 +433,8 @@ For setup, analysis, status, or sprint operations, read the corresponding file:
 - **禁止**: 複数Issueをインライン（直接 `gh issue create` ループ）で作成
 - **禁止**: priority:*ラベルの作成（Projects V2 Fieldで管理するため）
 - **禁止**: Issue State（Open/Closed）をKanban Status（Todo/In Progress/Done）と混同すること
+- **禁止**: マルチリポ運用のための設定ファイル（projects.json 等）を新規作成すること（動的解決方針）
+- **禁止**: Task テキスト判定をハードコード辞書で行うこと（LLM 判定主、辞書なし）
 </constraints>
 
 <error_handling>
