@@ -435,7 +435,53 @@ For setup, analysis, status, or sprint operations, read the corresponding file:
 - **禁止**: Issue State（Open/Closed）をKanban Status（Todo/In Progress/Done）と混同すること
 - **禁止**: マルチリポ運用のための設定ファイル（projects.json 等）を新規作成すること（動的解決方針）
 - **禁止**: Task テキスト判定をハードコード辞書で行うこと（LLM 判定主、辞書なし）
+- **禁止**: Issue 本文・コメント・コミットメッセージ・PR 説明に **`repo/repo#NNN` 形式や `https://github.com/owner/repo/issues/N` 形式の他リポ参照を書くこと**（後述「Cross-reference 漏洩防止」参照）
 </constraints>
+
+<cross_reference_safety>
+## Cross-reference 漏洩防止（重要）
+
+GitHub は Issue 本文・コメント・PR 説明・コミットメッセージに `owner/repo#NNN` 形式や Issue URL を書くと、**両側の Issue タイムラインに自動で `cross-referenced` イベントを生成する**。これは API でも削除できない不可逆な記録。
+
+### 何が問題か
+
+- 公開リポ（例: `org/dev-repo`）と非公開リポ（例: `org/biz-repo`）を運用している場合、**dev のコメントから biz 参照を書くと dev タイムラインに biz への cross-ref が残り、biz リポの存在自体が dev 閲覧者に露見する**
+- biz が PRIVATE でも「referenced from a private repository」として痕跡が残る
+- 一度発生した cross-reference イベントは **GitHub の管理 UI / API ともに削除手段なし**（本文を後から編集しても残る）
+
+### ルール
+
+| 操作 | 可否 | 代替 |
+|------|:---:|------|
+| dev Issue 本文・コメントに `org/biz-repo#N` を書く | ❌ | 「事業系として別途管理」等の自然文 |
+| biz Issue 本文・コメントに `org/dev-repo#N` を書く | ❌ | 同上（cross-ref は両方向に生成される） |
+| dev コミットメッセージに `org/biz-repo#N` | ❌ | コミットメッセージから除外 |
+| dev PR 説明に biz Issue 参照 | ❌ | PR 説明から除外 |
+| biz Issue を **dev の Project に追加** | ✅ | Project への追加は cross-ref を生成しない |
+| dev Issue を **biz の Project に追加** | ✅ | 同上 |
+| Issue クローズ時の `--reason "not planned"` のみ（コメントなし） | ✅ | クローズ理由だけで repo 名漏らさない |
+
+### Issue クローズ時の運用
+
+`gh issue close` で `-c <comment>` フラグを使う際、**コメント本文に他リポ名・URL を含めない**。曖昧表現で済ませる：
+
+```bash
+# ❌ NG
+gh issue close 499 --reason "not planned" -c "biz リポジトリへ移行: <your-org>/<biz-repo>#1"
+
+# ✅ OK
+gh issue close 499 --reason "not planned" -c "事業系として別途管理に移行"
+```
+
+### Issue 起票時のテンプレート注意
+
+bulk 起票テンプレート（`pm-bulk-issues.sh` 入力 JSON / 議事録解析の body 生成等）で
+**他リポへの参照を自動挿入しない**。「親 Issue: dev#NNN」のような自動補完を行う場合は、起票先と参照先が同一 repo のときのみ適用。
+
+### 既知漏洩の扱い
+
+過去に発生した cross-reference イベントは削除不可。記録としてユーザーに通知し、**今後の再発防止**に注力する（Issue 本文を編集して該当行を削除しても既存イベントは残る）。
+</cross_reference_safety>
 
 <error_handling>
 | エラー | 対応 |
