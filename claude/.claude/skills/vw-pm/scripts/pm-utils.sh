@@ -543,10 +543,19 @@ get_issue_item_id() {
 # Multi-repo Resolution: Repo <-> Projects V2 Reverse Lookup
 # ============================================================
 
-# Get GitHub Projects V2 linked to a repository (open only)
+# Get GitHub Projects V2 associated with a repository (open only)
+#
+# Two paths are merged:
+#   (1) Linked projects (fast)
+#       repository.projectsV2 returns projects explicitly linked via
+#       Project Settings > Workflows > Linked repositories.
+#   (2) Item-bearing projects (fallback scan)
+#       Owner's projects whose items reference any Issue/PR from this repo.
+#       This is required because adding an Issue to a Project does NOT
+#       automatically link the repository.
+#
 # Input:  owner/repo
-# Output: JSON array of {id, number, title, url, ownerLogin, ownerType}
-# Reference: https://docs.github.com/en/graphql/reference/objects#repository
+# Output: JSON array of {id, number, title, url, ownerLogin, ownerType} (distinct by id)
 get_projects_for_repo() {
 	local repo="$1"
 	validate_repo "$repo" || return 1
@@ -554,7 +563,8 @@ get_projects_for_repo() {
 	local owner="${repo%%/*}"
 	local name="${repo##*/}"
 
-	local query='query($owner: String!, $name: String!) {
+	# --- Path 1: Linked projects (repository.projectsV2) ---
+	local linked_query='query($owner: String!, $name: String!) {
     repository(owner: $owner, name: $name) {
       projectsV2(first: 20) {
         nodes {
@@ -573,15 +583,88 @@ get_projects_for_repo() {
     }
   }'
 
-	gh api graphql \
+	local linked
+	linked=$(gh api graphql \
 		-f owner="$owner" \
 		-f name="$name" \
-		-f query="$query" \
+		-f query="$linked_query" \
 		--jq '[.data.repository.projectsV2.nodes[]
            | select(.closed == false)
            | {id, number, title, url,
               ownerLogin: .owner.login,
-              ownerType: .owner.__typename}]'
+              ownerType: .owner.__typename}]' 2>/dev/null) || linked="[]"
+
+	# --- Path 2: Scan owner's projects for items referencing this repo ---
+	local owner_type
+	owner_type=$(gh api "users/$owner" --jq '.type' 2>/dev/null)
+
+	local owner_projects_query
+	if [[ "$owner_type" == "Organization" ]]; then
+		owner_projects_query='query($login: String!) {
+      organization(login: $login) {
+        projectsV2(first: 50) {
+          nodes {
+            id
+            number
+            title
+            url
+            closed
+            owner {
+              __typename
+              ... on User { login }
+              ... on Organization { login }
+            }
+          }
+        }
+      }
+    }'
+	else
+		owner_projects_query='query($login: String!) {
+      user(login: $login) {
+        projectsV2(first: 50) {
+          nodes {
+            id
+            number
+            title
+            url
+            closed
+            owner {
+              __typename
+              ... on User { login }
+              ... on Organization { login }
+            }
+          }
+        }
+      }
+    }'
+	fi
+
+	local all_projects
+	all_projects=$(gh api graphql \
+		-f login="$owner" \
+		-f query="$owner_projects_query" \
+		--jq '[.data | (.organization // .user) | .projectsV2.nodes[] | select(.closed == false)]' 2>/dev/null) || all_projects="[]"
+
+	local matched="[]"
+	while IFS= read -r project; do
+		[[ -z "$project" ]] && continue
+		local pid
+		pid=$(echo "$project" | jq -r '.id')
+
+		local repos
+		repos=$(get_project_scope_repos "$pid" 2>/dev/null) || continue
+
+		if echo "$repos" | jq -e --arg r "$repo" 'any(.[]?; . == $r)' >/dev/null 2>&1; then
+			local entry
+			entry=$(echo "$project" | jq '{id, number, title, url,
+                                       ownerLogin: .owner.login,
+                                       ownerType: .owner.__typename}')
+			matched=$(jq -n --argjson a "$matched" --argjson b "$entry" '$a + [$b]')
+		fi
+	done < <(echo "$all_projects" | jq -c '.[]')
+
+	# --- Union (distinct by id) ---
+	jq -n --argjson a "$linked" --argjson b "$matched" '$a + $b | unique_by(.id)'
 }
 
 # Get all items in a Project V2 with pagination
