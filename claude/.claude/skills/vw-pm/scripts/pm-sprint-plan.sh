@@ -1,5 +1,5 @@
 #!/bin/bash
-# pm-sprint-plan.sh - Sprint Planning data collector
+# pm-sprint-plan.sh - Sprint Planning data collector (multi-repo aware)
 # Usage: pm-sprint-plan.sh [options]
 #
 # Collects data for Sprint Planning:
@@ -7,6 +7,11 @@
 #   - In Progress carryover (previous Sprint, Status="In Progress")
 #   - Backlog candidates (Status=Todo|Backlog, Sprint未割当)
 #   - Project items grouped by assignee
+#
+# Multi-repo handling:
+#   - SCOPE_REPOS is recorded for downstream use (--scope / --repos / --repo / auto).
+#   - Project items are pulled by project_id (already cross-repo).
+#   - Each item carries its repository.nameWithOwner.
 #
 # Output: JSON (consumed by LLM in /vw-pm SPRINT.md flow)
 
@@ -22,11 +27,15 @@ Usage: $0 [options]
 Collect data for Sprint Planning.
 
 Options:
-  --repo <owner/repo>      Repository (default: auto-detect from git remote)
+  --repo <owner/repo>      Single repository (back-compat).
+  --repos a/r1,a/r2        Comma-separated list of repos (multi-repo mode).
+  --scope '<json_array>'   JSON array of repos (e.g. pm-resolve-scope.sh .scopeRepos).
   --project <number>       Project number (required)
   --owner <login>          Project owner (@me for user, or org name) (required)
   --sprint <name>          Target Sprint name (default: current iteration)
   -h, --help               Show this help
+
+Resolution precedence: --scope > --repos > --repo > auto-detect (cwd).
 
 Output: JSON with the following shape:
 {
@@ -42,6 +51,8 @@ EOF
 }
 
 REPO=""
+REPOS_CSV=""
+SCOPE_INPUT=""
 PROJECT_NUMBER=""
 PROJECT_OWNER=""
 SPRINT_NAME=""
@@ -50,6 +61,14 @@ while [[ $# -gt 0 ]]; do
 	case $1 in
 	--repo)
 		REPO="$2"
+		shift 2
+		;;
+	--repos)
+		REPOS_CSV="$2"
+		shift 2
+		;;
+	--scope)
+		SCOPE_INPUT="$2"
 		shift 2
 		;;
 	--project)
@@ -72,7 +91,35 @@ while [[ $# -gt 0 ]]; do
 	esac
 done
 
-REPO=$(get_repo "$REPO")
+# Resolve cwd repo (best-effort)
+CWD_REPO=""
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+	CWD_REPO=$(get_repo "" 2>/dev/null || echo "")
+fi
+REPO="${REPO:-$CWD_REPO}"
+
+# Build SCOPE_REPOS
+build_scope_repos() {
+	local result=""
+	if [[ -n "$SCOPE_INPUT" ]]; then
+		result="$SCOPE_INPUT"
+	elif [[ -n "$REPOS_CSV" ]]; then
+		result=$(printf '%s' "$REPOS_CSV" | tr ',' '\n' | sed '/^[[:space:]]*$/d' | jq -R . | jq -s .)
+	elif [[ -n "$REPO" ]]; then
+		result=$(jq -nc --arg r "$REPO" '[$r]')
+	else
+		local resolved
+		resolved=$("$SCRIPT_DIR/pm-resolve-scope.sh" 2>/dev/null) || true
+		if [[ -n "$resolved" ]]; then
+			result=$(echo "$resolved" | jq -c '.scopeRepos')
+		fi
+	fi
+	[[ -z "$result" ]] && result="[]"
+	echo "$result"
+}
+
+SCOPE_REPOS=$(build_scope_repos)
+
 [[ -z "$PROJECT_NUMBER" ]] && {
 	echo "Error: --project required" >&2
 	exit 1
@@ -170,6 +217,7 @@ while [[ "$HAS_NEXT" == "true" ]]; do
                     title
                     state
                     url
+                    repository { nameWithOwner }
                     issueType { name }
                     assignees(first: 5) { nodes { login } }
                   }
@@ -207,6 +255,7 @@ while [[ "$HAS_NEXT" == "true" ]]; do
                     title
                     state
                     url
+                    repository { nameWithOwner }
                     issueType { name }
                     assignees(first: 5) { nodes { login } }
                   }
@@ -228,6 +277,7 @@ NORMALIZED=$(echo "$ITEMS_RAW" | jq '
    | select(.content.number and .content.state == "OPEN")
    | {
        number: .content.number,
+       repo: (.content.repository.nameWithOwner // null),
        title: .content.title,
        url: .content.url,
        issueType: (.content.issueType.name // null),
@@ -268,6 +318,8 @@ jq -n \
 	--argjson current "$CURRENT_SPRINT" \
 	--argjson previous "$PREVIOUS_SPRINT" \
 	--arg sprintFieldId "$SPRINT_FIELD_ID" \
+	--argjson scopeRepos "$SCOPE_REPOS" \
+	--arg cwdRepo "$CWD_REPO" \
 	--argjson carryover "$CARRYOVER" \
 	--argjson backlog "$BACKLOG" \
 	--argjson byAssignee "$BY_ASSIGNEE" '
@@ -275,6 +327,8 @@ jq -n \
     currentSprint: $current,
     previousSprint: $previous,
     sprintFieldId: $sprintFieldId,
+    scopeRepos: $scopeRepos,
+    cwdRepo: (if $cwdRepo == "" then null else $cwdRepo end),
     carryover: $carryover,
     backlog: $backlog,
     byAssignee: $byAssignee

@@ -1,13 +1,20 @@
 #!/bin/bash
-# pm-sprint-review.sh - Sprint Review data collector
+# pm-sprint-review.sh - Sprint Review data collector (multi-repo aware)
 # Usage: pm-sprint-review.sh [options]
 #
 # Collects data for a Sprint Review:
 #   - Target Sprint period (defaults to most recently completed)
-#   - git commits within the period (per author)
-#   - merged PRs within the period (per author)
+#   - git commits within the period (cwd repo only — see note)
+#   - merged PRs within the period (collected from each SCOPE_REPOS entry)
 #   - Project items associated with the Sprint (Status, Open/Closed)
 #   - Done candidate hints (close-references in PR/commit messages)
+#
+# Multi-repo handling:
+#   - SCOPE_REPOS is built from --scope / --repos / --repo / auto-detect.
+#   - PR list is collected per repo and tagged with the source repo.
+#   - Project items already carry repository.nameWithOwner from GraphQL.
+#   - git log only inspects cwd (other repos are not cloned locally);
+#     for cross-repo commit attribution rely on PR data.
 #
 # Output: JSON (consumed by LLM in /vw-pm SPRINT.md flow)
 
@@ -23,21 +30,27 @@ Usage: $0 [options]
 Collect data for Sprint Review.
 
 Options:
-  --repo <owner/repo>      Repository (default: auto-detect from git remote)
+  --repo <owner/repo>      Single repository (back-compat). Used as cwd repo.
+  --repos a/r1,a/r2        Comma-separated list of repos (multi-repo mode).
+  --scope '<json_array>'   JSON array of repos (e.g. output of pm-resolve-scope.sh .scopeRepos).
   --project <number>       Project number (required)
   --owner <login>          Project owner (@me for user, or org name) (required)
   --sprint <name>          Sprint name (default: most recent completed)
-  --limit <N>              Max PRs/commits to fetch per author (default: 100)
+  --limit <N>              Max PRs to fetch per repo (default: 100)
   -h, --help               Show this help
+
+Resolution precedence: --scope > --repos > --repo > auto-detect (cwd).
 
 Output: JSON with the following shape:
 {
   "sprint": { "title": "Sprint 16", "startDate": "2026-04-20", "endDate": "2026-04-24", "duration": 5 },
   "period": { "since": "2026-04-20", "until": "2026-04-26" },
-  "commits": [{ "sha": "...", "author": "...", "date": "...", "message": "..." }],
-  "prs": [{ "number": N, "author": "...", "title": "...", "mergedAt": "...", "closes": [...] }],
-  "projectItems": [{ "number": N, "title": "...", "state": "OPEN|CLOSED", "status": "Done|Todo|...", "assignees": [...], "issueType": "Task|Bug|...", "url": "..." }],
-  "doneCandidates": [{ "issueNumber": N, "reason": "close-ref|title-match", "evidence": "..." }]
+  "scopeRepos": ["owner/r1", "owner/r2"],
+  "cwdRepo": "owner/r1",
+  "commits": [{ "sha": "...", "author": "...", "date": "...", "message": "...", "repo": "owner/r1" }],
+  "prs": [{ "number": N, "author": "...", "title": "...", "mergedAt": "...", "closes": [...], "repo": "owner/r1" }],
+  "projectItems": [{ "number": N, "repo": "...", "title": "...", "state": "OPEN|CLOSED", "status": "Done|Todo|...", "assignees": [...], "issueType": "Task|Bug|...", "url": "..." }],
+  "doneCandidates": [{ "issueNumber": N, "repo": "owner/r1", "reason": "close-ref|title-match", "evidence": "..." }]
 }
 
 The LLM consumes this and renders a tree per author, then asks the user
@@ -47,6 +60,8 @@ EOF
 }
 
 REPO=""
+REPOS_CSV=""
+SCOPE_INPUT=""
 PROJECT_NUMBER=""
 PROJECT_OWNER=""
 SPRINT_NAME=""
@@ -56,6 +71,14 @@ while [[ $# -gt 0 ]]; do
 	case $1 in
 	--repo)
 		REPO="$2"
+		shift 2
+		;;
+	--repos)
+		REPOS_CSV="$2"
+		shift 2
+		;;
+	--scope)
+		SCOPE_INPUT="$2"
 		shift 2
 		;;
 	--project)
@@ -82,7 +105,42 @@ while [[ $# -gt 0 ]]; do
 	esac
 done
 
-REPO=$(get_repo "$REPO")
+# Resolve cwd repo (best-effort, only used for git log + sole fallback)
+CWD_REPO=""
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+	CWD_REPO=$(get_repo "" 2>/dev/null || echo "")
+fi
+REPO="${REPO:-$CWD_REPO}"
+
+# Build SCOPE_REPOS (precedence: --scope > --repos > --repo > auto-resolve)
+build_scope_repos() {
+	local result=""
+	if [[ -n "$SCOPE_INPUT" ]]; then
+		result="$SCOPE_INPUT"
+	elif [[ -n "$REPOS_CSV" ]]; then
+		result=$(printf '%s' "$REPOS_CSV" | tr ',' '\n' | sed '/^[[:space:]]*$/d' | jq -R . | jq -s .)
+	elif [[ -n "$REPO" ]]; then
+		result=$(jq -nc --arg r "$REPO" '[$r]')
+	else
+		# Auto-resolve via pm-resolve-scope.sh
+		local resolved
+		resolved=$("$SCRIPT_DIR/pm-resolve-scope.sh" 2>/dev/null) || true
+		if [[ -n "$resolved" ]]; then
+			result=$(echo "$resolved" | jq -c '.scopeRepos')
+		fi
+	fi
+	[[ -z "$result" ]] && result="[]"
+	echo "$result"
+}
+
+SCOPE_REPOS=$(build_scope_repos)
+SCOPE_COUNT=$(echo "$SCOPE_REPOS" | jq 'length')
+
+if [[ "$SCOPE_COUNT" -eq 0 ]]; then
+	echo "Error: SCOPE_REPOS is empty (specify --repo / --repos / --scope, or run inside a git repo)" >&2
+	exit 1
+fi
+
 [[ -z "$PROJECT_NUMBER" ]] && {
 	echo "Error: --project required" >&2
 	exit 1
@@ -152,23 +210,34 @@ SPRINT_TITLE=$(echo "$SPRINT_META" | jq -r '.title')
 PERIOD_UNTIL=$(date -j -v+1d -f "%Y-%m-%d" "$END" +%Y-%m-%d 2>/dev/null ||
 	date -d "$END + 1 day" +%Y-%m-%d)
 
-# 2. Collect commits (--all branches, period bounded)
-COMMITS_JSON=$(git log --all --since="$START 00:00" --until="$PERIOD_UNTIL 00:00" \
-	--pretty=format:'{"sha":"%h","author":"%an","email":"%ae","date":"%ad","message":"%f"}' --date=short |
-	jq -s '.' 2>/dev/null || echo "[]")
+# 2. Collect commits from cwd repo only (git log requires a local working tree).
+#    Other SCOPE_REPOS contribute via PR data instead.
+if [[ -n "$CWD_REPO" ]] && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+	COMMITS_JSON=$(git log --all --since="$START 00:00" --until="$PERIOD_UNTIL 00:00" \
+		--pretty=format:'{"sha":"%h","author":"%an","email":"%ae","date":"%ad","message":"%f"}' --date=short |
+		jq -s --arg r "$CWD_REPO" '[.[] | . + {repo: $r}]' 2>/dev/null || echo "[]")
+else
+	COMMITS_JSON="[]"
+fi
 
-# 3. Collect merged PRs (using gh's merged: search)
+# 3. Collect merged PRs from each SCOPE_REPOS entry (tagged with source repo)
 PR_QUERY="merged:${START}..${END}"
-PRS_JSON=$(gh pr list --repo "$REPO" --state merged --search "$PR_QUERY" --limit "$LIMIT" \
-	--json number,title,body,author,mergedAt,headRefName |
-	jq '[.[] | {
-      number: .number,
-      title: .title,
-      author: .author.login,
-      mergedAt: (.mergedAt | split("T")[0]),
-      headRefName: .headRefName,
-      closes: [.body // "" | scan("(?:close[sd]?|fixe?[sd]?|resolve[sd]?|refs?)\\s*#(\\d+)"; "i") | .[0] | tonumber]
-    }]')
+PRS_JSON="[]"
+while IFS= read -r repo_entry; do
+	[[ -z "$repo_entry" ]] && continue
+	page=$(gh pr list --repo "$repo_entry" --state merged --search "$PR_QUERY" --limit "$LIMIT" \
+		--json number,title,body,author,mergedAt,headRefName 2>/dev/null |
+		jq --arg r "$repo_entry" '[.[] | {
+        repo: $r,
+        number: .number,
+        title: .title,
+        author: .author.login,
+        mergedAt: (.mergedAt | split("T")[0]),
+        headRefName: .headRefName,
+        closes: [.body // "" | scan("(?:close[sd]?|fixe?[sd]?|resolve[sd]?|refs?)\\s*#(\\d+)"; "i") | .[0] | tonumber]
+      }]' 2>/dev/null || echo "[]")
+	PRS_JSON=$(jq -n --argjson a "$PRS_JSON" --argjson b "$page" '$a + $b')
+done < <(echo "$SCOPE_REPOS" | jq -r '.[]')
 
 # 4. Collect Project items in this Sprint (paginated)
 ITEMS_RAW="[]"
@@ -203,6 +272,7 @@ while [[ "$HAS_NEXT" == "true" ]]; do
                     title
                     state
                     url
+                    repository { nameWithOwner }
                     issueType { name }
                     assignees(first: 5) { nodes { login } }
                   }
@@ -240,6 +310,7 @@ while [[ "$HAS_NEXT" == "true" ]]; do
                     title
                     state
                     url
+                    repository { nameWithOwner }
                     issueType { name }
                     assignees(first: 5) { nodes { login } }
                   }
@@ -264,6 +335,7 @@ ITEMS_JSON=$(echo "$ITEMS_RAW" | jq --arg sid "$SPRINT_ID" '
    | select($iter)
    | {
        number: $item.content.number,
+       repo: ($item.content.repository.nameWithOwner // null),
        title: $item.content.title,
        state: $item.content.state,
        url: $item.content.url,
@@ -275,15 +347,19 @@ ITEMS_JSON=$(echo "$ITEMS_RAW" | jq --arg sid "$SPRINT_ID" '
   ]')
 
 # 5. Detect Done candidates
-# Strategy: Issues whose number appears in PR `closes` lists or commit messages, but Status != Done
+# Strategy: Issues whose number+repo appears in PR `closes` or commit messages,
+# but Status != Done.  Match repo to avoid number collisions across SCOPE_REPOS.
 DONE_CANDIDATES=$(jq -n --argjson items "$ITEMS_JSON" --argjson prs "$PRS_JSON" --argjson commits "$COMMITS_JSON" '
   [
     ($items[] | select(.status != "Done")) as $item
     | (
-        ($prs[] | select(.closes | index($item.number)) | { issueNumber: $item.number, reason: "close-ref", evidence: ("PR #" + (.number|tostring)) }),
-        ($commits[] | select(.message | test("#" + ($item.number|tostring) + "(\\b|_)")) | { issueNumber: $item.number, reason: "commit-ref", evidence: .sha })
+        ($prs[] | select(.repo == $item.repo) | select(.closes | index($item.number))
+          | { issueNumber: $item.number, repo: $item.repo, reason: "close-ref",
+              evidence: ("PR " + .repo + "#" + (.number|tostring)) }),
+        ($commits[] | select(.repo == $item.repo) | select(.message | test("#" + ($item.number|tostring) + "(\\b|_)"))
+          | { issueNumber: $item.number, repo: $item.repo, reason: "commit-ref", evidence: .sha })
       )
-  ] | unique_by(.issueNumber, .reason, .evidence)
+  ] | unique_by(.issueNumber, .repo, .reason, .evidence)
 ')
 
 # 6. Output combined JSON
@@ -292,6 +368,8 @@ jq -n \
 	--arg sprintFieldId "$SPRINT_FIELD_ID" \
 	--arg periodSince "$START" \
 	--arg periodUntil "$END" \
+	--argjson scopeRepos "$SCOPE_REPOS" \
+	--arg cwdRepo "$CWD_REPO" \
 	--argjson commits "$COMMITS_JSON" \
 	--argjson prs "$PRS_JSON" \
 	--argjson items "$ITEMS_JSON" \
@@ -300,6 +378,8 @@ jq -n \
     sprint: $sprint,
     sprintFieldId: $sprintFieldId,
     period: { since: $periodSince, until: $periodUntil },
+    scopeRepos: $scopeRepos,
+    cwdRepo: (if $cwdRepo == "" then null else $cwdRepo end),
     commits: $commits,
     prs: $prs,
     projectItems: $items,
