@@ -667,6 +667,39 @@ get_projects_for_repo() {
 	jq -n --argjson a "$linked" --argjson b "$matched" '$a + $b | unique_by(.id)'
 }
 
+# Get project meta by GraphQL node ID
+# Input:  project_id (GraphQL node ID, e.g. PVT_xxx)
+# Output: JSON {id, number, title, url, ownerLogin, ownerType} (single object)
+get_project_meta_by_id() {
+	local project_id="$1"
+	[[ -z "$project_id" ]] && {
+		echo "Error: project_id is required" >&2
+		return 1
+	}
+
+	local query='query($id: ID!) {
+    node(id: $id) {
+      ... on ProjectV2 {
+        id
+        number
+        title
+        url
+        closed
+        owner {
+          __typename
+          ... on User { login }
+          ... on Organization { login }
+        }
+      }
+    }
+  }'
+
+	gh api graphql -f id="$project_id" -f query="$query" \
+		--jq '.data.node | {id, number, title, url, closed,
+                        ownerLogin: .owner.login,
+                        ownerType: .owner.__typename}'
+}
+
 # Get all items in a Project V2 with pagination
 # Input:  project_id (GraphQL node ID)
 # Output: JSON array of items with content (Issue/PR), repository, fieldValues
