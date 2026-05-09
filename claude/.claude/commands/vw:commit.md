@@ -438,7 +438,33 @@ git log --oneline -N  # N = 作成したコミット数
 **jj の場合、以下も表示**:
 - 作成/更新された bookmark 一覧
 - 各 bookmark の origin に対する ahead 状態
-- push コマンドのヒント: `jj git push --bookmark feat/<scope>`
+- **push コマンドは Claude 側で実行せず pbcopy でユーザーに渡す**:
+  ```bash
+  printf '%s' 'jj git push --bookmark feat/<scope>' | pbcopy
+  ```
+  ユーザーがターミナルで Cmd+V して実行する（不可逆操作なので Claude は実行しない）
+
+### Step 5.5: ユーザー手動実行コマンドの引き渡し（pbcopy）
+
+破壊的・不可逆なコマンド（permission で deny される類）が必要になった場合、Claude 側では実行せず `pbcopy` でクリップボードに送ってユーザーに渡す。
+
+**対象**:
+- `jj abandon` / `jj op restore` 等の jj 破壊操作
+- `jj git push` / `git push --force` 等のリモート操作
+- 実行を試みて permission で deny されたコマンド全般
+
+**渡し方**:
+```bash
+printf '%s' '<command>' | pbcopy
+```
+
+> `echo` ではなく `printf '%s'` を使う（末尾改行が入るとターミナルで即実行されてしまう）。
+
+**ユーザーへの提示**:
+- 「クリップボードに入れました。`! ` プレフィックスで貼り付けるか、ターミナルで実行してください」と一言添える
+- 関連する後続コマンド（push 等）があれば、それも同じく pbcopy 形式で再掲する
+
+**Why**: 不可逆/破壊操作はユーザー判断で実行すべき。Claude が permission deny を回避して実行することを避け、透明性を保つ。既存の vw-clean SKILL（trash コマンドを pbcopy 経由でユーザーに渡すパターン）と整合。
 
 ---
 
