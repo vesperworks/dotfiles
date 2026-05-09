@@ -11,6 +11,30 @@
 
 **このフェーズでは「Kanban Status」のみを扱う。**
 
+## ステップ 4.0: マルチリポ時の repo 解決（前提）
+
+`SCOPE_REPOS` が 2 件以上の場合、Issue 番号だけでは対象を一意に特定できない。
+
+判定フロー:
+1. ユーザー発言に `owner/repo#123` のような明示形式があれば、それを使う
+2. 単一 repo モード（`SCOPE_REPOS` が 1 件）なら確認不要
+3. マルチリポで repo が推定不能なら **AskUserQuestion で確認**
+
+```yaml
+AskUserQuestion:
+  questions:
+    - question: "Issue #{number} はどの repo のものですか？"
+      header: "repo 選択"
+      multiSelect: false
+      options:
+        - label: "owner/r1"
+          description: "<title-snippet があれば添える>"
+        - label: "owner/r2"
+          description: "<title-snippet があれば添える>"
+```
+
+選択結果を `TARGET_REPO` として 4.3 / 4.5 のコマンドに渡す。
+
 ## ステップ 4.1: キーワード検出
 
 ユーザーの発言から以下のキーワードを検出:
@@ -44,13 +68,16 @@ AskUserQuestion:
 
 ## ステップ 4.3: Status更新実行
 
-承認後に実行:
+承認後に実行（マルチリポ時は `--repo $TARGET_REPO` を必ず付与）:
 
 ```bash
 .claude/skills/vw-pm/scripts/pm-project-fields.sh {number} \
+  --repo "$TARGET_REPO" \
   --status "{new_status}" \
   --project 1 --owner @me
 ```
+
+単一 repo モードでは `--repo` 省略可（cwd / `--repo` 引数いずれかで自動補完）。
 
 ## ステップ 4.4: 更新報告
 
@@ -71,8 +98,11 @@ Issue #{number}: {old_status} → **{new_status}**
 3. 更新結果を報告
 
 ```bash
-# 直接リクエスト例
+# 直接リクエスト例（マルチリポ時は --repo を付与）
 .claude/skills/vw-pm/scripts/pm-project-fields.sh 123 \
+  --repo "$TARGET_REPO" \
   --status "Done" \
   --project 1 --owner @me
 ```
+
+マルチリポで Issue 番号だけ言われた場合（`#123 を Done に`）、先に 4.0 の repo 確認を経由する。

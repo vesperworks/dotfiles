@@ -110,10 +110,14 @@ validate_labels() {
 
 # Validate issue type against allowed values
 # Usage: validate_issue_type "Task" && echo "valid"
+# Note: macOS default bash is 3.2 which lacks ${var,,} lowercase syntax.
+#       Use tr for portability.
 validate_issue_type() {
 	local type="$1"
 	[[ -z "$type" ]] && return 0
-	[[ "${type,,}" =~ ^(task|bug|feature|epic|story|enhancement|documentation)$ ]]
+	local lower
+	lower=$(printf '%s' "$type" | tr '[:upper:]' '[:lower:]')
+	[[ "$lower" =~ ^(task|bug|feature|epic|story|enhancement|documentation)$ ]]
 }
 
 # ============================================================

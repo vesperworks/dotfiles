@@ -1,8 +1,14 @@
 #:schema https://developers.openai.com/codex/config-schema.json
-# ~/.codex/config.toml
+# ~/.codex/config.toml (template)
+#
+# このファイルは公開可能な雛形（template）です。
+# install.sh が ~/.codex/config.toml にコピーする想定。
+# 個人マシン固有の値（trust list / 絶対パスを含む notify / marketplaces source 等）は
+# 含めない。それらは codex CLI が起動時に自動追記する。
+# 公開リポに乗らないように .gitignore で config.toml 自体は除外している。
 
 # === ベースライン（安全デフォルト） ===
-model = "gpt-5.4"
+model = "gpt-5.5"
 model_verbosity = "medium"    # 応答の冗長さ
 approval_policy = "on-request" # 通常は自走、危険操作だけ承認
 sandbox_mode = "workspace-write"    # ローカル作業を止まりにくくする
@@ -12,7 +18,6 @@ personality = "pragmatic"
 web_search = "live"
 allow_login_shell = false
 
-# workspace-write の既定
 [sandbox_workspace_write]
 network_access = false # 基本はネットワーク遮断
 writable_roots = []    # 必要なら "~/.npm" などを追加
@@ -54,7 +59,6 @@ writable_roots = []
 
 # === エディタ・通知など ===
 file_opener = "vscode"
-notify = ["bash", "-lc", "afplay /System/Library/Sounds/Ping.aiff"]
 
 [tui]
 # デスクトップ通知
@@ -79,6 +83,7 @@ args = ["chrome-devtools-mcp"]
 command = "npx"
 args = ["-y", "@upstash/context7-mcp@latest"]
 
+# pencil は macOS デスクトップアプリ依存。インストールしていない環境では削除可。
 [mcp_servers.pencil]
 command = "/Applications/Pencil.app/Contents/Resources/app.asar.unpacked/out/mcp-server-darwin-arm64"
 args = ["--ws-port", "63922"]
@@ -86,5 +91,31 @@ args = ["--ws-port", "63922"]
 [features]
 multi_agent = true
 
+# プラグイン enable（codex CLI 起動時に必要なものは自動補完される。
+# 以下は当方で確認済みの構成。不要なら削除。）
 [plugins."github@openai-curated"]
 enabled = true
+
+[plugins."browser-use@openai-bundled"]
+enabled = true
+
+[plugins."computer-use@openai-bundled"]
+enabled = true
+
+[plugins."documents@openai-primary-runtime"]
+enabled = true
+
+[plugins."spreadsheets@openai-primary-runtime"]
+enabled = true
+
+[plugins."presentations@openai-primary-runtime"]
+enabled = true
+
+# --------------------------------------------------------------------
+# 以下は codex CLI が起動時に自動追記するため、template には含めない:
+#   - notify (computer-use bundled plugin の絶対パス)
+#   - [projects."<absolute path>"] trust_level = "trusted"
+#   - [marketplaces.*] source = "/Users/.../..."  ← 絶対パス
+# 個別プロジェクトでカスタマイズしたい設定は <project>/.codex/config.toml に
+# 配置することを推奨（公式の 2 層分離設計）。
+# --------------------------------------------------------------------
