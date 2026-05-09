@@ -20,6 +20,7 @@ cd ~/dotfiles
 | `git` | `~/.gitconfig` | Git config (delta, lfs) |
 | `brew` | `~/.Brewfile` | Homebrew bundle |
 | `claude` | `~/.claude/` | [Claude Code](https://docs.anthropic.com/en/docs/claude-code) customizations |
+| `codex` | `~/.codex/` | OpenAI Codex CLI — **template-only**, see [policy](#codex-template-only) |
 | `ghostty` | `~/.config/ghostty/` | Terminal |
 | `alacritty` | `~/.config/alacritty/` | Terminal |
 | `tmux` | `~/.config/tmux/` | Terminal multiplexer |
@@ -28,6 +29,10 @@ cd ~/dotfiles
 | `sketchybar` | `~/.config/sketchybar/` | Status bar |
 | `borders` | `~/.config/borders/` | Window borders |
 | `yazi` | `~/.config/yazi/` | File manager |
+
+## Codex (template-only)
+
+The `codex` package ships only a template (`config.toml.example`); the live `~/.codex/config.toml` is **not tracked** because Codex CLI auto-appends machine-specific entries (project paths, marketplace sources) and has no `include` mechanism. `install.sh` copies the template on first setup; after that it's machine-local. For team-shared settings use `<project_repo>/.codex/config.toml` ([official two-layer design](https://developers.openai.com/codex/config-reference)).
 
 ## Stow Usage
 
