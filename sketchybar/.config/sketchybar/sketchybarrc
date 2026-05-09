@@ -98,7 +98,7 @@ status_item=(
 # Animation inspired by FelixKratz/dotfiles
 
 # Define workspaces (1-9 and 0)
-WORKSPACES=("1" "2" "3" "4" "5" "Q" "W" "E" "R" "T")
+WORKSPACES=("1" "2" "3" "4" "5" "A" "S" "D" "F" "Q" "W" "E" "R" "T")
 
 for workspace in "${WORKSPACES[@]}"; do
   # Space item (inner border)
