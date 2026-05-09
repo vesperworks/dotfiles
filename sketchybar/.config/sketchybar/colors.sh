@@ -16,7 +16,7 @@ export GREY=0xff939ab7
 export TRANSPARENT=0x00000000
 
 # Bar and UI colors
-export BAR_COLOR=0xa024273a           # Semi-transparent dark
+export BAR_COLOR=0xa024273a # Semi-transparent dark
 export ICON_COLOR=$WHITE
 export LABEL_COLOR=$WHITE
 export BACKGROUND=0xff24273a
@@ -30,9 +30,9 @@ export POPUP_BACKGROUND_COLOR=0xff24273a
 export POPUP_BORDER_COLOR=$WHITE
 
 # Workspace states
-export ACTIVE_COLOR=$MAGENTA          # Magenta for active
+export ACTIVE_COLOR=$MAGENTA # Magenta for active
 export INACTIVE_COLOR=$GREY
-export EMPTY_COLOR=0xff494d64         # Surface color
+export EMPTY_COLOR=0xff494d64 # Surface color
 
 # Accent colors (aliases)
 export ACCENT_BLUE=$BLUE
@@ -43,6 +43,11 @@ export ACCENT_TEAL=0xff8bd5ca
 export ACCENT_PEACH=$ORANGE
 export ACCENT_PINK=0xfff5bde6
 export ACCENT_LAVENDER=0xffb7bdf8
+# Catppuccin Macchiato accent colors used for asdf workspaces
+export ACCENT_SKY=0xff91d7e3
+export ACCENT_SAPPHIRE=0xff7dc4e4
+export ACCENT_FLAMINGO=0xfff0c6c6
+export ACCENT_MAROON=0xffee99a0
 
 # Surface colors
 export SURFACE0=0xff363a4f
@@ -63,3 +68,7 @@ export WS_COLOR_W=$ACCENT_TEAL
 export WS_COLOR_E=$ACCENT_PINK
 export WS_COLOR_R=$ACCENT_LAVENDER
 export WS_COLOR_T=$WHITE
+export WS_COLOR_A=$ACCENT_SKY
+export WS_COLOR_S=$ACCENT_SAPPHIRE
+export WS_COLOR_D=$ACCENT_FLAMINGO
+export WS_COLOR_F=$ACCENT_MAROON
