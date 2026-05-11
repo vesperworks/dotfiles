@@ -67,6 +67,9 @@ if ok_tasks then vw_tasks.setup() end
 local ok_qmd, vw_qmd = pcall(require, 'vw.qmd')
 if ok_qmd then vw_qmd.setup() end
 
+local ok_transclusion, vw_transclusion = pcall(require, 'vw.transclusion')
+if ok_transclusion then vw_transclusion.setup() end
+
 -- 全進行中タスク中止（timer 依存のため init.lua で定義）
 vim.keymap.set('n', '<leader>/', function()
   local ok, timer = pcall(require, 'vw.timer')

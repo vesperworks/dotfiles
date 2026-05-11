@@ -10,6 +10,7 @@ return {
   config = function(_, opts)
     -- キャッシュモジュールを早期ロード（autocmd + ユーザーコマンド登録）
     require("vw.blink-obsidian-tags")
+    require("vw.blink-obsidian-headings")
     require("blink.cmp").setup(opts)
   end,
 
@@ -34,9 +35,18 @@ return {
     sources = {
       default = { "buffer", "path" },
       per_filetype = {
-        markdown = { "obsidian", "obsidian_tags_cached", "buffer", "path" },
+        markdown = { "obsidian_headings", "obsidian", "obsidian_tags_cached", "buffer", "path" },
       },
       providers = {
+        obsidian_headings = {
+          name = "obsidian_headings",
+          module = "vw.blink-obsidian-headings",
+          score_offset = 1000,
+          async = false,
+          enabled = function()
+            return vim.bo.filetype == "markdown"
+          end,
+        },
         obsidian_tags_cached = {
           name = "obsidian_tags_cached",
           module = "vw.blink-obsidian-tags",
