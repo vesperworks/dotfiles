@@ -261,3 +261,4 @@ prefix_rule(
     decision = "forbidden",
     justification = "Destructive cleanup is not allowed by default.",
 )
+prefix_rule(pattern=["xcrun", "simctl"], decision="allow")
