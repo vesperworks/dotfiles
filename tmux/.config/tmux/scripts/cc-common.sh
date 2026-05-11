@@ -3,22 +3,33 @@
 # sesh-sessions.sh, cc-question-preview.sh, cc-wait-answer.sh, cc-wait-respond.sh から source される
 
 # === ANSI Colors (Tokyo Night) ===
-COLOR_YELLOW=$'\033[38;2;224;175;104m'  # #e0af68 (WAITING)
-COLOR_BLUE=$'\033[38;2;122;162;247m'    # #7aa2f7 (IDLE)
-COLOR_GREEN=$'\033[38;2;115;218;202m'   # #73daca (BUSY)
-COLOR_MAGENTA=$'\033[38;2;187;154;247m' # #bb9af7 (DONE)
-COLOR_DIM=$'\033[38;2;86;95;137m'       # #565f89
+COLOR_YELLOW=$'\033[38;2;224;175;104m'  # #e0af68 (WAIT = 返答待ち)
+COLOR_BLUE=$'\033[38;2;122;162;247m'    # #7aa2f7 (PROMPT = 入力欄が空)
+COLOR_GREEN=$'\033[38;2;115;218;202m'   # #73daca (BUSY = 動作中)
+COLOR_MAGENTA=$'\033[38;2;187;154;247m' # #bb9af7 (NEW = 未読の応答)
+COLOR_DIM=$'\033[38;2;86;95;137m'       # #565f89 (DONE = 既読 / その他)
 COLOR_RESET=$'\033[0m'
 
 # === AI CLI 検出パターン ===
 AI_COMM_NAMES='claude|agent|codex|gemini'
 WAITING_PATTERN='esc to cancel|enter to select|Do you want|Would you like|allow command|Allow execution|\[y/n\]|ready to submit'
-BUSY_PATTERN='esc to interrupt|ctrl\+c to interrupt'
+BUSY_PATTERN='esc to interrupt|ctrl\+c to interrupt|[0-9]+s · ↓|· ↑ [0-9]+|tokens\)$|^[[:space:]]*[✶✻✽✢❉✷⋆*][[:space:]]+[^[:space:]].*\([0-9]+'
+
+# === キャッシュキー生成（sesh-sessions.sh と cc-wait-count.sh で共有） ===
+# 引数列を ASCII 安全な文字列に変換。空なら "default"。
+# Why: cache file path のハードコードと動的算出の暗黙合意を解消。
+#      引数仕様を変えるとき、この 1 箇所だけ直せば両方追従する。
+cache_key_for_args() {
+	local key
+	key=$(printf '%s' "$*" | tr -c 'A-Za-z0-9' '_')
+	[ -z "$key" ] && key="default"
+	echo "$key"
+}
 
 # === trim_blank_lines ===
 # capture-pane 出力の先頭・末尾の空白行を除去（ANSI エスケープ対応）
 trim_blank_lines() {
-  awk '
+	awk '
   {
     plain = $0
     gsub(/\033\[[0-9;]*m/, "", plain)
@@ -38,12 +49,12 @@ trim_blank_lines() {
 # セッション内の WAITING 状態のペインIDを返す
 # Usage: pane_id=$(find_waiting_pane "session_name")
 find_waiting_pane() {
-  local sess=$1
-  while IFS=$'\t' read -r pane_pid pane_id; do
-    [ -z "$pane_pid" ] && continue
+	local sess=$1
+	while IFS=$'\t' read -r pane_pid pane_id; do
+		[ -z "$pane_pid" ] && continue
 
-    local has_ai
-    has_ai=$(ps -o pid=,ppid=,comm= -ax 2>/dev/null | awk -v root="$pane_pid" -v pat="$AI_COMM_NAMES" '
+		local has_ai
+		has_ai=$(ps -o pid=,ppid=,comm= -ax 2>/dev/null | awk -v root="$pane_pid" -v pat="$AI_COMM_NAMES" '
       BEGIN { queue[root]=1 }
       { pid[NR]=$1; ppid[NR]=$2; comm[NR]=$3 }
       END {
@@ -66,15 +77,15 @@ find_waiting_pane() {
       }
     ') || true
 
-    [ -z "$has_ai" ] && continue
+		[ -z "$has_ai" ] && continue
 
-    local output
-    output=$(tmux capture-pane -t "$pane_id" -p 2>/dev/null | tail -30) || true
-    if echo "$output" | grep -qiE "$WAITING_PATTERN"; then
-      echo "$pane_id"
-      return 0
-    fi
-  done < <(tmux list-panes -t "$sess" -F "#{pane_pid}	#{pane_id}" 2>/dev/null)
+		local output
+		output=$(tmux capture-pane -t "$pane_id" -p 2>/dev/null | tail -30) || true
+		if echo "$output" | grep -qiE "$WAITING_PATTERN"; then
+			echo "$pane_id"
+			return 0
+		fi
+	done < <(tmux list-panes -t "$sess" -F "#{pane_pid}	#{pane_id}" 2>/dev/null)
 
-  return 1
+	return 1
 }
