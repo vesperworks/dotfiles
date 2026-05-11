@@ -100,20 +100,28 @@ detect_ai_status() {
 		local pane_output
 		pane_output=$(tmux capture-pane -t "$pane_id" -p 2>/dev/null | tail -30) || true
 
-		if echo "$pane_output" | grep -qiE 'esc to interrupt|ctrl\+c to interrupt'; then
+		# WAIT 検出（最優先 - ユーザーの操作が必要なので絶対に見落とさない）
+		# 許可プロンプト中も裏で spinner が動いているので BUSY パターンと両方マッチするが、
+		# 意味的にはユーザー判断が必要な WAIT を優先する
+		if echo "$pane_output" | grep -qiE 'esc to cancel|enter to select|Do you want|Would you like|allow command|Allow execution|\[y/n\]|ready to submit'; then
+			echo "WAITING"
+			return
+		# BUSY 検出:
+		#   - "esc to interrupt" / "ctrl+c to interrupt" (旧 Claude Code, codex 等)
+		#   - "Ns · ↓" 形式の spinner 行 (新 Claude Code: 経過時間 + token カウント)
+		#   - "↑ N" 形式 (送信中)
+		#   - 行頭 spinner キャラクター (✶ ✻ ✽ ✢ ❉ ✷ ⋆ * の循環) + 末尾の tokens)
+		#     spinner はタイミングで文字が変わるが、行頭にあるという構造は安定
+		elif echo "$pane_output" | grep -qiE 'esc to interrupt|ctrl\+c to interrupt|[0-9]+s · ↓|· ↑ [0-9]+'; then
 			echo "BUSY"
 			return
-		elif echo "$pane_output" | grep -qiE 'esc to cancel|enter to select|Do you want|Would you like|allow command|Allow execution|\[y/n\]|ready to submit'; then
-			if [ "$best_status" != "WAITING" ]; then
-				best_status="WAITING"
-			fi
-		elif echo "$pane_output" | grep -qE -- '-- INSERT --|⏎'; then
-			# プロンプトにカーソルがある = 入力待ち
-			if [ -z "$best_status" ]; then
-				best_status="IDLE"
-			fi
+		elif echo "$pane_output" | grep -qE '^[[:space:]]*[✶✻✽✢❉✷⋆*]\s+\S.*\([0-9]+'; then
+			echo "BUSY"
+			return
 		else
-			# AIプロセスはあるが入力プロンプトなし = 応答完了・放置
+			# AI プロセスはあるが BUSY/WAITING パターンが見えない = 応答完了 or 入力待ち
+			# Claude Code はアイドル時も入力欄を表示するので、IDLE と DONE を区別せず
+			# すべて DONE 扱いとし、hash 比較で NEW（未読）/ DONE（既読）に分岐させる
 			if [ -z "$best_status" ]; then
 				best_status="DONE"
 			fi
@@ -186,14 +194,59 @@ format_age() {
 	fi
 }
 
-# === ステータスアイコン+色を取得 ===
+# === ハッシュ保存ディレクトリ ===
+HASH_DIR="${TMPDIR:-/tmp}/sesh-pane-hash"
+
+# === セッション名 → 安全なファイル名 ===
+sanitize_name() {
+	printf '%s' "$1" | tr -c 'A-Za-z0-9._-' '_'
+}
+
+# === 現在のペイン内容ハッシュ（save-pane-hash.sh と同じロジック） ===
+get_current_pane_hash() {
+	local session_name=$1
+	{
+		tmux list-panes -t "$session_name" -F '#{pane_id}' 2>/dev/null | while IFS= read -r pid; do
+			[ -z "$pid" ] && continue
+			printf '=== %s ===\n' "$pid"
+			tmux capture-pane -p -t "$pid" 2>/dev/null || true
+		done
+	} | shasum 2>/dev/null | awk '{print $1}'
+}
+
+# === 保存ハッシュ取得（無ければ空文字） ===
+get_saved_pane_hash() {
+	local session_name=$1
+	local safe_name hash_file
+	safe_name=$(sanitize_name "$session_name")
+	hash_file="$HASH_DIR/$safe_name"
+	[ -f "$hash_file" ] || return 0
+	cat "$hash_file" 2>/dev/null || true
+}
+
+# === 未読判定（return 0 = unread, 1 = read） ===
+# 「最後に detach/switch した時のペイン内容」と「今のペイン内容」を比較。
+# 保存ハッシュ無し（まだ一度も detach 経験がない）→ 既読扱い（誤検出抑制）。
+is_unread() {
+	local current_hash=$1
+	local saved_hash=$2
+	[ -z "$saved_hash" ] && return 1
+	[ -z "$current_hash" ] && return 1
+	[ "$current_hash" != "$saved_hash" ]
+}
+
+# === ステータスアイコン+色を取得（表示幅 9 で統一） ===
+# 絵文字 (💤 💡) は 2 cells、他のアイコン (● ◐ ◇) は 1 cell なので、
+# テキスト部分のパディングで全体を 9 cells 幅に揃える
 format_status() {
 	local status=$1
 	case "$status" in
-	BUSY) echo "${COLOR_GREEN}● BUSY${COLOR_RESET}" ;;
-	WAITING) echo "${COLOR_YELLOW}◐ WAIT${COLOR_RESET}" ;;
-	IDLE) echo "${COLOR_BLUE}○ IDLE${COLOR_RESET}" ;;
-	DONE) echo "${COLOR_MAGENTA}◇ DONE${COLOR_RESET}" ;;
+	BUSY) echo "${COLOR_GREEN}● BUSY   ${COLOR_RESET}" ;;
+	REPLY) echo "${COLOR_YELLOW}◐ REPLY  ${COLOR_RESET}" ;;
+	NEW) echo "${COLOR_MAGENTA}◇ NEW    ${COLOR_RESET}" ;;
+	SLEEPY) echo "${COLOR_YELLOW}💡 SLEEPY${COLOR_RESET}" ;;
+	SLEEP) echo "${COLOR_DIM}💤 SLEEP ${COLOR_RESET}" ;;
+	DONE) echo "${COLOR_DIM}◇ DONE   ${COLOR_RESET}" ;;
 	*) echo "" ;;
 	esac
 }
@@ -206,15 +259,68 @@ process_session() {
 	local max_name_len=$4
 	local last_attached=${5:-0}
 	local now=${6:-0}
+	local is_today=${7:-0}
 
-	local ai_status resources cpu_pct rss_kb mem_str status_str age_str
+	local ai_status display_status bucket
+	local resources cpu_pct rss_kb mem_str status_str age_str
+	local cur_hash saved_hash
 
-	ai_status=$(detect_ai_status "$session_name")
+	# SLEEP/SLEEPY は最優先（AI ステータス検出より先に判定）
+	# 環境変数 SLEEPING / CANDIDATE はピッカー側から渡される改行区切りリスト
+	if printf '%s\n' "${SLEEPING:-}" | grep -qxF "$session_name" 2>/dev/null; then
+		display_status="SLEEP"
+	elif printf '%s\n' "${CANDIDATE:-}" | grep -qxF "$session_name" 2>/dev/null; then
+		display_status="SLEEPY"
+	else
+		ai_status=$(detect_ai_status "$session_name")
+		# 内部 AI ステータス → 表示ステータス変換
+		# DONE は「detach 後に内容が変わったか」で NEW か DONE に分岐
+		case "$ai_status" in
+		BUSY) display_status="BUSY" ;;
+		WAITING) display_status="REPLY" ;;
+		DONE)
+			cur_hash=$(get_current_pane_hash "$session_name")
+			saved_hash=$(get_saved_pane_hash "$session_name")
+			if is_unread "$cur_hash" "$saved_hash"; then
+				display_status="NEW"
+			else
+				display_status="DONE"
+			fi
+			;;
+		*) display_status="" ;;
+		esac
+	fi
+
+	# Bucket 決定: アクション必要度の高い順
+	#   1=REPLY (自分の返答要)
+	#   2=BUSY (動作中)
+	#   3=NEW (未読の応答)
+	#   4=今日 attach (アクティブ)
+	#   ── separator ──
+	#   5=未 attach (アーカイブ)
+	#   6=SLEEPY (2h+ idle、sleep 候補)
+	#   7=SLEEP (sleep 済み)
+	case "$display_status" in
+	REPLY) bucket=1 ;;
+	BUSY) bucket=2 ;;
+	NEW) bucket=3 ;;
+	SLEEPY) bucket=6 ;;
+	SLEEP) bucket=7 ;;
+	*)
+		if [ "$is_today" = "1" ]; then
+			bucket=4
+		else
+			bucket=5
+		fi
+		;;
+	esac
+	echo "$bucket" >"$outfile.bucket"
+
 	resources=$(get_session_resources "$session_name")
 	cpu_pct=$(echo "$resources" | awk '{print $1}')
 	rss_kb=$(echo "$resources" | awk '{print $2}')
 	mem_str=$(format_mem "$rss_kb")
-	status_str=$(format_status "$ai_status")
+	status_str=$(format_status "$display_status")
 	age_str=$(format_age "$last_attached" "$now")
 
 	# セッション名の後にパディングを挿入して列を揃える
@@ -224,12 +330,12 @@ process_session() {
 		padding=$(printf '%*s' "$pad_len" '')
 	fi
 
-	# ステータス列: " ● BUSY  " = 1+6+2 = 9表示幅、age 列: "XXX" 4 幅
+	# ステータス列: " %b  " = 1+9+2 = 12 表示幅
 	local suffix=""
 	if [ -n "$status_str" ]; then
 		suffix=$(printf " %b  ${COLOR_DIM}%s  %5s%%  %4s${COLOR_RESET}" "$status_str" "$age_str" "$cpu_pct" "$mem_str")
 	else
-		suffix=$(printf "         ${COLOR_DIM}%s  %5s%%  %4s${COLOR_RESET}" "$age_str" "$cpu_pct" "$mem_str")
+		suffix=$(printf "            ${COLOR_DIM}%s  %5s%%  %4s${COLOR_RESET}" "$age_str" "$cpu_pct" "$mem_str")
 	fi
 
 	echo "${line}${padding}${suffix}" >"$outfile"
@@ -276,16 +382,16 @@ main() {
 		session_name=$(echo "$line" | awk '{print $2}')
 
 		# 今日アクセスしたかを判定
-		local last_attached
+		local last_attached is_today
 		last_attached=$(echo "$tmux_sessions_with_time" | awk -F'\t' -v s="$session_name" '$1==s {print $2; exit}')
 		if [ -n "$last_attached" ] && [ "$last_attached" -ge "$today_start" ] 2>/dev/null; then
-			echo "1" >"$tmpdir/${idx}.today"
+			is_today=1
 		else
-			echo "0" >"$tmpdir/${idx}.today"
+			is_today=0
 		fi
 
 		if echo "$tmux_sessions" | grep -qxF "$session_name"; then
-			process_session "$line" "$session_name" "$tmpdir/$idx" "$max_name_len" "$last_attached" "$now" &
+			process_session "$line" "$session_name" "$tmpdir/$idx" "$max_name_len" "$last_attached" "$now" "$is_today" &
 			pids+=($!)
 		else
 			# tmuxセッション以外もパディングして列を揃える
@@ -295,6 +401,8 @@ main() {
 				padding=$(printf '%*s' "$pad_len" '')
 			fi
 			echo "${line}${padding}" >"$tmpdir/$idx"
+			# tmux 外セッションは未 attach 扱い（bucket 6）
+			echo "6" >"$tmpdir/${idx}.bucket"
 		fi
 
 		idx=$((idx + 1))
@@ -305,41 +413,72 @@ main() {
 		wait "$pid" 2>/dev/null || true
 	done
 
-	# WAIT → 今日アクセス済み(MRU) → セパレータ → 未アクセス(MRU)
-	local -a wait_items=() today_items=() old_items=()
+	# bucket: 1=REPLY 2=BUSY 3=NEW 4=SLEEPY 5=今日 6=未 attach 7=SLEEP
+	local -a bucket1 bucket2 bucket3 bucket4 bucket5 bucket6 bucket7
+	bucket1=()
+	bucket2=()
+	bucket3=()
+	bucket4=()
+	bucket5=()
+	bucket6=()
+	bucket7=()
 	for ((i = 0; i < idx; i++)); do
 		[ -f "$tmpdir/$i" ] || continue
-		local content is_today
+		local content bucket
 		content=$(cat "$tmpdir/$i")
-		is_today=$(cat "$tmpdir/${i}.today" 2>/dev/null) || is_today="0"
-		case "$content" in
-		*"◐ WAIT"*) wait_items+=("$content") ;;
-		*)
-			if [ "$is_today" = "1" ]; then
-				today_items+=("$content")
-			else
-				old_items+=("$content")
-			fi
-			;;
+		bucket=$(cat "$tmpdir/${i}.bucket" 2>/dev/null) || bucket=6
+		case "$bucket" in
+		1) bucket1+=("$content") ;;
+		2) bucket2+=("$content") ;;
+		3) bucket3+=("$content") ;;
+		4) bucket4+=("$content") ;;
+		5) bucket5+=("$content") ;;
+		6) bucket6+=("$content") ;;
+		7) bucket7+=("$content") ;;
+		*) bucket6+=("$content") ;;
 		esac
 	done
 
 	local sep="${COLOR_DIM}──${COLOR_RESET}"
-	local has_output=false
-	# WAIT（常に最上位）
-	if [ "${#wait_items[@]}" -gt 0 ]; then
-		printf '%s\n' "${wait_items[@]}"
-		has_output=true
+	local has_top=false
+	local has_archive=false
+	# 1: REPLY（自分の返答待ち、最優先）
+	if [ "${#bucket1[@]}" -gt 0 ]; then
+		printf '%s\n' "${bucket1[@]}"
+		has_top=true
 	fi
-	# 今日アクセス済み
-	if [ "${#today_items[@]}" -gt 0 ]; then
-		printf '%s\n' "${today_items[@]}"
-		has_output=true
+	# 2: BUSY（動作中）
+	if [ "${#bucket2[@]}" -gt 0 ]; then
+		printf '%s\n' "${bucket2[@]}"
+		has_top=true
 	fi
-	# セパレータ + 未アクセス
-	if [ "${#old_items[@]}" -gt 0 ]; then
-		if $has_output; then echo "$sep"; fi
-		printf '%s\n' "${old_items[@]}"
+	# 3: NEW（未読の応答、age 問わず）
+	if [ "${#bucket3[@]}" -gt 0 ]; then
+		printf '%s\n' "${bucket3[@]}"
+		has_top=true
+	fi
+	# 4: 今日アクセス済み（アクティブ）
+	if [ "${#bucket4[@]}" -gt 0 ]; then
+		printf '%s\n' "${bucket4[@]}"
+		has_top=true
+	fi
+	# ── separator ── (アクティブとアーカイブの境界)
+	# 5: 未 attach（アーカイブ）
+	if [ "${#bucket5[@]}" -gt 0 ]; then
+		if $has_top; then echo "$sep"; fi
+		printf '%s\n' "${bucket5[@]}"
+		has_archive=true
+	fi
+	# 6: SLEEPY（sleep 候補、アーカイブの下部）
+	if [ "${#bucket6[@]}" -gt 0 ]; then
+		if ! $has_archive && $has_top; then echo "$sep"; fi
+		printf '%s\n' "${bucket6[@]}"
+		has_archive=true
+	fi
+	# 7: SLEEP（sleep 済み、最下部）
+	if [ "${#bucket7[@]}" -gt 0 ]; then
+		if ! $has_archive && $has_top; then echo "$sep"; fi
+		printf '%s\n' "${bucket7[@]}"
 	fi
 }
 

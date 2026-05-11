@@ -45,33 +45,10 @@ if [ "$candidate_count" != "0" ] && [ "$candidate_count" != "?" ]; then
 	sleep_badge="${sleep_badge}💡 $candidate_count candidate  "
 fi
 
-# sesh-sessions.sh の出力を後処理: 行頭に状態マーカーを挿入
-#   💤 = Sleep 中（claude kill 済、closed-sessions.jsonl に記録あり）
-#   💡 = Sleep 候補（idle だがまだ claude 生存）
-#   "   " = 通常（バッジ幅 4 と整合）
-# 優先度: 💤 > 💡 > 無印
-# ENVIRON 経由で渡す（-v sleeping="..." だと改行を含む変数が壊れる）
+# sesh-sessions.sh に SLEEPING / CANDIDATE 環境変数を渡し、
+# ステータス列で 💤 SLEEP / 💡 SLEEPY を表示させる（行頭マーカーは廃止）
 sesh_output_filtered() {
-	"$SESH_SESSIONS" "$@" | SLEEPING="$sleeping_sessions" CANDIDATE="$candidate_sessions" awk '
-		BEGIN {
-			n = split(ENVIRON["SLEEPING"], arr, "\n")
-			for (i=1; i<=n; i++) if (arr[i] != "") sleeping[arr[i]] = 1
-			m = split(ENVIRON["CANDIDATE"], arr2, "\n")
-			for (i=1; i<=m; i++) if (arr2[i] != "") candidate[arr2[i]] = 1
-		}
-		{
-			# ANSI 色 + 先頭の Nerd Font アイコン + 空白を除去 → 最初の単語が session 名
-			# sesh-sessions.sh は " <icon> <session> ..." 形式で出力
-			plain = $0
-			gsub(/\033\[[0-9;]*[a-zA-Z]/, "", plain)         # ANSI strip
-			sub(/^[^a-zA-Z0-9_-]+/, "", plain)               # 先頭のアイコン + 空白除去
-			n = split(plain, fields, " ")
-			name = (n > 0) ? fields[1] : ""
-			if (name in sleeping) print "💤 " $0
-			else if (name in candidate) print "💡 " $0
-			else print "   " $0
-		}
-	'
+	SLEEPING="$sleeping_sessions" CANDIDATE="$candidate_sessions" "$SESH_SESSIONS" "$@"
 }
 
 result=$(sesh_output_filtered -t | fzf-tmux -p 65%,65% \
@@ -89,9 +66,9 @@ result=$(sesh_output_filtered -t | fzf-tmux -p 65%,65% \
 	--bind "ctrl-a:change-prompt(  )+reload($SESH_SESSIONS)" \
 	--bind "ctrl-t:change-prompt(  )+reload($SESH_SESSIONS -t)" \
 	--bind "ctrl-x:change-prompt(  )+reload(sesh list -z -i)" \
-	--bind "ctrl-d:execute-silent(tmux kill-session -t \$(echo {} | sed 's/^💤 //;s/^💡 //;s/^   //' | awk '{print \$2}'))+change-prompt(  )+reload($SESH_SESSIONS -t)" \
+	--bind "ctrl-d:execute-silent(tmux kill-session -t \$(echo {} | awk '{print \$2}'))+change-prompt(  )+reload($SESH_SESSIONS -t)" \
 	--bind "ctrl-e:execute-silent(touch $KEY_MARKER)+accept" \
-	--bind "ctrl-y:execute-silent(tmux send-keys -t \$(echo {} | sed 's/^💤 //;s/^💡 //;s/^   //' | awk '{print \$2}') Enter)+reload($SESH_SESSIONS -t)" \
+	--bind "ctrl-y:execute-silent(tmux send-keys -t \$(echo {} | awk '{print \$2}') Enter)+reload($SESH_SESSIONS -t)" \
 	--bind "ctrl-s:execute-silent(touch $SLEEP_MARKER)+accept")
 
 # --expect と --print-query の出力:
@@ -118,10 +95,15 @@ if [ -f "$SLEEP_MARKER" ]; then
 fi
 
 if [ -n "$selection" ]; then
-	# 行頭に "💤 " / "💡 " (emoji+space, 5byte) or "   " (3space) のプレフィックス。
-	# emoji は awk の field 1 にカウントされるが空白は無視されるため、
-	# 単純に sed で剥がしてから print $2 に統一する。
-	session=$(echo "$selection" | sed 's/^💤 //;s/^💡 //;s/^   //' | awk '{print $2}')
+	# 行頭にプレフィックス無し（行頭マーカーは廃止）。
+	# 出力フォーマット: " <icon> <session_name> ..." なので $2 が session 名。
+	session=$(echo "$selection" | awk '{print $2}')
+
+	# このセッションが SLEEP 中（claude kill 済）かを判定
+	is_sleeping=0
+	if [ -n "$sleeping_sessions" ] && echo "$sleeping_sessions" | grep -qxF "$session"; then
+		is_sleeping=1
+	fi
 
 	case "$key" in
 	ctrl-o)
@@ -139,8 +121,8 @@ if [ -n "$selection" ]; then
 		# Enter: 通常のセッション接続
 		sesh connect "$session"
 
-		# 💤 付きの行（Sleep 中セッション）なら、attach 後に claude --resume を自動送信
-		if [[ "$selection" == 💤* ]] && [ -s "$SLEEP_LOG" ] && command -v jq >/dev/null 2>&1; then
+		# SLEEP 中セッションなら、attach 後に claude --resume を自動送信
+		if [ "$is_sleeping" = "1" ] && [ -s "$SLEEP_LOG" ] && command -v jq >/dev/null 2>&1; then
 			# closed-sessions.jsonl から該当 session の最新エントリを引く
 			resume_info=$(jq -r --arg s "$session" \
 				'select(.session == $s) | [(.claude_session_id // ""), (.pwd // "")] | @tsv' \
