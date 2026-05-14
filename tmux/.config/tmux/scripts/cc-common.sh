@@ -26,6 +26,18 @@ cache_key_for_args() {
 	echo "$key"
 }
 
+# === world state fingerprint ===
+# tmux 全体の状態を 1 つの hash に縮約する軽量フィンガープリント。
+# session_activity（入力で更新）+ history_size（出力で更新）の両方を見るので、
+# 「前回 picker 計算後に世界が変わったか」を 2 IPC + shasum (~15-30ms) で判定できる。
+# Why: bg 再計算 (~3秒) を変化なし時に skip し、tmux server lock 占有を回避するため。
+world_state_fingerprint() {
+	{
+		tmux list-sessions -F '#{session_name}:#{session_activity}' 2>/dev/null
+		tmux list-panes -a -F '#{pane_id}:#{history_size}' 2>/dev/null
+	} | shasum 2>/dev/null | awk '{print $1}'
+}
+
 # === trim_blank_lines ===
 # capture-pane 出力の先頭・末尾の空白行を除去（ANSI エスケープ対応）
 trim_blank_lines() {

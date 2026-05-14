@@ -24,6 +24,43 @@ _init_snapshot() {
 	ps -ax -o pid=,ppid=,%cpu=,rss=,comm= 2>/dev/null >"$PS_SNAPSHOT" || true
 }
 
+# === tmux pane 一覧の一括スナップショット ===
+# tmux list-panes -t <session> を 26 セッション × 3 関数で叩いていたのを
+# tmux list-panes -a 1 回に集約。tmux IPC を ~78 回 → 1 回に削減。
+# フィールド: $1=session_name, $2=pane_id (%N), $3=pane_pid
+PANES_SNAPSHOT=""
+_init_panes_snapshot() {
+	if [ -n "$PANES_SNAPSHOT" ]; then return; fi
+	_init_snapshot
+	PANES_SNAPSHOT="$TMPDIR_WORK/panes_snapshot"
+	tmux list-panes -a -F '#{session_name}	#{pane_id}	#{pane_pid}' 2>/dev/null >"$PANES_SNAPSHOT" || true
+}
+
+# === pane capture の一括スナップショット ===
+# detect_ai_status と get_current_pane_hash の両方が tmux capture-pane を呼ぶのを
+# 1 回に集約。pane capture × 32 ペイン × 2 関数 = 64 IPC → 32 IPC に半減。
+# pane_id ("%N" 固定形式) の "%" だけ "_" に置換してファイル名にする（fork 回避）。
+# capture は subshell で並列実行（IPC 待ち時間の重複を最小化）。
+PANE_CAP_DIR=""
+_init_pane_captures() {
+	if [ -n "$PANE_CAP_DIR" ]; then return; fi
+	_init_panes_snapshot
+	PANE_CAP_DIR="$TMPDIR_WORK/captures"
+	mkdir -p "$PANE_CAP_DIR"
+	local _sess pid _ppid safe
+	local cap_pids=()
+	while IFS=$'\t' read -r _sess pid _ppid; do
+		[ -z "$pid" ] && continue
+		safe="${pid//%/_}"
+		(tmux capture-pane -p -t "$pid" 2>/dev/null >"$PANE_CAP_DIR/$safe" || true) &
+		cap_pids+=($!)
+	done <"$PANES_SNAPSHOT"
+	local cap_pid
+	for cap_pid in "${cap_pids[@]+"${cap_pids[@]}"}"; do
+		wait "$cap_pid" 2>/dev/null || true
+	done
+}
+
 # === AI CLI検出パターン ===
 # basenameで完全一致させるため、awkでは別ロジックを使用
 AI_COMM_NAMES='claude|agent|codex|gemini'
@@ -80,6 +117,8 @@ has_ai_process() {
 # === AI CLIステータス検出 ===
 detect_ai_status() {
 	_init_snapshot
+	_init_panes_snapshot
+	_init_pane_captures
 	local session_name=$1
 	local best_status=""
 
@@ -96,9 +135,10 @@ detect_ai_status() {
 			continue
 		fi
 
-		# ペイン出力からパターンマッチ
-		local pane_output
-		pane_output=$(tmux capture-pane -t "$pane_id" -p 2>/dev/null | tail -30) || true
+		# ペイン出力からパターンマッチ（共有 capture を tail）
+		local pane_output cap_file
+		cap_file="$PANE_CAP_DIR/${pane_id//%/_}"
+		pane_output=$(tail -30 "$cap_file" 2>/dev/null) || true
 
 		# WAIT 検出（最優先 - ユーザーの操作が必要なので絶対に見落とさない）
 		# 許可プロンプト中も裏で spinner が動いているので BUSY パターンと両方マッチするが、
@@ -118,7 +158,7 @@ detect_ai_status() {
 				best_status="DONE"
 			fi
 		fi
-	done < <(tmux list-panes -t "$session_name" -F "#{pane_pid}	#{pane_id}" 2>/dev/null)
+	done < <(awk -F'\t' -v s="$session_name" '$1==s {print $3"\t"$2}' "$PANES_SNAPSHOT" 2>/dev/null)
 
 	if [ -n "$best_status" ]; then
 		echo "$best_status"
@@ -128,12 +168,13 @@ detect_ai_status() {
 # === セッションリソース取得 ===
 get_session_resources() {
 	_init_snapshot
+	_init_panes_snapshot
 	local session_name=$1
 	local pid_file="$TMPDIR_WORK/res_$$_${session_name}"
 
-	# 全ペインPIDとその子孫を収集
+	# 全ペインPIDとその子孫を収集（snapshot から awk フィルタ）
 	local pane_pids
-	pane_pids=$(tmux list-panes -t "$session_name" -F '#{pane_pid}' 2>/dev/null) || true
+	pane_pids=$(awk -F'\t' -v s="$session_name" '$1==s {print $3}' "$PANES_SNAPSHOT" 2>/dev/null) || true
 
 	: >"$pid_file"
 	local ppid
@@ -195,13 +236,19 @@ sanitize_name() {
 }
 
 # === 現在のペイン内容ハッシュ（save-pane-hash.sh と同じロジック） ===
+# pane 順序: list-panes -a も list-panes -t と同じく tmux 内部 linked list 順なので、
+# session でフィルタした結果は -t と同一（Phase 0 で実機検証済み）。
+# capture 内容: _init_pane_captures が事前に取った同じバイト列を使うので、
+# save-pane-hash.sh が `tmux capture-pane -p -t "$pid"` で取るものと一致。
 get_current_pane_hash() {
+	_init_panes_snapshot
+	_init_pane_captures
 	local session_name=$1
 	{
-		tmux list-panes -t "$session_name" -F '#{pane_id}' 2>/dev/null | while IFS= read -r pid; do
+		awk -F'\t' -v s="$session_name" '$1==s {print $2}' "$PANES_SNAPSHOT" 2>/dev/null | while IFS= read -r pid; do
 			[ -z "$pid" ] && continue
 			printf '=== %s ===\n' "$pid"
-			tmux capture-pane -p -t "$pid" 2>/dev/null || true
+			cat "$PANE_CAP_DIR/${pid//%/_}" 2>/dev/null || true
 		done
 	} | shasum 2>/dev/null | awk '{print $1}'
 }
@@ -336,6 +383,8 @@ process_session() {
 # === メイン処理 ===
 main() {
 	_init_snapshot
+	_init_panes_snapshot
+	_init_pane_captures
 	local tmpdir=$TMPDIR_WORK
 
 	# SLEEP/SLEEPY 情報読み込み: env > 共有ファイル の優先順
@@ -523,13 +572,15 @@ run_with_cache() {
 	# sleep info は共有ファイル経由で main 側が読むので、env マーカーは不要
 	# これにより cc-wait-count.sh と picker が同じキャッシュを参照（ステータス完全一致）
 	# 生成ロジックは cc-common.sh の cache_key_for_args() に集約
-	local key
+	local key cache_file fp_file
 	key=$(cache_key_for_args "$@")
-	local cache_file="$cache_dir/$key.cache"
+	cache_file="$cache_dir/$key.cache"
+	fp_file="$cache_dir/$key.fp"
 
-	# キャッシュなし or NO_CACHE 指定時 → 同期実行
+	# キャッシュなし or NO_CACHE 指定時 → 同期実行 + fingerprint 保存
 	if [ ! -f "$cache_file" ] || [ "${SESH_SESSIONS_NO_CACHE:-0}" = "1" ]; then
 		main "$@" | tee "$cache_file"
+		world_state_fingerprint >"$fp_file" 2>/dev/null || true
 		return
 	fi
 
@@ -537,11 +588,23 @@ run_with_cache() {
 	cat "$cache_file"
 
 	# バックグラウンドで再計算（次回呼び出し用）
+	# fingerprint 比較で「世界が変わっていない」場合は recalc を skip
+	# Why: 3 秒の bg 再計算が走ると tmux server lock が占有され、status-right
+	#      の WAIT カウント表示も遅延する。変化なしなら 30ms で完了させる。
 	(
+		current_fp=$(world_state_fingerprint)
+		saved_fp=$(cat "$fp_file" 2>/dev/null || true)
+		if [ -n "$current_fp" ] && [ "$current_fp" = "$saved_fp" ]; then
+			exit 0
+		fi
 		# 同じ条件で再実行、結果をアトミックに置換
 		tmp_file="$cache_file.tmp.$$"
-		main "$@" >"$tmp_file" 2>/dev/null
-		mv "$tmp_file" "$cache_file" 2>/dev/null
+		if main "$@" >"$tmp_file" 2>/dev/null; then
+			mv "$tmp_file" "$cache_file" 2>/dev/null
+			printf '%s\n' "$current_fp" >"$fp_file"
+		else
+			rm -f "$tmp_file"
+		fi
 	) </dev/null >/dev/null 2>&1 &
 	disown 2>/dev/null || true
 }
