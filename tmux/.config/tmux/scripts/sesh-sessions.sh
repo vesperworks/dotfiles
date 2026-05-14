@@ -577,6 +577,10 @@ run_with_cache() {
 	cache_file="$cache_dir/$key.cache"
 	fp_file="$cache_dir/$key.fp"
 
+	# 古い tmp.* 残骸の掃除（bg recalc が SIGHUP 等で kill された場合に残ることがある）
+	# 5 分以上古い tmp は安全に削除可能（mv が完了していれば短命のはず）
+	find "$cache_dir" -maxdepth 1 -name "${key}.cache.tmp.*" -mmin +5 -delete 2>/dev/null || true
+
 	# キャッシュなし or NO_CACHE 指定時 → 同期実行 + fingerprint 保存
 	if [ ! -f "$cache_file" ] || [ "${SESH_SESSIONS_NO_CACHE:-0}" = "1" ]; then
 		main "$@" | tee "$cache_file"
