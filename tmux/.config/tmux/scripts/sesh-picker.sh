@@ -36,6 +36,13 @@ fi
 candidate_count=$("$CLAUDE_SLEEP" --count-cached 2>/dev/null || echo "?")
 candidate_sessions=$("$CLAUDE_SLEEP" --list-sessions 2>/dev/null || true)
 
+# sleep info を共有ファイルに書き出す（fzf の --bind reload で env 引き継ぎ不要に）
+# sesh-sessions.sh は env が無ければこのファイルから読む
+SLEEP_INFO_DIR="${TMPDIR:-/tmp}/sesh-state"
+mkdir -p "$SLEEP_INFO_DIR"
+printf '%s' "$sleeping_sessions" >"$SLEEP_INFO_DIR/sleeping"
+printf '%s' "$candidate_sessions" >"$SLEEP_INFO_DIR/candidate"
+
 # バッジ構築: 💤 sleeping + 💡 candidate
 sleep_badge=""
 if [ "$sleeping_count" != "0" ] 2>/dev/null; then

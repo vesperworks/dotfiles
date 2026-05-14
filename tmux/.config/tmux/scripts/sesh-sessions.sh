@@ -103,19 +103,11 @@ detect_ai_status() {
 		# WAIT 検出（最優先 - ユーザーの操作が必要なので絶対に見落とさない）
 		# 許可プロンプト中も裏で spinner が動いているので BUSY パターンと両方マッチするが、
 		# 意味的にはユーザー判断が必要な WAIT を優先する
-		if echo "$pane_output" | grep -qiE 'esc to cancel|enter to select|Do you want|Would you like|allow command|Allow execution|\[y/n\]|ready to submit'; then
+		# パターンは cc-common.sh で一元管理（cc-wait-count.sh と同期）
+		if echo "$pane_output" | grep -qiE "$WAITING_PATTERN"; then
 			echo "WAITING"
 			return
-		# BUSY 検出:
-		#   - "esc to interrupt" / "ctrl+c to interrupt" (旧 Claude Code, codex 等)
-		#   - "Ns · ↓" 形式の spinner 行 (新 Claude Code: 経過時間 + token カウント)
-		#   - "↑ N" 形式 (送信中)
-		#   - 行頭 spinner キャラクター (✶ ✻ ✽ ✢ ❉ ✷ ⋆ * の循環) + 末尾の tokens)
-		#     spinner はタイミングで文字が変わるが、行頭にあるという構造は安定
-		elif echo "$pane_output" | grep -qiE 'esc to interrupt|ctrl\+c to interrupt|[0-9]+s · ↓|· ↑ [0-9]+'; then
-			echo "BUSY"
-			return
-		elif echo "$pane_output" | grep -qE '^[[:space:]]*[✶✻✽✢❉✷⋆*]\s+\S.*\([0-9]+'; then
+		elif echo "$pane_output" | grep -qiE "$BUSY_PATTERN"; then
 			echo "BUSY"
 			return
 		else
@@ -242,7 +234,7 @@ format_status() {
 	local status=$1
 	case "$status" in
 	BUSY) echo "${COLOR_GREEN}● BUSY   ${COLOR_RESET}" ;;
-	REPLY) echo "${COLOR_YELLOW}◐ REPLY  ${COLOR_RESET}" ;;
+	WAIT) echo "${COLOR_YELLOW}◐ WAIT   ${COLOR_RESET}" ;;
 	NEW) echo "${COLOR_MAGENTA}◇ NEW    ${COLOR_RESET}" ;;
 	SLEEPY) echo "${COLOR_YELLOW}💡 SLEEPY${COLOR_RESET}" ;;
 	SLEEP) echo "${COLOR_DIM}💤 SLEEP ${COLOR_RESET}" ;;
@@ -266,10 +258,10 @@ process_session() {
 	local cur_hash saved_hash
 
 	# SLEEP/SLEEPY は最優先（AI ステータス検出より先に判定）
-	# 環境変数 SLEEPING / CANDIDATE はピッカー側から渡される改行区切りリスト
-	if printf '%s\n' "${SLEEPING:-}" | grep -qxF "$session_name" 2>/dev/null; then
+	# SLEEPING / CANDIDATE はピッカー側から共有ファイル経由で渡される改行区切りリスト
+	if [ -n "${SLEEPING_LIST:-}" ] && echo "$SLEEPING_LIST" | grep -qxF "$session_name" 2>/dev/null; then
 		display_status="SLEEP"
-	elif printf '%s\n' "${CANDIDATE:-}" | grep -qxF "$session_name" 2>/dev/null; then
+	elif [ -n "${CANDIDATE_LIST:-}" ] && echo "$CANDIDATE_LIST" | grep -qxF "$session_name" 2>/dev/null; then
 		display_status="SLEEPY"
 	else
 		ai_status=$(detect_ai_status "$session_name")
@@ -277,7 +269,7 @@ process_session() {
 		# DONE は「detach 後に内容が変わったか」で NEW か DONE に分岐
 		case "$ai_status" in
 		BUSY) display_status="BUSY" ;;
-		WAITING) display_status="REPLY" ;;
+		WAITING) display_status="WAIT" ;;
 		DONE)
 			cur_hash=$(get_current_pane_hash "$session_name")
 			saved_hash=$(get_saved_pane_hash "$session_name")
@@ -292,7 +284,7 @@ process_session() {
 	fi
 
 	# Bucket 決定: アクション必要度の高い順
-	#   1=REPLY (自分の返答要)
+	#   1=WAIT (自分の返答要)
 	#   2=BUSY (動作中)
 	#   3=NEW (未読の応答)
 	#   4=今日 attach (アクティブ)
@@ -301,7 +293,7 @@ process_session() {
 	#   6=SLEEPY (2h+ idle、sleep 候補)
 	#   7=SLEEP (sleep 済み)
 	case "$display_status" in
-	REPLY) bucket=1 ;;
+	WAIT) bucket=1 ;;
 	BUSY) bucket=2 ;;
 	NEW) bucket=3 ;;
 	SLEEPY) bucket=6 ;;
@@ -346,6 +338,25 @@ main() {
 	_init_snapshot
 	local tmpdir=$TMPDIR_WORK
 
+	# SLEEP/SLEEPY 情報読み込み: env > 共有ファイル の優先順
+	# picker bind での reload では env が引き継がれないため、ファイル fallback で一貫性を保つ
+	local sleep_info_dir="${TMPDIR:-/tmp}/sesh-state"
+	if [ -n "${SLEEPING:-}" ]; then
+		SLEEPING_LIST="$SLEEPING"
+	elif [ -f "$sleep_info_dir/sleeping" ]; then
+		SLEEPING_LIST=$(cat "$sleep_info_dir/sleeping" 2>/dev/null)
+	else
+		SLEEPING_LIST=""
+	fi
+	if [ -n "${CANDIDATE:-}" ]; then
+		CANDIDATE_LIST="$CANDIDATE"
+	elif [ -f "$sleep_info_dir/candidate" ]; then
+		CANDIDATE_LIST=$(cat "$sleep_info_dir/candidate" 2>/dev/null)
+	else
+		CANDIDATE_LIST=""
+	fi
+	export SLEEPING_LIST CANDIDATE_LIST
+
 	# sesh listで基本リスト取得
 	local sesh_output
 	sesh_output=$(sesh list "$@" -i 2>/dev/null) || true
@@ -354,10 +365,13 @@ main() {
 		return
 	fi
 
-	# tmuxセッション一覧をキャッシュ（最終アクセス時刻付き）
+	# tmuxセッション一覧をキャッシュ（最終アクセス時刻 / activity / 接続中フラグ付き）
+	# session_last_attached だけだと「昨日 attach して今日もずっと接続中」のセッションが
+	# 今日扱いから漏れるので、session_attached（接続中なら 1+）と session_activity（最終
+	# アクティビティ時刻、入力で更新される）も取って OR 判定する
 	local tmux_sessions tmux_sessions_with_time today_start now
 	tmux_sessions=$(tmux list-sessions -F '#{session_name}' 2>/dev/null) || true
-	tmux_sessions_with_time=$(tmux list-sessions -F '#{session_name}	#{session_last_attached}' 2>/dev/null) || true
+	tmux_sessions_with_time=$(tmux list-sessions -F '#{session_name}	#{session_last_attached}	#{session_activity}	#{session_attached}' 2>/dev/null) || true
 	today_start=$(date -j -v0H -v0M -v0S +%s 2>/dev/null) || today_start=$(date -d 'today 00:00:00' +%s 2>/dev/null) || today_start=0
 	now=$(date +%s)
 
@@ -381,13 +395,23 @@ main() {
 		local session_name
 		session_name=$(echo "$line" | awk '{print $2}')
 
-		# 今日アクセスしたかを判定
-		local last_attached is_today
-		last_attached=$(echo "$tmux_sessions_with_time" | awk -F'\t' -v s="$session_name" '$1==s {print $2; exit}')
-		if [ -n "$last_attached" ] && [ "$last_attached" -ge "$today_start" ] 2>/dev/null; then
+		# 今日アクティブかを判定: 接続中 OR 今日 activity あり OR 今日 last_attached
+		# session_last_attached は「最後に attach した瞬間」しか更新されないので、
+		# ずっと attach 中のセッションは何日経っても初回 attach 時刻のまま。
+		# 接続中フラグと session_activity（キー入力等で更新）でカバーする。
+		# age 列の表示値はこれまで通り session_last_attached を使う。
+		local meta last_attached activity attached is_today
+		meta=$(echo "$tmux_sessions_with_time" | awk -F'\t' -v s="$session_name" '$1==s {print; exit}')
+		last_attached=$(echo "$meta" | awk -F'\t' '{print $2}')
+		activity=$(echo "$meta" | awk -F'\t' '{print $3}')
+		attached=$(echo "$meta" | awk -F'\t' '{print $4}')
+		is_today=0
+		if [ -n "$attached" ] && [ "$attached" -gt 0 ] 2>/dev/null; then
 			is_today=1
-		else
-			is_today=0
+		elif [ -n "$activity" ] && [ "$activity" -ge "$today_start" ] 2>/dev/null; then
+			is_today=1
+		elif [ -n "$last_attached" ] && [ "$last_attached" -ge "$today_start" ] 2>/dev/null; then
+			is_today=1
 		fi
 
 		if echo "$tmux_sessions" | grep -qxF "$session_name"; then
@@ -413,7 +437,7 @@ main() {
 		wait "$pid" 2>/dev/null || true
 	done
 
-	# bucket: 1=REPLY 2=BUSY 3=NEW 4=SLEEPY 5=今日 6=未 attach 7=SLEEP
+	# bucket: 1=WAIT 2=BUSY 3=NEW 4=今日 attach 5=未 attach 6=SLEEPY 7=SLEEP
 	local -a bucket1 bucket2 bucket3 bucket4 bucket5 bucket6 bucket7
 	bucket1=()
 	bucket2=()
@@ -442,7 +466,7 @@ main() {
 	local sep="${COLOR_DIM}──${COLOR_RESET}"
 	local has_top=false
 	local has_archive=false
-	# 1: REPLY（自分の返答待ち、最優先）
+	# 1: WAIT（自分の返答待ち、最優先）
 	if [ "${#bucket1[@]}" -gt 0 ]; then
 		printf '%s\n' "${bucket1[@]}"
 		has_top=true
@@ -482,7 +506,47 @@ main() {
 	fi
 }
 
+# === キャッシュ + 非同期更新ラッパー ===
+# C-t 押下時の体感速度向上のため、前回の出力結果を即表示し、
+# バックグラウンドで再計算する。次回呼び出しで最新が見える。
+#
+# キャッシュキー: 引数 ($@) のハッシュ ("sesh list -t" と "sesh list -z" を区別)
+# キャッシュTTL: なし（常に表示 + 常にバックグラウンドで再計算）
+# 環境変数:
+#   SESH_SESSIONS_NO_CACHE=1 でキャッシュを無視して同期実行（デバッグ用）
+#   SLEEPING / CANDIDATE はキャッシュキーに含めない（picker 側で都度渡される）
+run_with_cache() {
+	local cache_dir="${TMPDIR:-/tmp}/sesh-state"
+	mkdir -p "$cache_dir"
+
+	# キャッシュキー: 引数のみ
+	# sleep info は共有ファイル経由で main 側が読むので、env マーカーは不要
+	# これにより cc-wait-count.sh と picker が同じキャッシュを参照（ステータス完全一致）
+	# 生成ロジックは cc-common.sh の cache_key_for_args() に集約
+	local key
+	key=$(cache_key_for_args "$@")
+	local cache_file="$cache_dir/$key.cache"
+
+	# キャッシュなし or NO_CACHE 指定時 → 同期実行
+	if [ ! -f "$cache_file" ] || [ "${SESH_SESSIONS_NO_CACHE:-0}" = "1" ]; then
+		main "$@" | tee "$cache_file"
+		return
+	fi
+
+	# キャッシュ即表示
+	cat "$cache_file"
+
+	# バックグラウンドで再計算（次回呼び出し用）
+	(
+		# 同じ条件で再実行、結果をアトミックに置換
+		tmp_file="$cache_file.tmp.$$"
+		main "$@" >"$tmp_file" 2>/dev/null
+		mv "$tmp_file" "$cache_file" 2>/dev/null
+	) </dev/null >/dev/null 2>&1 &
+	disown 2>/dev/null || true
+}
+
 # source時はmain()を実行しない（関数のみ公開）
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
-	main "$@"
+	run_with_cache "$@"
 fi
