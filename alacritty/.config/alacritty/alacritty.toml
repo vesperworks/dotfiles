@@ -97,3 +97,9 @@ chars = "\u001b[107;6u"
 key = "L"
 mods = "Control|Shift"
 chars = "\u001b[108;6u"
+
+# Ctrl+Tab → tmux User0 (動作テスト中はリテラル "TEST" 送信)
+[[keyboard.bindings]]
+key = "Tab"
+mods = "Control"
+chars = "\u001b[1;5I"
