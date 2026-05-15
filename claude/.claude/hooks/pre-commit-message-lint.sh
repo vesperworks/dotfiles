@@ -11,7 +11,7 @@ set -euo pipefail
 #   3. Conventional Commits 形式違反（type(scope): subject）
 #   4. subject の冗長/曖昧（wip, update files, misc 等）
 #   5. subject の文末ピリオド
-#   6. subject 50文字超過
+#   6. subject 72文字超過
 
 DEBUG="${CLAUDE_HOOKS_DEBUG:-false}"
 DEBUG_LOG="$HOME/.claude/hooks/debug.log"
