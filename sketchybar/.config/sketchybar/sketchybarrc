@@ -210,8 +210,22 @@ sketchybar --add item wifi right \
 
 add_popup_rows wifi 3
 
-# Unify the five items above into a single rounded background.
-sketchybar --add bracket status_group wifi battery volume keyboard clock \
+# AeroSpace Hang Indicator (driven by aerospace-process-watchdog launchd
+# agent; falls back to aerospace-hang-diag for manual diagnostic). Hidden
+# by default; turns yellow on `degraded` (CPU spike or state=U processes)
+# and red on `hung` via the `aerospace_hang_state` custom event.
+sketchybar --add event aerospace_hang_state
+sketchybar --add item aerospace_hang right \
+  --set aerospace_hang "${status_item[@]}" \
+  icon=󰀦 \
+  icon.color="$RED" \
+  label.drawing=off \
+  drawing=off \
+  script="$PLUGIN_DIR/aerospace_hang.sh" \
+  --subscribe aerospace_hang aerospace_hang_state mouse.clicked
+
+# Unify the items above into a single rounded background.
+sketchybar --add bracket status_group aerospace_hang wifi battery volume keyboard clock \
   --set status_group background.color="$BACKGROUND_1" \
   background.corner_radius=5 \
   background.height=26
