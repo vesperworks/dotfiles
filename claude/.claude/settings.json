@@ -97,7 +97,10 @@
       "Bash(gh issue:*)",
       "Bash(gh project:*)",
       "Bash(gh api graphql:*)",
-      "Bash(search-sessions:*)"
+      "Bash(search-sessions:*)",
+      "Bash(open *.html)",
+      "Bash(open *.png)",
+      "Bash(open *.pdf)"
     ],
     "deny": [
       "Bash(rm -rf:*)",
