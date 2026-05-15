@@ -266,6 +266,10 @@
             "type": "command",
             "command": "~/.claude/hooks/pre-commit-sensitive-check.sh",
             "if": "Bash(jj describe *)"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/pre-checkpoint-simplify.sh"
           }
         ]
       },
