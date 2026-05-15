@@ -105,6 +105,56 @@ install_tmux_plugins() {
 	fi
 }
 
+# --- aerospace watchdog (launchd) ---
+# Continuously monitors AeroSpace health and known-bad processes. Generates
+# the launchd plist with absolute paths derived from $HOME so the public
+# dotfiles repo stays free of user-specific paths.
+bootstrap_aerospace_watchdog() {
+	local script="$HOME/.local/bin/aerospace-process-watchdog"
+	local plist="$HOME/Library/LaunchAgents/com.user.aerospace-watchdog.plist"
+	local log_dir="$HOME/Library/Logs/aerospace-watchdog"
+
+	if [[ ! -x "$script" ]]; then
+		warn "aerospace-process-watchdog not found ($script). Skipping launchd setup."
+		return 0
+	fi
+
+	mkdir -p "$(dirname "$plist")" "$log_dir"
+
+	cat >"$plist" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.user.aerospace-watchdog</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>${script}</string>
+    <string>--quiet</string>
+  </array>
+  <key>StartInterval</key>
+  <integer>60</integer>
+  <key>ThrottleInterval</key>
+  <integer>30</integer>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>${log_dir}/stdout.log</string>
+  <key>StandardErrorPath</key>
+  <string>${log_dir}/stderr.log</string>
+</dict>
+</plist>
+EOF
+
+	launchctl unload "$plist" 2>/dev/null || true
+	if launchctl load "$plist"; then
+		log "Loaded launchd agent: com.user.aerospace-watchdog (60s interval)"
+	else
+		warn "Failed to load launchd agent: $plist"
+	fi
+}
+
 # --- codex user-level config bootstrap ---
 # user 層 config (~/.codex/config.toml) は個人マシン固有のため git 管理外。
 # 新マシン初回セットアップ時に config.toml.example を実ファイルとしてコピーする。
@@ -138,5 +188,6 @@ install_uv
 install_yazi_plugins
 install_tmux_plugins
 bootstrap_codex_config
+bootstrap_aerospace_watchdog
 
 log "Done! Restart your shell or run: source ~/.zshrc"

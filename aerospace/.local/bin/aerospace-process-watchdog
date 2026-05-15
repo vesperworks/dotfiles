@@ -1,0 +1,283 @@
+#!/bin/bash
+# aerospace-process-watchdog - Continuous health monitor for AeroSpace.
+#
+# Role:
+#   Monitoring partner to aerospace-hang-diag. Runs every 60s via launchd
+#   and classifies system state into normal / degraded / hung based on:
+#     - AeroSpace responsiveness  (gtimeout aerospace list-workspaces)
+#     - AeroSpace CPU usage       (thresholds, env-tunable)
+#     - state=U processes among known-bad apps (Fantastical helper, IDEs)
+#     - macOS daemon CPU spikes   (chronod / replicatord / WindowServer)
+#   Sends the state to SketchyBar via the `aerospace_hang_state` event.
+#   When state escalates to `hung`, invokes aerospace-hang-diag for
+#   evidence capture (sample.txt + ps.txt).
+#
+# Hysteresis:
+#   degraded/normal transitions require two consecutive matching samples
+#   to avoid flapping. `hung` is always reported immediately.
+#
+# Usage:
+#   aerospace-process-watchdog [options]
+#
+# Options:
+#   -v, --verbose  Print detection details to stderr
+#   -q, --quiet    Suppress stdout (used by launchd)
+#   -n, --dry-run  Don't send sketchybar trigger or invoke hang-diag
+#   -h, --help     Show this help
+#
+# Exit codes:
+#   0  normal
+#   1  degraded
+#   2  hung
+#   3  invalid args / fatal
+
+set -euo pipefail
+
+readonly STATE_DIR="${TMPDIR:-/tmp}/aerospace-watchdog"
+readonly LOG_FILE="${WATCHDOG_LOG:-$HOME/Library/Logs/aerospace-watchdog/watchdog.log}"
+readonly LOG_MAX_LINES=1000
+readonly AEROSPACE_BIN="/opt/homebrew/bin/aerospace"
+readonly SKETCHYBAR_BIN="/opt/homebrew/bin/sketchybar"
+readonly GTIMEOUT="/opt/homebrew/bin/gtimeout"
+readonly HANGDIAG_BIN="${WATCHDOG_HANGDIAG_BIN:-$HOME/.local/bin/aerospace-hang-diag}"
+readonly HANGDIAG_COOLDOWN=300  # 5 minutes — avoid sample-storm on persistent hang
+
+CPU_DEGRADED="${WATCHDOG_CPU_DEGRADED_THRESHOLD:-30}"
+CPU_HUNG="${WATCHDOG_CPU_HUNG_THRESHOLD:-60}"
+
+# Default known-bad apps; override via WATCHDOG_KNOWN_BAD_APPS (comma-separated)
+DEFAULT_KNOWN_BAD=(
+  "fantastical2.mac.helper"
+  "IntelliJIdea"
+  "WebStorm"
+  "GoLand"
+  "PyCharm"
+  "RubyMine"
+  "Emacs"
+  "zoom.us"
+  "iPhone Mirroring"
+  "ChatGPT"
+)
+
+VERBOSE=false
+QUIET=false
+DRY_RUN=false
+
+usage() {
+  sed -n '2,/^set -euo/p' "$0" | sed '$d' | sed 's/^# \{0,1\}//'
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -v|--verbose) VERBOSE=true; shift ;;
+    -q|--quiet) QUIET=true; shift ;;
+    -n|--dry-run) DRY_RUN=true; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "unknown argument: $1" >&2; usage >&2; exit 3 ;;
+  esac
+done
+
+mkdir -p "$STATE_DIR" "$(dirname "$LOG_FILE")"
+
+vlog() {
+  [[ "$VERBOSE" == "true" ]] && echo "$@" >&2
+  return 0
+}
+
+qlog() {
+  [[ "$QUIET" == "true" ]] || echo "$@"
+}
+
+trigger_state() {
+  local state="$1"
+  if [[ "$DRY_RUN" == "true" ]]; then
+    vlog "[dry-run] would trigger STATE=$state"
+    return 0
+  fi
+  [[ -x "$SKETCHYBAR_BIN" ]] || return 0
+  "$SKETCHYBAR_BIN" --trigger aerospace_hang_state STATE="$state" >/dev/null 2>&1 || true
+}
+
+write_log() {
+  local line="$1"
+  echo "$line" >> "$LOG_FILE"
+  local lines
+  lines=$(/usr/bin/wc -l < "$LOG_FILE" 2>/dev/null | /usr/bin/awk '{print $1}')
+  [[ -z "$lines" ]] && lines=0
+  if (( lines > LOG_MAX_LINES )); then
+    /usr/bin/tail -n $((LOG_MAX_LINES / 2)) "$LOG_FILE" > "${LOG_FILE}.tmp" \
+      && /bin/mv "${LOG_FILE}.tmp" "$LOG_FILE"
+  fi
+}
+
+aerospace_pid() {
+  /usr/bin/pgrep -x AeroSpace || true
+}
+
+check_aerospace_alive() {
+  local pid rc
+  pid=$(aerospace_pid)
+  if [[ -z "$pid" ]]; then
+    echo "not-running"
+    return 0
+  fi
+  vlog "aerospace_pid=$pid"
+  set +e
+  "$GTIMEOUT" 2 "$AEROSPACE_BIN" list-workspaces --focused >/dev/null 2>&1
+  rc=$?
+  set -e
+  vlog "list-workspaces rc=$rc"
+  if [[ "$rc" == "0" ]]; then
+    echo "responsive"
+  else
+    echo "unresponsive"
+  fi
+}
+
+get_aerospace_cpu() {
+  local pid
+  pid=$(aerospace_pid)
+  [[ -z "$pid" ]] && { echo 0; return; }
+  /bin/ps -p "$pid" -o %cpu= 2>/dev/null | /usr/bin/awk '{print int($1+0.5)}'
+}
+
+# Output one match per line: "<app>:state=U"
+find_known_bad_stuck() {
+  local bad_list_str bad_list
+  if [[ -n "${WATCHDOG_KNOWN_BAD_APPS:-}" ]]; then
+    bad_list_str="$WATCHDOG_KNOWN_BAD_APPS"
+    IFS=',' read -r -a bad_list <<< "$bad_list_str"
+  else
+    bad_list=("${DEFAULT_KNOWN_BAD[@]}")
+  fi
+  local app hit
+  for app in "${bad_list[@]}"; do
+    hit=$(/bin/ps -axo state,command 2>/dev/null \
+      | /usr/bin/awk -v a="$app" '$1 ~ /^U/ && index($0, a) > 0 {print a; exit}')
+    [[ -n "$hit" ]] && echo "${app}:state=U"
+  done
+}
+
+check_daemon_spike() {
+  /bin/ps -axo pcpu,command 2>/dev/null | /usr/bin/awk '
+    /chronod$/      && $1+0 > 50 { print "chronod:cpu=" int($1); exit }
+    /replicatord$/  && $1+0 > 30 { print "replicatord:cpu=" int($1); exit }
+    /WindowServer$/ && $1+0 > 40 { print "WindowServer:cpu=" int($1); exit }
+  '
+}
+
+# Returns "state<TAB>reason1,reason2,..."
+classify() {
+  local resp cpu bad daemon
+  resp=$(check_aerospace_alive)
+  if [[ "$resp" == "not-running" ]]; then
+    printf 'normal\t\n'
+    return 0
+  fi
+  if [[ "$resp" == "unresponsive" ]]; then
+    printf 'hung\taerospace:unresponsive\n'
+    return 0
+  fi
+
+  cpu=$(get_aerospace_cpu)
+  vlog "AeroSpace CPU: ${cpu}%"
+
+  if (( cpu > CPU_HUNG )); then
+    printf 'hung\taerospace:cpu=%s\n' "$cpu"
+    return 0
+  fi
+
+  local reasons=()
+  if (( cpu > CPU_DEGRADED )); then
+    reasons+=("aerospace:cpu=$cpu")
+  fi
+
+  bad=$(find_known_bad_stuck)
+  if [[ -n "$bad" ]]; then
+    while IFS= read -r line; do
+      reasons+=("$line")
+    done <<< "$bad"
+  fi
+
+  daemon=$(check_daemon_spike)
+  if [[ -n "$daemon" ]]; then
+    reasons+=("$daemon")
+  fi
+
+  if [[ ${#reasons[@]} -gt 0 ]]; then
+    local joined
+    joined=$(/usr/bin/printf '%s,' "${reasons[@]}")
+    printf 'degraded\t%s\n' "${joined%,}"
+  else
+    printf 'normal\t\n'
+  fi
+}
+
+read_file_or() {
+  if [[ -f "$1" ]]; then
+    /bin/cat "$1"
+  else
+    echo "$2"
+  fi
+}
+
+# ----- main flow -----
+result=$(classify)
+new_state="${result%%$'\t'*}"
+reasons_str="${result#*$'\t'}"
+
+prev=$(read_file_or "$STATE_DIR/last_state" "normal")
+pending=$(read_file_or "$STATE_DIR/pending_state" "")
+
+final_state="$prev"
+action=""
+
+if [[ "$new_state" == "hung" ]]; then
+  # hung は即時反映（ヒステリシス無視）
+  final_state="hung"
+  /bin/rm -f "$STATE_DIR/pending_state" 2>/dev/null || true
+elif [[ "$new_state" == "$prev" ]]; then
+  # 状態変化なし
+  /bin/rm -f "$STATE_DIR/pending_state" 2>/dev/null || true
+elif [[ "$new_state" == "$pending" ]]; then
+  # 2 回連続で同じ非 prev 状態 → 遷移確定
+  final_state="$new_state"
+  /bin/rm -f "$STATE_DIR/pending_state" 2>/dev/null || true
+else
+  # 初回の差異 → pending に保留
+  echo "$new_state" > "$STATE_DIR/pending_state"
+fi
+
+echo "$final_state" > "$STATE_DIR/last_state"
+
+# Always sync sketchybar with the current final_state (idempotent on
+# the plugin side: STATE handler sets drawing on/off + color).
+trigger_state "$final_state"
+
+# Hung escalation: invoke hang-diag (rate-limited)
+if [[ "$final_state" == "hung" ]] && [[ "$DRY_RUN" != "true" ]] && [[ -x "$HANGDIAG_BIN" ]]; then
+  last_diag_at=0
+  if [[ -f "$STATE_DIR/last_hangdiag_at" ]]; then
+    last_diag_at=$(/bin/cat "$STATE_DIR/last_hangdiag_at" 2>/dev/null || echo 0)
+  fi
+  now=$(/bin/date +%s)
+  if (( now - last_diag_at >= HANGDIAG_COOLDOWN )); then
+    "$HANGDIAG_BIN" --force --quiet >/dev/null 2>&1 &
+    echo "$now" > "$STATE_DIR/last_hangdiag_at"
+    action="action=invoked-hang-diag"
+  else
+    action="action=hang-diag-skipped-cooldown"
+  fi
+fi
+
+ts=$(/bin/date +%Y-%m-%dT%H:%M:%S)
+write_log "$ts state=$final_state prev=$prev curr=$new_state reasons=[$reasons_str] $action"
+
+qlog "state=$final_state prev=$prev curr=$new_state reasons=[$reasons_str]"
+
+case "$final_state" in
+  normal)   exit 0 ;;
+  degraded) exit 1 ;;
+  hung)     exit 2 ;;
+  *)        exit 3 ;;
+esac
