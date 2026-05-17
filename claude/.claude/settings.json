@@ -65,7 +65,6 @@
       "WebFetch(domain:eu-central-1-1.aws.cloud2.influxdata.com)",
       "mcp__ide__*",
       "mcp__context7__*",
-      "mcp__pencil",
       "mcp__chrome-devtools__take_screenshot",
       "mcp__chrome-devtools__take_snapshot",
       "mcp__chrome-devtools__navigate_page",
@@ -284,6 +283,12 @@
       }
     ]
   },
+  "worktree": {
+    "symlinkDirectories": [
+      "node_modules",
+      ".cache"
+    ]
+  },
   "statusLine": {
     "type": "command",
     "command": "claude-powerline"
@@ -291,7 +296,16 @@
   "enabledPlugins": {
     "commit-commands@claude-code-plugins": true,
     "code-review@claude-code-plugins": true,
-    "frontend-design@claude-code-plugins": true
+    "frontend-design@claude-code-plugins": true,
+    "document-skills@anthropic-agent-skills": true
+  },
+  "extraKnownMarketplaces": {
+    "anthropic-agent-skills": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/skills"
+      }
+    }
   },
   "language": "Japanese",
   "sandbox": {
@@ -306,25 +320,21 @@
   "effortLevel": "high",
   "advisorModel": "opus",
   "fastModePerSessionOptIn": true,
-  "skipAutoPermissionPrompt": true,
-  "voiceEnabled": true,
+  "tui": "fullscreen",
+  "autoMemoryEnabled": true,
+  "showThinkingSummaries": true,
   "theme": "dark-daltonized",
   "editorMode": "vim",
   "preferredNotifChannel": "terminal_bell",
   "autoCompactEnabled": false,
-  "teammateMode": "auto",
-  "agentPushNotifEnabled": false,
-  "tui": "fullscreen",
   "fileCheckpointingEnabled": true,
-  "showThinkingSummaries": true,
-  "autoMemoryEnabled": true,
-  "inputNeededNotifEnabled": false,
   "showTurnDuration": true,
   "terminalProgressBarEnabled": true,
-  "worktree": {
-    "symlinkDirectories": [
-      "node_modules",
-      ".cache"
-    ]
-  }
+  "teammateMode": "auto",
+  "inputNeededNotifEnabled": false,
+  "agentPushNotifEnabled": false,
+  "skipAutoPermissionPrompt": true,
+  "voiceEnabled": true,
+  "feedbackSurveyRate": 0,
+  "showMessageTimestamps": true
 }
