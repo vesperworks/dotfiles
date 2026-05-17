@@ -29,6 +29,9 @@ claude/.claude/todos/
 claude/.claude/plans/
 claude/.claude/eval/**/results/
 
+# vw-wabun-hig-audit: フォーク元参照用 clone（編集禁止・参照専用）
+claude/.claude/skills/vw-wabun-hig-audit/reference/
+
 # Codex local
 # user 層 config.toml は個人マシン固有（trust_level / 自動追記される絶対パス等）。
 # テンプレートは codex/.codex/config.toml.example として track。
