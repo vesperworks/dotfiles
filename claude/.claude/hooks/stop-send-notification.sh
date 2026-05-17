@@ -48,26 +48,7 @@ fi
 
 TITLE="🤖CC｜${PROJECT_NAME}"
 
-# tmuxセッション名を取得（Alacrittyウィンドウ特定用）
-# -execute は sh -c 経由で評価されるため、セッション名の ' を除去してインジェクションを防ぐ
-TMUX_SESSION=$(tmux display-message -p '#S' 2>/dev/null || echo "")
-TMUX_SESSION_SAFE="${TMUX_SESSION//\'/}"
-
-# -group にタイムスタンプを付与し、`terminal-notifier -remove ALL` で一括消去可能に
-NOTIFICATION_GROUP="cc-$(date +%s%N)"
-
-if command -v terminal-notifier &>/dev/null; then
-	terminal-notifier \
-		-title "$TITLE" \
-		-message "$LAST_MESSAGE" \
-		-group "$NOTIFICATION_GROUP" \
-		-sound Glass \
-		-timeout 10 \
-		-execute "$HOME/.claude/hooks/focus-alacritty.sh '${TMUX_SESSION_SAFE}'"
-else
-	SHORT_MSG=$(echo "$LAST_MESSAGE" | head -c 100)
-	osascript -e "display notification \"$SHORT_MSG\" with title \"$TITLE\" sound name \"Glass\""
-fi
+# macOS デスクトップ通知は無効化（Moshi スマホ通知で代替）
 
 # Moshi通知（スマホ）
 if [ -n "${MOSHI_TOKEN:-}" ]; then
