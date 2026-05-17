@@ -214,6 +214,7 @@ add_popup_rows wifi 3
 # agent; falls back to aerospace-hang-diag for manual diagnostic). Hidden
 # by default; turns yellow on `degraded` (CPU spike or state=U processes)
 # and red on `hung` via the `aerospace_hang_state` custom event.
+# Click opens a 3-row popup: summary / copy-kill-cmd / open-log.
 sketchybar --add event aerospace_hang_state
 sketchybar --add item aerospace_hang right \
   --set aerospace_hang "${status_item[@]}" \
@@ -221,8 +222,11 @@ sketchybar --add item aerospace_hang right \
   icon.color="$RED" \
   label.drawing=off \
   drawing=off \
+  "${popup_style[@]}" \
   script="$PLUGIN_DIR/aerospace_hang.sh" \
-  --subscribe aerospace_hang aerospace_hang_state mouse.clicked
+  --subscribe aerospace_hang aerospace_hang_state mouse.clicked mouse.exited.global
+
+add_popup_rows aerospace_hang 3 off
 
 # Unify the items above into a single rounded background.
 sketchybar --add bracket status_group aerospace_hang wifi battery volume keyboard clock \
@@ -303,6 +307,23 @@ sketchybar --add item aerospace_session right \
   --subscribe aerospace_session mouse.clicked mouse.exited.global
 
 add_popup_rows aerospace_session 12 off
+
+# Moshi Hook Toggle (cat icon). Click to start/stop the moshi-hook
+# LaunchAgent that intercepts CLI approval prompts. Keep OFF for hands-on
+# work (native approval UI stays usable), flip ON when stepping away.
+# ORANGE=running, SURFACE2=stopped. Uses click_script directly (not
+# --subscribe mouse.clicked) for reliability.
+sketchybar --add item moshi_toggle right \
+  --set moshi_toggle update_freq=60 \
+  padding_left=6 \
+  padding_right=6 \
+  icon=󰄛 \
+  icon.color="$SURFACE2" \
+  icon.padding_left=8 \
+  icon.padding_right=8 \
+  label.drawing=off \
+  script="$PLUGIN_DIR/moshi_toggle.sh" \
+  click_script="$PLUGIN_DIR/moshi_toggle.sh toggle"
 
 ##### Force all scripts to run the first time (never do this in a script) #####
 sketchybar --update
