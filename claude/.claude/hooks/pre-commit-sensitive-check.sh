@@ -9,7 +9,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # stdin から JSON を読み取り、コマンドと CWD を一括抽出
 INPUT=$(cat)
-read -r COMMAND CWD < <(echo "$INPUT" | jq -r '[(.tool_input.command // ""), (.cwd // "")] | @tsv' 2>/dev/null) || true
+# @tsv はタブ区切りなので IFS をタブに限定しないと、コマンド内のスペースで
+# 誤分割されて CWD が壊れ、センシティブ検出が no-op 化する
+IFS=$'\t' read -r COMMAND CWD < <(echo "$INPUT" | jq -r '[(.tool_input.command // ""), (.cwd // "")] | @tsv' 2>/dev/null) || true
 
 [[ -z "$COMMAND" ]] && exit 0
 

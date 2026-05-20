@@ -9,6 +9,10 @@
 # Input: stdin JSON with tool_input.command, cwd
 # Output: exit 0 (never block)
 
+set -euo pipefail
+# never block 契約: 予期せぬエラーでも exit 0 で抜ける
+trap 'exit 0' ERR
+
 input=$(cat)
 command=$(echo "$input" | jq -r '.tool_input.command // empty')
 
@@ -22,7 +26,11 @@ if echo "$command" | grep -qE '(^|\s|&&|\|\||;)(jj|git)\s'; then
 	lock_file="${cwd:-.}/.git/index.lock"
 
 	if [[ -f "$lock_file" ]]; then
-		rm -f "$lock_file"
+		# 実行中の正当な git 操作の lock を消さないよう、60 秒以上古い残留 lock のみ削除
+		lock_mtime=$(stat -f %m "$lock_file" 2>/dev/null || echo 0)
+		if (($(date +%s) - lock_mtime > 60)); then
+			rm -f "$lock_file"
+		fi
 	fi
 fi
 

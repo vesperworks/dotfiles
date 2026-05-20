@@ -12,6 +12,8 @@
 #   0 - Allow command execution
 #   2 - Block command (dangerous pattern detected)
 
+set -euo pipefail
+
 input=$(cat)
 command=$(echo "$input" | jq -r '.tool_input.command // empty')
 
