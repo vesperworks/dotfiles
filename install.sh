@@ -43,7 +43,10 @@ stow_packages() {
 	for pkg in "${STOW_PACKAGES[@]}"; do
 		if [[ -d "$DOTFILES_DIR/$pkg" ]]; then
 			log "Stowing $pkg..."
-			stow -t "$HOME" -d "$DOTFILES_DIR" --no-folding "$pkg"
+			# --restow keeps re-runs idempotent; per-package fallback so one
+			# conflicting package doesn't abort the rest under set -e
+			stow -t "$HOME" -d "$DOTFILES_DIR" --no-folding --restow "$pkg" ||
+				warn "stow failed for $pkg (conflicting real file in \$HOME?). Continuing."
 		fi
 	done
 }
@@ -156,24 +159,25 @@ EOF
 }
 
 # --- codex user-level config bootstrap ---
-# user 層 config (~/.codex/config.toml) は個人マシン固有のため git 管理外。
-# 新マシン初回セットアップ時に config.toml.example を実ファイルとしてコピーする。
-# 既存マシン（既に config.toml がある場合）は何もしない。
+# user 層 config (~/.codex/config.toml, ~/.codex/rules/default.rules) は
+# 個人マシン固有（codex CLI が案件パス込みの allow ルール等を自動追記する）のため
+# git 管理外。新マシン初回セットアップ時に *.example を実ファイルとしてコピーする。
+# 既存マシン（既にターゲットがある場合）は何もしない。
 bootstrap_codex_config() {
-	local target="$HOME/.codex/config.toml"
-	local example="$HOME/.codex/config.toml.example"
-
-	if [[ -f "$target" ]]; then
-		return 0
-	fi
-	if [[ ! -f "$example" ]]; then
-		warn "codex example not found ($example). Skipping bootstrap."
-		return 0
-	fi
-
-	mkdir -p "$(dirname "$target")"
-	log "Bootstrapping ~/.codex/config.toml from example..."
-	cp "$example" "$target"
+	local target example
+	for target in "$HOME/.codex/config.toml" "$HOME/.codex/rules/default.rules"; do
+		example="${target}.example"
+		if [[ -f "$target" ]]; then
+			continue
+		fi
+		if [[ ! -f "$example" ]]; then
+			warn "codex example not found ($example). Skipping bootstrap."
+			continue
+		fi
+		mkdir -p "$(dirname "$target")"
+		log "Bootstrapping ~/${target#"$HOME"/} from example..."
+		cp "$example" "$target"
+	done
 }
 
 # --- Main ---

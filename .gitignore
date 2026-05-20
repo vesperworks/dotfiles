@@ -33,10 +33,12 @@ claude/.claude/eval/**/results/
 claude/.claude/skills/vw-wabun-hig-audit/reference/
 
 # Codex local
-# user 層 config.toml は個人マシン固有（trust_level / 自動追記される絶対パス等）。
-# テンプレートは codex/.codex/config.toml.example として track。
+# user 層 config.toml / rules/default.rules は個人マシン固有（trust_level / codex CLI が
+# 案件パス・URL 込みの allow ルールを自動追記するため公開不可）。
+# テンプレートは *.example として track。
 # 新マシンセットアップは install.sh が example をコピーして bootstrap する。
 codex/.codex/config.toml
+codex/.codex/rules/default.rules
 codex/.codex/sessions/
 codex/.codex/archived_sessions/
 codex/.codex/log/
