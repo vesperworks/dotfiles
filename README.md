@@ -16,7 +16,9 @@ cd ~/dotfiles
 
 | Package | Target | Description |
 |---------|--------|-------------|
+| `bin` | `~/.local/bin/` | Personal scripts |
 | `zsh` | `~/.zshrc` etc. | Shell config (atuin, zoxide, fzf) |
+| `sheldon` | `~/.config/sheldon/` | Zsh plugin manager |
 | `git` | `~/.gitconfig` | Git config (delta, lfs) |
 | `brew` | `~/.Brewfile` | Homebrew bundle |
 | `claude` | `~/.claude/` | [Claude Code](https://docs.anthropic.com/en/docs/claude-code) customizations |
@@ -29,10 +31,11 @@ cd ~/dotfiles
 | `sketchybar` | `~/.config/sketchybar/` | Status bar |
 | `borders` | `~/.config/borders/` | Window borders |
 | `yazi` | `~/.config/yazi/` | File manager |
+| `raycast` | `~/.config/raycast/` | Raycast script commands |
 
 ## Codex (template-only)
 
-The `codex` package ships only a template (`config.toml.example`); the live `~/.codex/config.toml` is **not tracked** because Codex CLI auto-appends machine-specific entries (project paths, marketplace sources) and has no `include` mechanism. `install.sh` copies the template on first setup; after that it's machine-local. For team-shared settings use `<project_repo>/.codex/config.toml` ([official two-layer design](https://developers.openai.com/codex/config-reference)).
+The `codex` package ships only templates (`config.toml.example`, `rules/default.rules.example`); the live `~/.codex/config.toml` and `~/.codex/rules/default.rules` are **not tracked** because Codex CLI auto-appends machine-specific entries (project paths, allow rules with private URLs, marketplace sources) and has no `include` mechanism. `install.sh` copies the templates on first setup; after that they're machine-local. For team-shared settings use `<project_repo>/.codex/config.toml` ([official two-layer design](https://developers.openai.com/codex/config-reference)).
 
 ## Stow Usage
 
