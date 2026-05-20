@@ -157,6 +157,7 @@
     ],
     "defaultMode": "auto"
   },
+  "model": "claude-fable-5[1m]",
   "hooks": {
     "Stop": [
       {
@@ -311,30 +312,36 @@
   "sandbox": {
     "enabled": true,
     "autoAllowBashIfSandboxed": true,
+    "network": {
+      "allowedDomains": [
+        "readwise.io",
+        "*.readwise.io"
+      ]
+    },
     "excludedCommands": [
       "gh",
       "jj"
     ]
   },
+  "feedbackSurveyRate": 0,
   "alwaysThinkingEnabled": true,
   "effortLevel": "high",
-  "advisorModel": "opus",
   "fastModePerSessionOptIn": true,
   "tui": "fullscreen",
   "autoMemoryEnabled": true,
   "showThinkingSummaries": true,
+  "skipWorkflowUsageWarning": true,
   "theme": "dark-daltonized",
   "editorMode": "vim",
   "preferredNotifChannel": "terminal_bell",
   "autoCompactEnabled": false,
   "fileCheckpointingEnabled": true,
   "showTurnDuration": true,
+  "showMessageTimestamps": true,
   "terminalProgressBarEnabled": true,
   "teammateMode": "auto",
   "inputNeededNotifEnabled": false,
   "agentPushNotifEnabled": false,
   "skipAutoPermissionPrompt": true,
-  "voiceEnabled": true,
-  "feedbackSurveyRate": 0,
-  "showMessageTimestamps": true
+  "voiceEnabled": true
 }
