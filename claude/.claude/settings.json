@@ -114,7 +114,6 @@
       "Bash(chmod 777:*)",
       "Bash(git reset:*)",
       "Bash(git rebase:*)",
-      "Bash(git force:*)",
       "Bash(git push --force:*)",
       "Bash(git branch -D *)",
       "Bash(git branch -d *)",
@@ -135,10 +134,7 @@
       "Read(id_ecdsa)",
       "Read(*.pem)",
       "Read(*.key)",
-      "Write(.env*)",
-      "Bash(cat:*)",
-      "Bash(find:*)",
-      "Bash(grep:*)"
+      "Write(.env*)"
     ],
     "ask": [
       "Bash(gh issue delete:*)",
@@ -156,12 +152,12 @@
       "Bash(bun remove:*)",
       "Bash(deno uninstall:*)",
       "Bash(pnpm remove:*)",
-      "Bash(pnpm rm:*)",
-      "mcp__puppeteer__*"
+      "Bash(pnpm rm:*)"
     ],
     "defaultMode": "auto"
   },
   "model": "claude-fable-5[1m]",
+  "fallbackModel": ["default"],
   "hooks": {
     "Stop": [
       {
