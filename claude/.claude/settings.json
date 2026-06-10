@@ -93,6 +93,8 @@
       "Bash(jj *)",
       "Bash(source ~/.claude/scripts/:*)",
       "Bash(~/.claude/scripts/:*)",
+      "Bash(~/.claude/skills/vw-pm/scripts/:*)",
+      "Bash(gh auth status)",
       "Bash(gh issue:*)",
       "Bash(gh project:*)",
       "Bash(gh api graphql:*)",
@@ -139,6 +141,8 @@
       "Bash(grep:*)"
     ],
     "ask": [
+      "Bash(gh issue delete:*)",
+      "Bash(gh project item-delete:*)",
       "Bash(git push:*)",
       "Bash(git commit:*)",
       "Bash(git branch:*)",
