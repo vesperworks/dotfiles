@@ -6,11 +6,18 @@
 # Input: stdin JSON with tool_input.file_path
 # Output: exit 0 (always allow)
 
+set -euo pipefail
+# always allow 契約: 予期せぬエラーでも exit 0 で抜ける
+trap 'exit 0' ERR
+
 DEBUG="${CLAUDE_HOOKS_DEBUG:-false}"
 DEBUG_LOG="$HOME/.claude/hooks/debug.log"
 
 debug_log() {
-	[[ "$DEBUG" == "true" ]] && echo "[auto-format] $1" >>"$DEBUG_LOG"
+	# `[[ ]] &&` 形式は set -e 下で false が伝播するため if 文にする
+	if [[ "$DEBUG" == "true" ]]; then
+		echo "[auto-format] $1" >>"$DEBUG_LOG"
+	fi
 }
 
 # stdin から JSON を読み取り

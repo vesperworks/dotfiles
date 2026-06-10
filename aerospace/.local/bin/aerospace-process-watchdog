@@ -150,11 +150,14 @@ find_known_bad_stuck() {
   else
     bad_list=("${DEFAULT_KNOWN_BAD[@]}")
   fi
-  local app hit
+  # ps は 1 回だけ実行し、state=U の行を抜き出してから全アプリを照合する
+  local stuck_lines app
+  stuck_lines=$(/bin/ps -axo state,command 2>/dev/null | /usr/bin/awk '$1 ~ /^U/')
+  [[ -z "$stuck_lines" ]] && return 0
   for app in "${bad_list[@]}"; do
-    hit=$(/bin/ps -axo state,command 2>/dev/null \
-      | /usr/bin/awk -v a="$app" '$1 ~ /^U/ && index($0, a) > 0 {print a; exit}')
-    [[ -n "$hit" ]] && echo "${app}:state=U"
+    case "$stuck_lines" in
+    *"$app"*) echo "${app}:state=U" ;;
+    esac
   done
 }
 

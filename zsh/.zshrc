@@ -5,19 +5,39 @@ fi
 
 # Completions (must be before sheldon to avoid compdef errors)
 if type brew &>/dev/null; then
-  FPATH="$(brew --prefix)/share/zsh/site-functions:${FPATH}"
+  # $(brew --prefix) はサブプロセスで遅い。Apple Silicon 固定値に倒す
+  FPATH="${HOMEBREW_PREFIX:-/opt/homebrew}/share/zsh/site-functions:${FPATH}"
 fi
 # Remove non-existent /usr/local paths from FPATH (Apple Silicon)
 FPATH="${FPATH/\/usr\/local\/share\/zsh\/site-functions:/}"
 autoload -Uz compinit
-if [[ -n "${ZDOTDIR:-$HOME}/.zcompdump(#qN.mh+24)" ]]; then
-  compinit -u
-else
+# .zcompdump が 24h 以内なら -C（セキュリティチェック省略の高速パス）。
+# 注意: [[ -n file(#q...) ]] は条件式内で glob 展開されず常に真になる罠が
+# あるため、配列代入経由で判定する
+_zcompdump_fresh=( "${ZDOTDIR:-$HOME}"/.zcompdump(N.mh-24) )
+if (( ${#_zcompdump_fresh} )); then
   compinit -C -u
+else
+  compinit -u
 fi
+unset _zcompdump_fresh
 
-# sheldon (plugin manager)
-eval "$(sheldon source 2>/dev/null)"
+# sheldon (plugin manager) — 出力をキャッシュして毎回の起動コストを回避
+_sheldon_cache="$HOME/.cache/sheldon/source.zsh"
+_sheldon_toml="$HOME/.config/sheldon/plugins.toml"
+if [[ ! -s "$_sheldon_cache" || "$_sheldon_toml" -nt "$_sheldon_cache" ]]; then
+  mkdir -p "${_sheldon_cache:h}" 2>/dev/null
+  # 失敗時は空キャッシュを残さない（残すと sheldon インストール後も
+  # toml 更新まで空ファイルを source し続けて自然回復しない）
+  { sheldon source > "$_sheldon_cache" } 2>/dev/null || rm -f "$_sheldon_cache"
+fi
+if [[ -s "$_sheldon_cache" ]]; then
+  source "$_sheldon_cache"
+else
+  # キャッシュが書けない環境では従来どおり直接 eval
+  eval "$(sheldon source 2>/dev/null)"
+fi
+unset _sheldon_cache _sheldon_toml
 
 # Powerlevel10k config
 [[ -f ~/.p10k.zsh ]] && source ~/.p10k.zsh
@@ -31,9 +51,28 @@ export PATH="$HOME/.vw:$PATH"
 export PATH="$HOME/.antigravity/antigravity/bin:$PATH"
 export PATH="$HOME/go/bin:$PATH"
 
+# eval キャッシュ: init/completion 系コマンドの出力は静的なので、バイナリ更新時
+# のみ再生成してファイル source に置き換える（毎シェルのサブプロセス起動を回避）
+_evalcache() {
+  local bin cache
+  bin="$(command -v "$1")" || return 0
+  cache="$HOME/.cache/zsh-evalcache/$1.zsh"
+  if [[ ! -s "$cache" || "$bin" -nt "$cache" ]]; then
+    mkdir -p "${cache:h}" 2>/dev/null
+    # 失敗時は空キャッシュを残さない（バイナリ更新まで空 source が固定化するため）
+    { "$@" > "$cache" } 2>/dev/null || rm -f "$cache"
+  fi
+  if [[ -s "$cache" ]]; then
+    source "$cache"
+  else
+    # キャッシュが書けない環境では従来どおり直接 eval
+    eval "$("$@" 2>/dev/null)"
+  fi
+}
+
 # 1Password
 [[ -f ~/.secrets.env ]] && source ~/.secrets.env
-command -v op >/dev/null 2>&1 && eval "$(op completion zsh)"
+_evalcache op completion zsh
 
 # Environment
 export EDITOR="nvim"
@@ -42,25 +81,32 @@ export OBSIDIAN_VAULT="$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documen
 export CCMANAGER_MULTI_PROJECT_ROOT="$HOME/Works"
 
 # Tools
-eval "$(zoxide init zsh)"
+_evalcache zoxide init zsh
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
-eval "$(atuin init zsh --disable-up-arrow)"
+_evalcache atuin init zsh --disable-up-arrow
 export ATUIN_FZF_OPTS='--preview "echo {}" --preview-window=down:3:wrap'
 [ -f "$HOME/.local/bin/env" ] && . "$HOME/.local/bin/env"
 
-# NVM
+# NVM (lazy load: nvm.sh の同期 source は数百ms かかるため初回使用時にロード)
 export NVM_DIR="$HOME/.nvm"
-[ -s "/opt/homebrew/opt/nvm/nvm.sh" ] && \. "/opt/homebrew/opt/nvm/nvm.sh"
-[ -s "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm" ] && \. "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm"
+if [ -s "/opt/homebrew/opt/nvm/nvm.sh" ]; then
+  _load_nvm() {
+    unfunction nvm node npm npx _load_nvm 2>/dev/null
+    \. "/opt/homebrew/opt/nvm/nvm.sh"
+    [ -s "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm" ] && \. "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm"
+  }
+  nvm()  { _load_nvm; nvm "$@"; }
+  node() { _load_nvm; node "$@"; }
+  npm()  { _load_nvm; npm "$@"; }
+  npx()  { _load_nvm; npx "$@"; }
+fi
 
 # Bun
 export BUN_INSTALL="$HOME/.bun"
 [ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
 
 # UV completion
-if command -v uv >/dev/null 2>&1; then
-  eval "$(uv generate-shell-completion zsh)"
-fi
+_evalcache uv generate-shell-completion zsh
 
 # Local machine overrides
 [[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
@@ -87,6 +133,7 @@ alias la='eza -a --color=always --icons'
 alias lt='eza --tree --color=always --icons --level=2'
 alias ccm='ccmanager --multi-project'
 alias ch='claude-history'
+alias tailscale="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
 
 # tmux-top: tmux セッション別 CPU/MEM/idle 集計（detached で重い/古いセッションのケアに使う）
 alias tmux-top='~/.config/tmux/scripts/tmux-top.sh'

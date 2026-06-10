@@ -16,18 +16,19 @@ cd "$1" || exit 1
 RESET="#[fg=${THEME[foreground]},bg=${THEME[background]},nobold,noitalics,nounderscore,nodim]"
 
 # === ブランチ名取得（jj / git 自動判定） ===
+# status-interval 3s ごとに呼ばれるため jj 起動は 1 回に統合:
+# @ の bookmark / 親の bookmark / change-id をタブ区切りで一括取得し bash 側で選ぶ。
+# jj リポでなければ jj log が失敗して空になり、git にフォールバックする。
 BRANCH=""
-if command -v jj &>/dev/null && jj root &>/dev/null 2>&1; then
-	# jj リポ: カレントチェンジセットのブックマーク名を取得
-	BRANCH=$(jj log -r @ --no-graph -T 'bookmarks.map(|b| b.name()).join(", ")' 2>/dev/null)
-	if [ -z "$BRANCH" ]; then
-		# ワーキングコピーにブックマークがなければ親を参照
-		BRANCH=$(jj log -r '@-' --no-graph -T 'bookmarks.map(|b| b.name()).join(", ")' 2>/dev/null)
-	fi
-	if [ -z "$BRANCH" ]; then
-		# どちらにもない場合は change-id の短縮形
-		BRANCH=$(jj log -r @ --no-graph -T 'change_id.shortest(8)' 2>/dev/null)
-	fi
+JJ_OUT=""
+if command -v jj &>/dev/null; then
+	JJ_OUT=$(jj log -r @ --no-graph \
+		-T 'bookmarks.map(|b| b.name()).join(", ") ++ "\t" ++ parents.map(|c| c.bookmarks().map(|b| b.name()).join(", ")).join(", ") ++ "\t" ++ change_id.shortest(8)' \
+		2>/dev/null) || JJ_OUT=""
+fi
+if [ -n "$JJ_OUT" ]; then
+	IFS=$'\t' read -r WC_BOOKMARKS PARENT_BOOKMARKS CHANGE_ID <<<"$JJ_OUT"
+	BRANCH="${WC_BOOKMARKS:-${PARENT_BOOKMARKS:-$CHANGE_ID}}"
 else
 	BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
 fi
