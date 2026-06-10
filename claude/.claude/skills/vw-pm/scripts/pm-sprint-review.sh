@@ -113,27 +113,7 @@ fi
 REPO="${REPO:-$CWD_REPO}"
 
 # Build SCOPE_REPOS (precedence: --scope > --repos > --repo > auto-resolve)
-build_scope_repos() {
-	local result=""
-	if [[ -n "$SCOPE_INPUT" ]]; then
-		result="$SCOPE_INPUT"
-	elif [[ -n "$REPOS_CSV" ]]; then
-		result=$(printf '%s' "$REPOS_CSV" | tr ',' '\n' | sed '/^[[:space:]]*$/d' | jq -R . | jq -s .)
-	elif [[ -n "$REPO" ]]; then
-		result=$(jq -nc --arg r "$REPO" '[$r]')
-	else
-		# Auto-resolve via pm-resolve-scope.sh
-		local resolved
-		resolved=$("$SCRIPT_DIR/pm-resolve-scope.sh" 2>/dev/null) || true
-		if [[ -n "$resolved" ]]; then
-			result=$(echo "$resolved" | jq -c '.scopeRepos')
-		fi
-	fi
-	[[ -z "$result" ]] && result="[]"
-	echo "$result"
-}
-
-SCOPE_REPOS=$(build_scope_repos)
+SCOPE_REPOS=$(pm_scope_from_args "$SCOPE_INPUT" "$REPOS_CSV" "$REPO")
 SCOPE_COUNT=$(echo "$SCOPE_REPOS" | jq 'length')
 
 if [[ "$SCOPE_COUNT" -eq 0 ]]; then
@@ -204,7 +184,6 @@ DURATION=$(echo "$SPRINT_META" | jq -r '.duration')
 END=$(date -j -v+"${DURATION}"d -f "%Y-%m-%d" "$START" +%Y-%m-%d 2>/dev/null ||
 	date -d "$START + $DURATION days" +%Y-%m-%d)
 SPRINT_ID=$(echo "$SPRINT_META" | jq -r '.id')
-SPRINT_TITLE=$(echo "$SPRINT_META" | jq -r '.title')
 
 # Period covers a few days past Sprint end to catch follow-up commits
 PERIOD_UNTIL=$(date -j -v+1d -f "%Y-%m-%d" "$END" +%Y-%m-%d 2>/dev/null ||
@@ -221,110 +200,37 @@ else
 fi
 
 # 3. Collect merged PRs from each SCOPE_REPOS entry (tagged with source repo)
+#    Repos are fetched in parallel (independent API calls).
+#    Note: "ref(s) #N" is NOT a GitHub closing keyword — only close/fix/resolve
+#    variants populate `closes` (avoids false-positive Done candidates).
 PR_QUERY="merged:${START}..${END}"
-PRS_JSON="[]"
+PR_TMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/vw-pm-prs.XXXXXX")
+pr_idx=0
 while IFS= read -r repo_entry; do
 	[[ -z "$repo_entry" ]] && continue
-	page=$(gh pr list --repo "$repo_entry" --state merged --search "$PR_QUERY" --limit "$LIMIT" \
-		--json number,title,body,author,mergedAt,headRefName 2>/dev/null |
-		jq --arg r "$repo_entry" '[.[] | {
+	(
+		gh pr list --repo "$repo_entry" --state merged --search "$PR_QUERY" --limit "$LIMIT" \
+			--json number,title,body,author,mergedAt,headRefName 2>/dev/null |
+			jq --arg r "$repo_entry" '[.[] | {
         repo: $r,
         number: .number,
         title: .title,
         author: .author.login,
         mergedAt: (.mergedAt | split("T")[0]),
         headRefName: .headRefName,
-        closes: [.body // "" | scan("(?:close[sd]?|fixe?[sd]?|resolve[sd]?|refs?)\\s*#(\\d+)"; "i") | .[0] | tonumber]
-      }]' 2>/dev/null || echo "[]")
-	PRS_JSON=$(jq -n --argjson a "$PRS_JSON" --argjson b "$page" '$a + $b')
+        closes: [.body // "" | scan("(?:close[sd]?|fixe?[sd]?|resolve[sd]?)\\s*#(\\d+)"; "i") | .[0] | tonumber]
+      }]' 2>/dev/null || echo "[]"
+	) >"$PR_TMP_DIR/prs-$(printf '%04d' "$pr_idx").json" &
+	pr_idx=$((pr_idx + 1))
 done < <(echo "$SCOPE_REPOS" | jq -r '.[]')
+wait
+PRS_JSON=$(jq -s 'add // []' "$PR_TMP_DIR"/prs-*.json 2>/dev/null || echo "[]")
+rm -rf "$PR_TMP_DIR"
 
-# 4. Collect Project items in this Sprint (paginated)
-ITEMS_RAW="[]"
-CURSOR=""
-HAS_NEXT=true
-while [[ "$HAS_NEXT" == "true" ]]; do
-	if [[ -z "$CURSOR" ]]; then
-		PAGE=$(gh api graphql -f projectId="$PROJECT_ID" -f query='
-      query($projectId: ID!) {
-        node(id: $projectId) {
-          ... on ProjectV2 {
-            items(first: 100) {
-              pageInfo { hasNextPage endCursor }
-              nodes {
-                id
-                fieldValues(first: 30) {
-                  nodes {
-                    ... on ProjectV2ItemFieldSingleSelectValue {
-                      name
-                      field { ... on ProjectV2SingleSelectField { name } }
-                    }
-                    ... on ProjectV2ItemFieldIterationValue {
-                      iterationId
-                      title
-                      field { ... on ProjectV2IterationField { name } }
-                    }
-                  }
-                }
-                content {
-                  ... on Issue {
-                    number
-                    title
-                    state
-                    url
-                    repository { nameWithOwner }
-                    issueType { name }
-                    assignees(first: 5) { nodes { login } }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }')
-	else
-		PAGE=$(gh api graphql -f projectId="$PROJECT_ID" -f cursor="$CURSOR" -f query='
-      query($projectId: ID!, $cursor: String!) {
-        node(id: $projectId) {
-          ... on ProjectV2 {
-            items(first: 100, after: $cursor) {
-              pageInfo { hasNextPage endCursor }
-              nodes {
-                id
-                fieldValues(first: 30) {
-                  nodes {
-                    ... on ProjectV2ItemFieldSingleSelectValue {
-                      name
-                      field { ... on ProjectV2SingleSelectField { name } }
-                    }
-                    ... on ProjectV2ItemFieldIterationValue {
-                      iterationId
-                      title
-                      field { ... on ProjectV2IterationField { name } }
-                    }
-                  }
-                }
-                content {
-                  ... on Issue {
-                    number
-                    title
-                    state
-                    url
-                    repository { nameWithOwner }
-                    issueType { name }
-                    assignees(first: 5) { nodes { login } }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }')
-	fi
-	ITEMS_RAW=$(jq -n --argjson a "$ITEMS_RAW" --argjson b "$(echo "$PAGE" | jq '.data.node.items.nodes')" '$a + $b')
-	HAS_NEXT=$(echo "$PAGE" | jq -r '.data.node.items.pageInfo.hasNextPage')
-	CURSOR=$(echo "$PAGE" | jq -r '.data.node.items.pageInfo.endCursor')
-done
+# 4. Collect Project items in this Sprint
+#    (shared paginated fetch from pm-utils.sh — includes iterationId/Status/
+#     assignees/issueType needed below)
+ITEMS_RAW=$(get_project_items "$PROJECT_ID")
 
 # Filter to items associated with the target Sprint
 ITEMS_JSON=$(echo "$ITEMS_RAW" | jq --arg sid "$SPRINT_ID" '

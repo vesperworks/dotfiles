@@ -86,13 +86,18 @@ AskUserQuestion で2点確認する:
 
 ### A.4: 一括反映
 
-- **Issue Close + Status=Done**: 各 Issue の Project Item ID を取得して以下を実行
-  - `pm-project-fields.sh <num> --project <N> --owner <login> --status Done`
-  - `gh issue close <num> --reason completed -c "<comment>"`
-- **Sprint 紐付け**: Iteration Field を当該 Sprint に揃える
-  - `pm-project-fields.sh <num> --project <N> --owner <login> --iteration "<sprint title>"`
+- **Status=Done（複数件）**: `--bulk` で一括反映する。bulk JSON は Write ツールで `.tmp/` 配下に作成（Write 許可済みパス）
+  ```bash
+  ${CLAUDE_SKILL_DIR}/scripts/pm-project-fields.sh --bulk .tmp/sprint_done.json \
+    --repo <owner/repo> --project <N> --owner <login>
+  ```
+  bulk JSON 例: `[{"issue": 12, "status": "Done"}, {"issue": 15, "status": "Done"}]`
+- **Issue Close**: `gh issue close <num> --repo <owner/repo> --reason completed -c "<comment>"` を件数分実行（`gh issue` は許可済みでプロンプトは出ない）
+- **Sprint 紐付け**: bulk JSON に `"iteration": "<sprint title>"` を含めて同時反映
 
-複数件は **インライン直書きせず**、Write ツールで `/tmp/claude/run_*.sh` を作成して `bash` 実行する。
+**マルチリポ時は必ず `--repo` を付ける**（省略すると cwd repo の同番号 Issue に解決され、`add_issue_to_project` の副作用で無関係 Issue が Project に追加される）。repo が異なる Issue は repo ごとに bulk JSON を分ける。
+
+ad-hoc なシェルスクリプト（`run_*.sh`）の生成・実行は **しない**（Write / Bash 両方で余計なパーミッションプロンプトが出るため）。
 
 ### A.5: 結果サマリー
 
@@ -123,7 +128,7 @@ ${CLAUDE_SKILL_DIR}/scripts/pm-sprint-plan.sh \
 
 - `currentSprint` / `previousSprint`: 対象/直前 Sprint メタ
 - `sprintFieldId`: Sprint Field の GraphQL ID
-- `carryover`: In Progress 状態のもの（前 Sprint からの継続候補）
+- `carryover`: In Progress 状態の全 Issue（Sprint 未割当の In Progress も含む。各項目の `previousSprint` に元 Sprint 名）
 - `backlog`: Status=Todo/Backlog/null かつ現 Sprint 未割当
 - `byAssignee`: 担当者別グルーピング
 
@@ -163,9 +168,11 @@ ${CLAUDE_SKILL_DIR}/scripts/pm-sprint-plan.sh \
 ```
 
 ```bash
-${CLAUDE_SKILL_DIR}/scripts/pm-project-fields.sh --bulk /tmp/claude/sprint17_plan.json \
+${CLAUDE_SKILL_DIR}/scripts/pm-project-fields.sh --bulk .tmp/sprint17_plan.json \
   --project <N> --owner <login>
 ```
+
+bulk JSON は Write ツールで `.tmp/` 配下に作成する（Write 許可済みパス。`/tmp/claude/` は許可外でプロンプトが出る）。マルチリポ時は repo ごとに JSON を分けて `--repo` を付与。
 
 ### B.5: 結果サマリー
 

@@ -13,7 +13,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/pm-utils.sh"
 
 usage() {
-  cat <<EOF
+	cat <<EOF
 Usage: $0 <parent_issue_number> [options]
 
 Cascade iteration from a parent issue to its sub-issues.
@@ -37,7 +37,7 @@ Examples:
   # Dry run with recursive mode
   $0 10 --project 1 --owner @me --recursive --dry-run
 EOF
-  exit 1
+	exit 1
 }
 
 # Default values
@@ -51,55 +51,55 @@ DRY_RUN=false
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
-  case $1 in
-    --repo)
-      REPO="$2"
-      shift 2
-      ;;
-    --project)
-      PROJECT_NUMBER="$2"
-      shift 2
-      ;;
-    --owner)
-      PROJECT_OWNER="$2"
-      shift 2
-      ;;
-    --recursive)
-      RECURSIVE=true
-      shift
-      ;;
-    --max-depth)
-      MAX_DEPTH="$2"
-      shift 2
-      ;;
-    --dry-run)
-      DRY_RUN=true
-      shift
-      ;;
-    -h | --help) usage ;;
-    -*)
-      echo "Unknown option: $1"
-      usage
-      ;;
-    *)
-      PARENT_ISSUE="$1"
-      shift
-      ;;
-  esac
+	case $1 in
+	--repo)
+		REPO="$2"
+		shift 2
+		;;
+	--project)
+		PROJECT_NUMBER="$2"
+		shift 2
+		;;
+	--owner)
+		PROJECT_OWNER="$2"
+		shift 2
+		;;
+	--recursive)
+		RECURSIVE=true
+		shift
+		;;
+	--max-depth)
+		MAX_DEPTH="$2"
+		shift 2
+		;;
+	--dry-run)
+		DRY_RUN=true
+		shift
+		;;
+	-h | --help) usage ;;
+	-*)
+		echo "Unknown option: $1"
+		usage
+		;;
+	*)
+		PARENT_ISSUE="$1"
+		shift
+		;;
+	esac
 done
 
 # Validate required arguments
 [[ -z "$PARENT_ISSUE" ]] && {
-  echo "Error: parent_issue_number is required"
-  usage
+	echo "Error: parent_issue_number is required"
+	usage
 }
 [[ -z "$PROJECT_NUMBER" ]] && {
-  echo "Error: --project is required"
-  usage
+	echo "Error: --project is required"
+	usage
 }
 [[ -z "$PROJECT_OWNER" ]] && {
-  echo "Error: --owner is required"
-  usage
+	echo "Error: --owner is required"
+	usage
 }
 
 REPO="${REPO:-$(get_repo)}"
@@ -130,8 +130,8 @@ echo "Fetching project information..."
 PROJECT_ID=$(get_project_id "$PROJECT_OWNER" "$PROJECT_NUMBER")
 
 if [[ -z "$PROJECT_ID" || "$PROJECT_ID" == "null" ]]; then
-  echo "Error: Could not find project #$PROJECT_NUMBER for owner $PROJECT_OWNER" >&2
-  exit 1
+	echo "Error: Could not find project #$PROJECT_NUMBER for owner $PROJECT_OWNER" >&2
+	exit 1
 fi
 
 # Step 2: Get project fields
@@ -139,8 +139,8 @@ FIELDS_JSON=$(get_project_fields "$PROJECT_ID")
 ITERATION_FIELD_ID=$(find_iteration_field_id "$FIELDS_JSON")
 
 if [[ -z "$ITERATION_FIELD_ID" || "$ITERATION_FIELD_ID" == "null" ]]; then
-  echo "Error: Project #$PROJECT_NUMBER does not have an Iteration field" >&2
-  exit 1
+	echo "Error: Project #$PROJECT_NUMBER does not have an Iteration field" >&2
+	exit 1
 fi
 
 # Step 3: Get parent issue's iteration
@@ -152,11 +152,11 @@ PARENT_ITERATION_TITLE=$(echo "$PARENT_ITERATION_JSON" | jq -r '.title // empty'
 PARENT_ISSUE_TITLE=$(echo "$PARENT_ITERATION_JSON" | jq -r '.issueTitle // empty')
 
 if [[ -z "$PARENT_ITERATION_ID" || "$PARENT_ITERATION_ID" == "null" ]]; then
-  echo ""
-  echo "Error: Parent issue #$PARENT_ISSUE does not have an iteration set" >&2
-  echo "Please set an iteration for the parent issue first using:" >&2
-  echo "  pm-project-fields.sh $PARENT_ISSUE --project $PROJECT_NUMBER --owner $PROJECT_OWNER --iteration \"Sprint Name\"" >&2
-  exit 1
+	echo ""
+	echo "Error: Parent issue #$PARENT_ISSUE does not have an iteration set" >&2
+	echo "Please set an iteration for the parent issue first using:" >&2
+	echo "  pm-project-fields.sh $PARENT_ISSUE --project $PROJECT_NUMBER --owner $PROJECT_OWNER --iteration \"Sprint Name\"" >&2
+	exit 1
 fi
 
 echo "  Parent: #$PARENT_ISSUE - $PARENT_ISSUE_TITLE"
@@ -165,25 +165,25 @@ echo ""
 
 # Step 4: Get sub-issues (direct or recursive)
 if [[ "$RECURSIVE" == true ]]; then
-  echo "Fetching all descendants (recursive)..."
-  DESCENDANTS_JSON=$(get_all_descendants "$REPO" "$PARENT_ISSUE" "$MAX_DEPTH")
-  TOTAL_COUNT=$(echo "$DESCENDANTS_JSON" | jq 'length')
+	echo "Fetching all descendants (recursive)..."
+	DESCENDANTS_JSON=$(get_all_descendants "$REPO" "$PARENT_ISSUE" "$MAX_DEPTH")
+	TOTAL_COUNT=$(echo "$DESCENDANTS_JSON" | jq 'length')
 else
-  echo "Cascading to sub-issues..."
-  DESCENDANTS_JSON=$(get_child_issues "$REPO" "$PARENT_ISSUE")
-  TOTAL_COUNT=$(echo "$DESCENDANTS_JSON" | jq 'length')
+	echo "Cascading to sub-issues..."
+	DESCENDANTS_JSON=$(get_child_issues "$REPO" "$PARENT_ISSUE")
+	TOTAL_COUNT=$(echo "$DESCENDANTS_JSON" | jq 'length')
 fi
 
 if [[ "$TOTAL_COUNT" -eq 0 ]]; then
-  print_warn "No sub-issues found for #$PARENT_ISSUE"
-  echo ""
-  echo "═══════════════════════════════════════════════"
-  echo "📊 Summary"
-  echo "───────────────────────────────────────────────"
-  echo "  Parent: #$PARENT_ISSUE ($PARENT_ITERATION_TITLE)"
-  echo "  Sub-issues: 0"
-  echo "═══════════════════════════════════════════════"
-  exit 0
+	print_warn "No sub-issues found for #$PARENT_ISSUE"
+	echo ""
+	echo "═══════════════════════════════════════════════"
+	echo "📊 Summary"
+	echo "───────────────────────────────────────────────"
+	echo "  Parent: #$PARENT_ISSUE ($PARENT_ITERATION_TITLE)"
+	echo "  Sub-issues: 0"
+	echo "═══════════════════════════════════════════════"
+	exit 0
 fi
 
 echo "  Found $TOTAL_COUNT issue(s) to process"
@@ -194,100 +194,75 @@ updated_count=0
 skipped_count=0
 max_depth_reached=0
 
+# Fetch ALL project items once; per-issue iteration/item lookups become
+# local jq filters instead of one GraphQL query per sub-issue
+echo "Fetching project items..."
+ITEMS_JSON=$(get_project_items "$PROJECT_ID")
+
+# Process one sub-issue JSON object ({number, title, ...})
+# Shares PARENT_ITERATION_* / PROJECT_ID / ITERATION_FIELD_ID / counters via globals
+process_sub_issue() {
+	local item="$1" indent="${2:-}"
+	local sub_issue sub_issue_title sub_iteration_id sub_item_id lookup node_id
+
+	sub_issue=$(echo "$item" | jq -r '.number')
+	sub_issue_title=$(echo "$item" | jq -r '.title')
+
+	lookup=$(lookup_project_item "$ITEMS_JSON" "$sub_issue" "$REPO")
+	sub_iteration_id=$(echo "$lookup" | jq -r '.iterationId // empty' 2>/dev/null) || sub_iteration_id=""
+	sub_item_id=$(echo "$lookup" | jq -r '.itemId // empty' 2>/dev/null) || sub_item_id=""
+
+	# Check if already has the same iteration
+	if [[ "$sub_iteration_id" == "$PARENT_ITERATION_ID" ]]; then
+		print_skip "#$sub_issue: $sub_issue_title (already $PARENT_ITERATION_TITLE)"
+		skipped_count=$((skipped_count + 1))
+		return 0
+	fi
+
+	if [[ "$DRY_RUN" == true ]]; then
+		echo "${indent}Would update #$sub_issue: $sub_issue_title → $PARENT_ITERATION_TITLE"
+		updated_count=$((updated_count + 1))
+		return 0
+	fi
+
+	# Add to project if not already added
+	if [[ -z "$sub_item_id" || "$sub_item_id" == "null" ]]; then
+		node_id=$(get_issue_node_id "$REPO" "$sub_issue")
+		sub_item_id=$(add_issue_to_project "$PROJECT_ID" "$node_id")
+		if [[ -z "$sub_item_id" || "$sub_item_id" == "null" ]]; then
+			print_warn "Failed to add #$sub_issue to project"
+			return 0
+		fi
+	fi
+
+	# Update iteration
+	if update_iteration_field "$PROJECT_ID" "$sub_item_id" "$ITERATION_FIELD_ID" "$PARENT_ITERATION_ID" >/dev/null 2>&1; then
+		print_success "#$sub_issue: $sub_issue_title → $PARENT_ITERATION_TITLE"
+		updated_count=$((updated_count + 1))
+	else
+		print_warn "Failed to update #$sub_issue"
+	fi
+	return 0
+}
+
 # Process by depth level for better output
 if [[ "$RECURSIVE" == true ]]; then
-  for depth in $(echo "$DESCENDANTS_JSON" | jq -r '.[].depth' | sort -u); do
-    echo "Level $depth:"
-    max_depth_reached=$depth
+	for depth in $(echo "$DESCENDANTS_JSON" | jq -r '.[].depth' | sort -u); do
+		echo "Level $depth:"
+		max_depth_reached=$depth
 
-    while IFS= read -r item; do
-      [[ -z "$item" ]] && continue
-
-      sub_issue=$(echo "$item" | jq -r '.number')
-      sub_issue_title=$(echo "$item" | jq -r '.title')
-
-      # Get sub-issue's current iteration
-      sub_iteration_json=$(get_issue_iteration "$REPO" "$sub_issue" "$PROJECT_NUMBER")
-      sub_iteration_id=$(echo "$sub_iteration_json" | jq -r '.iterationId // empty')
-      sub_item_id=$(echo "$sub_iteration_json" | jq -r '.itemId // empty')
-
-      # Check if already has the same iteration
-      if [[ "$sub_iteration_id" == "$PARENT_ITERATION_ID" ]]; then
-        print_skip "#$sub_issue: $sub_issue_title (already $PARENT_ITERATION_TITLE)"
-        ((skipped_count++))
-        continue
-      fi
-
-      if [[ "$DRY_RUN" == true ]]; then
-        echo "  Would update #$sub_issue: $sub_issue_title → $PARENT_ITERATION_TITLE"
-        ((updated_count++))
-        continue
-      fi
-
-      # Add to project if not already added
-      if [[ -z "$sub_item_id" || "$sub_item_id" == "null" ]]; then
-        node_id=$(get_issue_node_id "$REPO" "$sub_issue")
-        sub_item_id=$(add_issue_to_project "$PROJECT_ID" "$node_id")
-        if [[ -z "$sub_item_id" || "$sub_item_id" == "null" ]]; then
-          print_warn "Failed to add #$sub_issue to project"
-          continue
-        fi
-      fi
-
-      # Update iteration
-      if update_iteration_field "$PROJECT_ID" "$sub_item_id" "$ITERATION_FIELD_ID" "$PARENT_ITERATION_ID" >/dev/null 2>&1; then
-        print_success "#$sub_issue: $sub_issue_title → $PARENT_ITERATION_TITLE"
-        ((updated_count++))
-      else
-        print_warn "Failed to update #$sub_issue"
-      fi
-    done < <(echo "$DESCENDANTS_JSON" | jq -c --argjson d "$depth" '.[] | select(.depth == $d)')
-    echo ""
-  done
+		while IFS= read -r item; do
+			[[ -z "$item" ]] && continue
+			process_sub_issue "$item" "  "
+		done < <(echo "$DESCENDANTS_JSON" | jq -c --argjson d "$depth" '.[] | select(.depth == $d)')
+		echo ""
+	done
 else
-  # Non-recursive mode: process direct children only
-  while IFS= read -r item; do
-    [[ -z "$item" ]] && continue
-
-    sub_issue=$(echo "$item" | jq -r '.number')
-    sub_issue_title=$(echo "$item" | jq -r '.title')
-
-    # Get sub-issue's current iteration
-    sub_iteration_json=$(get_issue_iteration "$REPO" "$sub_issue" "$PROJECT_NUMBER")
-    sub_iteration_id=$(echo "$sub_iteration_json" | jq -r '.iterationId // empty')
-    sub_item_id=$(echo "$sub_iteration_json" | jq -r '.itemId // empty')
-
-    # Check if already has the same iteration
-    if [[ "$sub_iteration_id" == "$PARENT_ITERATION_ID" ]]; then
-      print_skip "#$sub_issue: $sub_issue_title (already $PARENT_ITERATION_TITLE)"
-      ((skipped_count++))
-      continue
-    fi
-
-    if [[ "$DRY_RUN" == true ]]; then
-      echo "Would update #$sub_issue: $sub_issue_title → $PARENT_ITERATION_TITLE"
-      ((updated_count++))
-      continue
-    fi
-
-    # Add to project if not already added
-    if [[ -z "$sub_item_id" || "$sub_item_id" == "null" ]]; then
-      node_id=$(get_issue_node_id "$REPO" "$sub_issue")
-      sub_item_id=$(add_issue_to_project "$PROJECT_ID" "$node_id")
-      if [[ -z "$sub_item_id" || "$sub_item_id" == "null" ]]; then
-        print_warn "Failed to add #$sub_issue to project"
-        continue
-      fi
-    fi
-
-    # Update iteration
-    if update_iteration_field "$PROJECT_ID" "$sub_item_id" "$ITERATION_FIELD_ID" "$PARENT_ITERATION_ID" >/dev/null 2>&1; then
-      print_success "#$sub_issue: $sub_issue_title → $PARENT_ITERATION_TITLE"
-      ((updated_count++))
-    else
-      print_warn "Failed to update #$sub_issue"
-    fi
-  done < <(echo "$DESCENDANTS_JSON" | jq -c '.[]')
+	# Non-recursive mode: process direct children only
+	while IFS= read -r item; do
+		[[ -z "$item" ]] && continue
+		process_sub_issue "$item"
+	done < <(echo "$DESCENDANTS_JSON" | jq -c '.[]')
 fi
 
 # Step 6: Summary

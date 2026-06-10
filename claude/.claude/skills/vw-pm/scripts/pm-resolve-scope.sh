@@ -15,12 +15,13 @@
 #
 # Output: JSON to stdout
 #   {
-#     mode:        "single" | "multi" | "ambiguous" | "error",
-#     cwdRepo:     "owner/repo" | null,
-#     project:     {id, number, title, url, ownerLogin, ownerType} | null,
-#     scopeRepos:  ["owner/repo", ...],
-#     mainRepo:    "owner/repo" | null,
-#     candidates:  [project, ...]    // ambiguous mode only
+#     mode:           "single" | "multi" | "ambiguous" | "error",
+#     cwdRepo:        "owner/repo" | null,
+#     project:        {id, number, title, url, ownerLogin, ownerType} | null,
+#     scopeRepos:     ["owner/repo", ...],
+#     mainRepo:       "owner/repo" | null,
+#     repoOwnerTypes: {"owner/repo": "Organization" | "User", ...},
+#     candidates:     [project, ...]    // ambiguous mode only
 #   }
 #
 # Exit codes:
@@ -69,9 +70,13 @@ while [[ $# -gt 0 ]]; do
 	esac
 done
 
-# ---- cache refresh ----
+# ---- cache refresh (drop every vw-pm session cache kind) ----
 if [[ "$REFRESH" == "true" ]]; then
-	rm -f "$(get_pm_cache_dir)"/scope-*.json "$(get_pm_cache_dir)"/repo-meta-*.json
+	rm -f "$(get_pm_cache_dir)"/scope-*.json \
+		"$(get_pm_cache_dir)"/repo-meta-*.json \
+		"$(get_pm_cache_dir)"/fields-*.json \
+		"$(get_pm_cache_dir)"/project-id-*.txt \
+		"$(get_pm_cache_dir)"/owner-type-*.txt
 fi
 
 # ---- detect cwd repo (best-effort) ----
@@ -115,12 +120,15 @@ resolve_project() {
 	case "$count" in
 	0)
 		# No project linked: emit single-repo mode and exit
-		jq -n --arg r "$CWD_REPO" '{
+		local cwd_owner_type
+		cwd_owner_type=$(get_owner_type "${CWD_REPO%%/*}" 2>/dev/null || echo "")
+		jq -n --arg r "$CWD_REPO" --arg ot "$cwd_owner_type" '{
 				mode: "single",
 				cwdRepo: $r,
 				project: null,
 				scopeRepos: [$r],
 				mainRepo: $r,
+				repoOwnerTypes: (if $ot == "" then {} else {($r): $ot} end),
 				candidates: []
 			}'
 		exit 0
@@ -138,6 +146,7 @@ resolve_project() {
 				project: null,
 				scopeRepos: [],
 				mainRepo: null,
+				repoOwnerTypes: {},
 				candidates: $c
 			}'
 		exit 2
@@ -148,21 +157,33 @@ resolve_project() {
 resolve_project
 
 # ---- expand SCOPE_REPOS ----
+# (served from the scope cache when the fallback scan already fetched it)
 SCOPE_REPOS=$(get_project_scope_repos "$PROJECT_ID")
 
 # ---- choose MAIN_REPO ----
 MAIN_REPO=$(resolve_main_repo "$CWD_REPO" "$SCOPE_REPOS")
+
+# ---- owner types (lets the SKILL skip a separate per-repo gh api loop) ----
+REPO_OWNER_TYPES="{}"
+while IFS= read -r scope_repo; do
+	[[ -z "$scope_repo" ]] && continue
+	owner_type=$(get_owner_type "${scope_repo%%/*}" 2>/dev/null || echo "")
+	[[ -z "$owner_type" ]] && continue
+	REPO_OWNER_TYPES=$(echo "$REPO_OWNER_TYPES" | jq --arg r "$scope_repo" --arg t "$owner_type" '. + {($r): $t}')
+done < <(echo "$SCOPE_REPOS" | jq -r '.[]')
 
 # ---- output ----
 jq -n \
 	--arg r "$CWD_REPO" \
 	--argjson p "$PROJECT_META" \
 	--argjson s "$SCOPE_REPOS" \
-	--arg m "$MAIN_REPO" '{
+	--arg m "$MAIN_REPO" \
+	--argjson ot "$REPO_OWNER_TYPES" '{
 		mode: "multi",
 		cwdRepo: $r,
 		project: $p,
 		scopeRepos: $s,
-		mainRepo: $m,
+		mainRepo: (if $m == "" then null else $m end),
+		repoOwnerTypes: $ot,
 		candidates: []
 	}'

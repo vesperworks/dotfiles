@@ -116,36 +116,44 @@ if [[ "$SCOPE_COUNT" -eq 0 ]]; then
 	exit 1
 fi
 
-# Label definitions: name:color:description
+# Label definitions: name|color|description
+# ("|" as separator — label names themselves contain ":")
 type_labels=(
-	"type:epic:5319E7:マイルストーン"
-	"type:feature:0052CC:機能要件"
-	"type:story:00875A:ユーザーストーリー"
-	"type:task:97A0AF:実装タスク"
-	"type:bug:D73A4A:バグ修正"
+	"type:epic|5319E7|マイルストーン"
+	"type:feature|0052CC|機能要件"
+	"type:story|00875A|ユーザーストーリー"
+	"type:task|97A0AF|実装タスク"
+	"type:bug|D73A4A|バグ修正"
 )
 
 priority_labels=(
-	"priority:high:B60205:最優先"
-	"priority:medium:FBCA04:通常"
-	"priority:low:0E8A16:低優先度"
+	"priority:high|B60205|最優先"
+	"priority:medium|FBCA04|通常"
+	"priority:low|0E8A16|低優先度"
 )
 
 # Create labels from array passed as arguments
-# Usage: create_labels "name:color:desc" "name:color:desc" ...
+# Usage: create_labels "name|color|desc" "name|color|desc" ...
 # Returns: "created_count skipped_count"
+# Fetches existing labels once per repo, so idempotent re-runs cost 1 API call
+# and real creation failures are reported instead of masked as "Exists".
 create_labels() {
 	local created=0
 	local skipped=0
 
+	local existing
+	existing=$(gh label list --repo "$REPO" --limit 100 --json name --jq '.[].name' 2>/dev/null) || existing=""
+
 	for item in "$@"; do
-		IFS=':' read -r name color desc <<<"$item"
-		if gh label create "$name" --color "$color" --description "$desc" --repo "$REPO" 2>/dev/null; then
-			print_success "Created: $name"
-			((created++))
-		else
+		IFS='|' read -r name color desc <<<"$item"
+		if printf '%s\n' "$existing" | grep -qxF "$name"; then
 			print_skip "Exists: $name"
-			((skipped++))
+			skipped=$((skipped + 1))
+		elif gh label create "$name" --color "$color" --description "$desc" --repo "$REPO" >/dev/null; then
+			print_success "Created: $name"
+			created=$((created + 1))
+		else
+			print_warn "Failed to create: $name"
 		fi
 	done
 
@@ -191,15 +199,15 @@ while IFS= read -r repo_iter; do
 
 		echo "Creating type:* labels..."
 		read -r created skipped <<<"$(create_labels "${type_labels[@]}")"
-		((total_created += created))
-		((total_skipped += skipped))
+		total_created=$((total_created + created))
+		total_skipped=$((total_skipped + skipped))
 
 		if [[ "$WITH_PRIORITY" == true ]]; then
 			echo ""
 			echo "Creating priority:* labels..."
 			read -r created skipped <<<"$(create_labels "${priority_labels[@]}")"
-			((total_created += created))
-			((total_skipped += skipped))
+			total_created=$((total_created + created))
+			total_skipped=$((total_skipped + skipped))
 		fi
 
 	elif [[ "$IS_ORG" == true ]]; then
@@ -239,16 +247,16 @@ while IFS= read -r repo_iter; do
 
 		echo "Creating type:* labels..."
 		read -r created skipped <<<"$(create_labels "${type_labels[@]}")"
-		((total_created += created))
-		((total_skipped += skipped))
+		total_created=$((total_created + created))
+		total_skipped=$((total_skipped + skipped))
 
 		if [[ "$WITH_PRIORITY" == true ]]; then
 			echo ""
 			echo "⚠️ --with-priority is deprecated. Use Projects V2 Fields instead."
 			echo "Creating priority:* labels..."
 			read -r created skipped <<<"$(create_labels "${priority_labels[@]}")"
-			((total_created += created))
-			((total_skipped += skipped))
+			total_created=$((total_created + created))
+			total_skipped=$((total_skipped + skipped))
 		fi
 	fi
 	echo ""

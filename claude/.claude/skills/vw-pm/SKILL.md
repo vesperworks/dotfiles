@@ -3,7 +3,7 @@ name: vw-pm
 description: "GitHub Projects PM Agent。議事録からタスク抽出・Issue化、Projects初期セットアップを行う。キラーUX:「雑に議事録を投げるとタスク化してくれる」"
 disable-model-invocation: true
 model: sonnet
-allowed-tools: Bash(gh:*), Bash(git remote:*), Bash(git status:*), Bash(${CLAUDE_SKILL_DIR}/scripts/*:*), Bash(cat:*)
+allowed-tools: Bash(gh:*), Bash(git remote:*), Bash(git status:*), Bash(${CLAUDE_SKILL_DIR}/scripts/*:*), Bash(jq:*)
 ---
 
 <role>
@@ -98,12 +98,18 @@ If authentication fails:
 
 ### Step 2.2: 動的 Scope 解決（設定ファイルなし）
 
-cwd の repo から所属 Project を GraphQL で逆引きし、Project が束ねている全 repo (`SCOPE_REPOS`) とメインリポジトリ (`MAIN_REPO`) を取得する。**設定ファイルは持たず、毎回動的に解決する**。
+cwd の repo から所属 Project を GraphQL で逆引きし、Project が束ねている全 repo (`SCOPE_REPOS`) とメインリポジトリ (`MAIN_REPO`)、各 repo の owner type (`repoOwnerTypes`) を取得する。**設定ファイルは持たず、毎回動的に解決する**。
+
+**起動コマンドは必ず行頭を `${CLAUDE_SKILL_DIR}/scripts/` で始める**（`VAR=$(script)` のような変数代入ラップにすると permission パターンにマッチせずプロンプトが出る）:
 
 ```bash
-SCOPE_JSON=$(${CLAUDE_SKILL_DIR}/scripts/pm-resolve-scope.sh)
-EXIT=$?
-MODE=$(echo "$SCOPE_JSON" | jq -r .mode)
+${CLAUDE_SKILL_DIR}/scripts/pm-resolve-scope.sh > "${TMPDIR}/vw-pm-scope.json"
+```
+
+exit code（0=single/multi, 2=ambiguous）と出力 JSON の `.mode` で分岐する。JSON の読み取りは Read ツールか `jq` 単体コマンドで行う:
+
+```bash
+jq -r '.mode, .mainRepo, (.scopeRepos | join(","))' "${TMPDIR}/vw-pm-scope.json"
 ```
 
 #### Mode 別の挙動
@@ -114,43 +120,17 @@ MODE=$(echo "$SCOPE_JSON" | jq -r .mode)
 | `multi` | 0 | Project 1個に絞れた | `scopeRepos` / `mainRepo` / `project` が確定 → マルチリポモード |
 | `ambiguous` | 2 | Project 複数候補 | `candidates` から AskUserQuestion で選択 → `--project-id <ID>` で再実行 |
 
-#### Mode handling パターン
+#### Mode handling
 
-```bash
-case "$MODE" in
-  single)
-    SCOPE_REPOS=$(echo "$SCOPE_JSON" | jq -c .scopeRepos)
-    MAIN_REPO=$(echo "$SCOPE_JSON" | jq -r .mainRepo)
-    echo "📦 単一 repo モード: $MAIN_REPO"
-    ;;
-  multi)
-    SCOPE_REPOS=$(echo "$SCOPE_JSON" | jq -c .scopeRepos)
-    MAIN_REPO=$(echo "$SCOPE_JSON" | jq -r .mainRepo)
-    PROJECT_TITLE=$(echo "$SCOPE_JSON" | jq -r .project.title)
-    echo "🎯 マルチリポモード: $PROJECT_TITLE"
-    echo "   SCOPE_REPOS = $(echo "$SCOPE_REPOS" | jq -r 'join(", ")')"
-    echo "   MAIN_REPO   = $MAIN_REPO"
-    ;;
-  ambiguous)
-    # AskUserQuestion で candidates から選択させる
-    CANDIDATES=$(echo "$SCOPE_JSON" | jq -c .candidates)
-    # → ユーザー選択後:
-    # SCOPE_JSON=$(${CLAUDE_SKILL_DIR}/scripts/pm-resolve-scope.sh --project-id <selected_id>)
-    ;;
-esac
-```
+| mode | 読み取るキー | アクション |
+|------|------------|-----------|
+| `single` | `.mainRepo` | 「📦 単一 repo モード: <mainRepo>」を表示 |
+| `multi` | `.project.title` / `.scopeRepos` / `.mainRepo` | 「🎯 マルチリポモード: <title>」+ SCOPE_REPOS / MAIN_REPO を表示 |
+| `ambiguous` | `.candidates` | AskUserQuestion で選択 → `${CLAUDE_SKILL_DIR}/scripts/pm-resolve-scope.sh --project-id <selected_id>` で再実行 |
 
 ### Step 2.3: Repository Type Detection（各 SCOPE_REPOS について）
 
-`SCOPE_REPOS` の各 repo ごとに org / user 判定を行い、Issue Types vs ラベル戦略を決定する。**混在（org + user）は警告を出して続行**。
-
-```bash
-for repo in $(echo "$SCOPE_REPOS" | jq -r '.[]'); do
-  OWNER="${repo%%/*}"
-  OWNER_TYPE=$(gh api "users/$OWNER" --jq '.type' 2>/dev/null)
-  echo "  $repo → $OWNER_TYPE"
-done
-```
+**追加の API 呼び出しは不要**。Step 2.2 の出力 JSON に `repoOwnerTypes`（repo → "Organization" / "User"）が同梱されているので、それを読んで Issue Types vs ラベル戦略を決定する。**混在（org + user）は警告を出して続行**。
 
 | Repository Type | type分類 | priority |
 |-----------------|----------|----------|
@@ -243,10 +223,11 @@ Epic (if date mentioned)
 
 #### A. 各 SCOPE_REPOS のカテゴリを取得
 
+行頭起動形式で実行（repo は Step 2.2 の `.scopeRepos` から展開して直接引数に書く）:
+
 ```bash
-REPO_CATS=$(${CLAUDE_SKILL_DIR}/scripts/pm-categorize.sh --batch \
-  $(echo "$SCOPE_REPOS" | jq -r '.[]'))
-# 出力例: {"a/frontend": "dev", "a/wiki": "other"}
+${CLAUDE_SKILL_DIR}/scripts/pm-categorize.sh --batch owner/frontend owner/wiki
+# 出力例: {"owner/frontend": "dev", "owner/wiki": "other"}
 ```
 
 #### B. 各 Task のカテゴリを LLM が判定（辞書は持たない）
@@ -359,6 +340,7 @@ Script references (use `${CLAUDE_SKILL_DIR}/scripts/` prefix):
 
 **Issue / Project 操作:**
 - `${CLAUDE_SKILL_DIR}/scripts/pm-bulk-issues.sh` - Issue一括作成（repo 別 issues.json 対応）
+- `${CLAUDE_SKILL_DIR}/scripts/pm-list-issues.sh` - SCOPE_REPOS 横断の Issue 一覧取得（分析用）
 - `${CLAUDE_SKILL_DIR}/scripts/pm-link-hierarchy.sh` - 階層関係設定（同一 repo 内のみ）
 - `${CLAUDE_SKILL_DIR}/scripts/pm-project-fields.sh` - Projectsフィールド設定
 - `${CLAUDE_SKILL_DIR}/scripts/pm-setup-labels.sh` - ラベル作成（`--all-repos` で全 SCOPE_REPOS に展開）
@@ -417,7 +399,8 @@ For setup, analysis, status, or sprint operations, read the corresponding file:
 
 <constraints>
 ## 必須事項
-- **最重要**: gh コマンド（gh auth, gh issue, gh project, gh api 等）を Bash で実行する際は、**必ず `dangerouslyDisableSandbox: true` を指定すること**。サンドボックスが macOS Keychain へのアクセスをブロックし認証が失敗するため。
+- **最重要**: gh コマンド（gh auth, gh issue, gh project, gh api 等）**および `pm-*.sh` スクリプトの起動**を Bash で実行する際は、**必ず `dangerouslyDisableSandbox: true` を指定すること**。スクリプトは内部で gh を多用しており、サンドボックスが macOS Keychain へのアクセスをブロックし認証が失敗するため。
+- **必須**: スクリプト起動コマンドは **行頭を `${CLAUDE_SKILL_DIR}/scripts/` で始める**。`VAR=$(script)` の変数代入ラップ・`for`/`while` への埋め込みは permission パターンにマッチしないため禁止。出力が必要な場合は `> "${TMPDIR}/file.json"` にリダイレクトして Read / `jq` で読む
 - **必須**: すべての操作で `AskUserQuestion` ツールを使用してユーザー確認を取る（例外: ユーザーが明示的に操作を指示した場合は省略可）
 - **必須**: 認証確認（gh auth status）を実行前に行う
 - **必須**: Scope 解決は `pm-resolve-scope.sh` を呼んで動的に行う。**設定ファイルを作成しない**
