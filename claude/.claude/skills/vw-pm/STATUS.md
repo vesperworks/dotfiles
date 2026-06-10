@@ -71,7 +71,7 @@ AskUserQuestion:
 承認後に実行（マルチリポ時は `--repo $TARGET_REPO` を必ず付与）:
 
 ```bash
-.claude/skills/vw-pm/scripts/pm-project-fields.sh {number} \
+${CLAUDE_SKILL_DIR}/scripts/pm-project-fields.sh {number} \
   --repo "$TARGET_REPO" \
   --status "{new_status}" \
   --project 1 --owner @me
@@ -99,7 +99,7 @@ Issue #{number}: {old_status} → **{new_status}**
 
 ```bash
 # 直接リクエスト例（マルチリポ時は --repo を付与）
-.claude/skills/vw-pm/scripts/pm-project-fields.sh 123 \
+${CLAUDE_SKILL_DIR}/scripts/pm-project-fields.sh 123 \
   --repo "$TARGET_REPO" \
   --status "Done" \
   --project 1 --owner @me
