@@ -13,7 +13,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/pm-utils.sh"
 
 usage() {
-  cat <<EOF
+	cat <<EOF
 Usage: $0 <hierarchy.json> [options]
 
 Options:
@@ -48,7 +48,7 @@ Behavior:
   Default: Skip issues that already have a parent (safe)
   --force: Remove existing parent and set new one (override)
 EOF
-  exit 1
+	exit 1
 }
 
 # Default values
@@ -60,43 +60,43 @@ VERBOSE=false
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
-  case $1 in
-    --repo)
-      REPO="$2"
-      shift 2
-      ;;
-    --dry-run)
-      DRY_RUN=true
-      shift
-      ;;
-    --force)
-      FORCE=true
-      shift
-      ;;
-    --verbose | -v)
-      VERBOSE=true
-      shift
-      ;;
-    -h | --help) usage ;;
-    -*)
-      echo "Unknown option: $1"
-      usage
-      ;;
-    *)
-      HIERARCHY_FILE="$1"
-      shift
-      ;;
-  esac
+	case $1 in
+	--repo)
+		REPO="$2"
+		shift 2
+		;;
+	--dry-run)
+		DRY_RUN=true
+		shift
+		;;
+	--force)
+		FORCE=true
+		shift
+		;;
+	--verbose | -v)
+		VERBOSE=true
+		shift
+		;;
+	-h | --help) usage ;;
+	-*)
+		echo "Unknown option: $1"
+		usage
+		;;
+	*)
+		HIERARCHY_FILE="$1"
+		shift
+		;;
+	esac
 done
 
 # Validate input
 [[ -z "$HIERARCHY_FILE" ]] && {
-  echo "Error: hierarchy.json is required"
-  usage
+	echo "Error: hierarchy.json is required"
+	usage
 }
 [[ ! -f "$HIERARCHY_FILE" ]] && {
-  echo "Error: File not found: $HIERARCHY_FILE"
-  exit 1
+	echo "Error: File not found: $HIERARCHY_FILE"
+	exit 1
 }
 
 # Get repository
@@ -107,65 +107,81 @@ echo "Setting up issue hierarchy for $REPO..."
 [[ "$FORCE" == true ]] && echo "⚡ FORCE MODE - existing parents will be replaced"
 echo ""
 
+# Pre-fetch {number, id, parent} for every issue referenced in the hierarchy
+# with ONE aliased GraphQL query (replaces 2 REST GETs per child).
+# Issue numbers are validated integers from jq, so inlining them is safe.
+ALL_NUMBERS=$(jq '[.[] | .parent, .children[]] | unique' "$HIERARCHY_FILE")
+QUERY_BODY=$(echo "$ALL_NUMBERS" | jq -r '.[] | "i\(.): issue(number: \(.)) { number fullDatabaseId parent { number } }"' | tr '\n' ' ')
+ISSUE_META=$(gh api graphql \
+	-f owner="${REPO%%/*}" -f name="${REPO##*/}" \
+	-f query="query(\$owner: String!, \$name: String!) { repository(owner: \$owner, name: \$name) { $QUERY_BODY } }" \
+	--jq '[.data.repository | to_entries[] | .value | select(. != null)]' 2>/dev/null) || ISSUE_META="[]"
+
+# Look up pre-fetched metadata: lookup_issue_field <number> <jq-path>
+lookup_issue_field() {
+	echo "$ISSUE_META" | jq -r --argjson n "$1" ".[] | select(.number == \$n) | $2"
+}
+
 success_count=0
 skip_count=0
 fail_count=0
 
 while IFS= read -r relation; do
-  parent=$(echo "$relation" | jq -r '.parent')
-  children=$(echo "$relation" | jq -r '.children[]')
+	parent=$(echo "$relation" | jq -r '.parent')
+	children=$(echo "$relation" | jq -r '.children[]')
 
-  for child in $children; do
-    # Check if child already has a parent
-    existing_parent=$(get_parent_issue "$REPO" "$child")
+	for child in $children; do
+		# Check if child already has a parent (from pre-fetched metadata)
+		existing_parent=$(lookup_issue_field "$child" '.parent.number // empty')
 
-    if [[ "$DRY_RUN" == true ]]; then
-      if [[ -n "$existing_parent" ]]; then
-        echo "Would link: #$parent ← #$child (has parent #$existing_parent)"
-      else
-        echo "Would link: #$parent ← #$child (sub-issue)"
-      fi
-      continue
-    fi
+		if [[ "$DRY_RUN" == true ]]; then
+			if [[ -n "$existing_parent" ]]; then
+				echo "Would link: #$parent ← #$child (has parent #$existing_parent)"
+			else
+				echo "Would link: #$parent ← #$child (sub-issue)"
+			fi
+			continue
+		fi
 
-    # Handle existing parent
-    if [[ -n "$existing_parent" ]]; then
-      if [[ "$existing_parent" == "$parent" ]]; then
-        # Already linked to the same parent - skip
-        print_skip "#$child already linked to #$parent"
-        skip_count=$((skip_count + 1))
-        continue
-      elif [[ "$FORCE" == true ]]; then
-        # Remove existing parent and set new one
-        print_info "Removing #$child from parent #$existing_parent..."
-        if remove_sub_issue "$REPO" "$existing_parent" "$child" 2>/dev/null; then
-          print_success "Removed #$child from #$existing_parent"
-        else
-          print_warn "Failed to remove #$child from #$existing_parent"
-          fail_count=$((fail_count + 1))
-          continue
-        fi
-      else
-        # Default: skip issues with existing parent
-        print_skip "#$child (already has parent #$existing_parent)"
-        skip_count=$((skip_count + 1))
-        continue
-      fi
-    fi
+		# Handle existing parent
+		if [[ -n "$existing_parent" ]]; then
+			if [[ "$existing_parent" == "$parent" ]]; then
+				# Already linked to the same parent - skip
+				print_skip "#$child already linked to #$parent"
+				skip_count=$((skip_count + 1))
+				continue
+			elif [[ "$FORCE" == true ]]; then
+				# Remove existing parent and set new one
+				print_info "Removing #$child from parent #$existing_parent..."
+				if remove_sub_issue "$REPO" "$existing_parent" "$child" 2>/dev/null; then
+					print_success "Removed #$child from #$existing_parent"
+				else
+					print_warn "Failed to remove #$child from #$existing_parent"
+					fail_count=$((fail_count + 1))
+					continue
+				fi
+			else
+				# Default: skip issues with existing parent
+				print_skip "#$child (already has parent #$existing_parent)"
+				skip_count=$((skip_count + 1))
+				continue
+			fi
+		fi
 
-    # Set sub-issue relationship
-    error_output=""
-    if error_output=$(add_sub_issue "$REPO" "$parent" "$child" 2>&1); then
-      print_success "#$parent ← #$child (sub-issue)"
-      success_count=$((success_count + 1))
-    else
-      print_warn "Failed: #$parent ← #$child"
-      if [[ "$VERBOSE" == true ]]; then
-        echo "   └─ Error: $error_output" >&2
-      fi
-      fail_count=$((fail_count + 1))
-    fi
-  done
+		# Set sub-issue relationship (child ID comes from the pre-fetched batch)
+		child_id=$(lookup_issue_field "$child" '.fullDatabaseId // empty')
+		error_output=""
+		if error_output=$(add_sub_issue "$REPO" "$parent" "$child" "$child_id" 2>&1); then
+			print_success "#$parent ← #$child (sub-issue)"
+			success_count=$((success_count + 1))
+		else
+			print_warn "Failed: #$parent ← #$child"
+			if [[ "$VERBOSE" == true ]]; then
+				echo "   └─ Error: $error_output" >&2
+			fi
+			fail_count=$((fail_count + 1))
+		fi
+	done
 done < <(jq -c '.[]' "$HIERARCHY_FILE")
 
 echo ""
@@ -173,26 +189,26 @@ echo "════════════════════════�
 echo "📊 Summary"
 echo "───────────────────────────────────────────────"
 if [[ "$DRY_RUN" == true ]]; then
-  echo "  Mode: DRY RUN (no relationships created)"
+	echo "  Mode: DRY RUN (no relationships created)"
 else
-  echo "  Success: $success_count relationships"
-  [[ $skip_count -gt 0 ]] && echo "  Skipped: $skip_count (use --force to override)"
-  [[ $fail_count -gt 0 ]] && echo "  Failed: $fail_count relationships"
+	echo "  Success: $success_count relationships"
+	[[ $skip_count -gt 0 ]] && echo "  Skipped: $skip_count (use --force to override)"
+	[[ $fail_count -gt 0 ]] && echo "  Failed: $fail_count relationships"
 fi
 echo "═══════════════════════════════════════════════"
 
 # Tip for GitHub Projects
 if [[ "$DRY_RUN" != true ]] && ((success_count > 0)); then
-  echo ""
-  print_info "Tip: Enable 'Parent issue' and 'Sub-issue progress' fields in GitHub Projects for visualization"
+	echo ""
+	print_info "Tip: Enable 'Parent issue' and 'Sub-issue progress' fields in GitHub Projects for visualization"
 fi
 
 # Exit with error only if there are actual failures (not skips)
 if [[ $fail_count -gt 0 ]]; then
-  if [[ "$VERBOSE" != true ]]; then
-    echo ""
-    print_info "Hint: Use --verbose to see detailed error messages"
-  fi
-  exit 1
+	if [[ "$VERBOSE" != true ]]; then
+		echo ""
+		print_info "Hint: Use --verbose to see detailed error messages"
+	fi
+	exit 1
 fi
 exit 0

@@ -13,13 +13,12 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# pm-utils.sh sources security-utils.sh (warns if missing)
 source "$SCRIPT_DIR/pm-utils.sh"
 
-# Load security utilities (required)
-SECURITY_UTILS="${SCRIPT_DIR}/../../../scripts/security-utils.sh"
-# shellcheck source=../../../scripts/security-utils.sh
-source "$SECURITY_UTILS" || {
-	echo "Error: security-utils.sh not found" >&2
+# validate_* functions are required for this script — fail fast if unavailable
+command -v validate_repo >/dev/null || {
+	echo "Error: security-utils.sh could not be loaded (validate_* missing)" >&2
 	exit 1
 }
 
@@ -32,7 +31,7 @@ Options:
                          Auto-detected from cwd if omitted.
   --milestone <N>        Milestone number to assign (applied per issue's repo)
   --dry-run              Preview without creating issues
-  --checkpoint <file>    Checkpoint file path (default: /tmp/claude/pm-checkpoint.json)
+  --checkpoint <file>    Checkpoint file path (default: \$TMPDIR/vw-pm/pm-checkpoint.json)
   --batch-size <N>       Issues per batch (default: 20)
   --delay <sec>          Delay between batches (default: 1)
   -h, --help             Show this help
@@ -63,7 +62,7 @@ MILESTONE=""
 DRY_RUN=false
 BATCH_SIZE=20
 DELAY_SEC=1
-CHECKPOINT_FILE="/tmp/claude/pm-checkpoint.json"
+CHECKPOINT_FILE="${TMPDIR:-/tmp}/vw-pm/pm-checkpoint.json"
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -129,28 +128,8 @@ DISTINCT_REPOS=$(jq -r --arg d "$REPO" '
 	[.[] | (.repo // $d)] | map(select(. != "" and . != null)) | unique | .[]
 ' "$ISSUES_FILE")
 
-# Cache is_org_repo results (bash 3.2: parallel arrays, no associative array)
-CACHED_REPO_NAMES=()
-CACHED_REPO_IS_ORG=()
-
-cache_lookup_is_org() {
-	local r="$1" i
-	for i in "${!CACHED_REPO_NAMES[@]}"; do
-		if [[ "${CACHED_REPO_NAMES[$i]}" == "$r" ]]; then
-			[[ "${CACHED_REPO_IS_ORG[$i]}" == "true" ]]
-			return $?
-		fi
-	done
-	if is_org_repo "$r"; then
-		CACHED_REPO_NAMES+=("$r")
-		CACHED_REPO_IS_ORG+=("true")
-		return 0
-	else
-		CACHED_REPO_NAMES+=("$r")
-		CACHED_REPO_IS_ORG+=("false")
-		return 1
-	fi
-}
+# is_org_repo is backed by the shared owner-type file cache in pm-utils.sh
+# (one API call per owner per 5min, shared across scripts)
 
 echo "═══════════════════════════════════════════════"
 echo "📋 pm-bulk-issues.sh"
@@ -161,7 +140,7 @@ fi
 echo "  Distinct repos in input:"
 while IFS= read -r r; do
 	[[ -z "$r" ]] && continue
-	if cache_lookup_is_org "$r"; then
+	if is_org_repo "$r"; then
 		echo "    - $r → 📋 Organization (Issue Types via API)"
 	else
 		echo "    - $r → 👤 Personal (type:* labels)"
@@ -175,6 +154,7 @@ echo ""
 
 created_issues=()
 skipped_count=0
+failed_count=0
 count=0
 
 while IFS= read -r issue; do
@@ -193,7 +173,7 @@ while IFS= read -r issue; do
 	fi
 
 	# Decide repo type for this issue
-	if cache_lookup_is_org "$issue_repo"; then
+	if is_org_repo "$issue_repo"; then
 		IS_ORG=true
 	else
 		IS_ORG=false
@@ -227,8 +207,8 @@ while IFS= read -r issue; do
 		issue_type=""
 	fi
 
-	# Check checkpoint (idempotency)
-	if is_already_created "$CHECKPOINT_FILE" "$title"; then
+	# Check checkpoint (idempotency, matched per repo)
+	if is_already_created "$CHECKPOINT_FILE" "$title" "$issue_repo"; then
 		print_skip "Skip (exists): $title"
 		skipped_count=$((skipped_count + 1))
 		continue
@@ -264,27 +244,23 @@ while IFS= read -r issue; do
 		created_issues+=("$issue_repo#$number")
 
 		# Save checkpoint
-		save_checkpoint "$CHECKPOINT_FILE" "$number" "$title"
+		save_checkpoint "$CHECKPOINT_FILE" "$number" "$title" "$issue_repo"
 
-		# Set Issue Type for organization repos (via REST API)
-		if [[ -n "$issue_type" ]] && [[ "$IS_ORG" == true ]]; then
-			if set_issue_type "$issue_repo" "$number" "$issue_type" 2>/dev/null; then
-				echo "   ↳ Issue Type: $issue_type"
+		# Issue Type (org repos) + milestone share the same PATCH endpoint —
+		# send them in a single API call
+		patch_type=""
+		[[ -n "$issue_type" && "$IS_ORG" == true ]] && patch_type="$issue_type"
+		if [[ -n "$patch_type" || -n "$MILESTONE" ]]; then
+			if update_issue_meta "$issue_repo" "$number" "$patch_type" "$MILESTONE" 2>/dev/null; then
+				[[ -n "$patch_type" ]] && echo "   ↳ Issue Type: $patch_type"
+				[[ -n "$MILESTONE" ]] && echo "   ↳ Assigned to milestone #$MILESTONE"
 			else
-				print_warn "Failed to set Issue Type '$issue_type' for $issue_repo#$number"
-			fi
-		fi
-
-		# Assign milestone if specified
-		if [[ -n "$MILESTONE" ]]; then
-			if assign_milestone "$issue_repo" "$number" "$MILESTONE" 2>/dev/null; then
-				echo "   ↳ Assigned to milestone #$MILESTONE"
-			else
-				print_warn "Failed to assign milestone #$MILESTONE to $issue_repo#$number"
+				print_warn "Failed to set type/milestone for $issue_repo#$number"
 			fi
 		fi
 	else
 		print_warn "Failed to create [$issue_repo]: $title"
+		failed_count=$((failed_count + 1))
 	fi
 
 	# Batch delay for rate limit protection
@@ -304,7 +280,15 @@ if [[ "$DRY_RUN" == true ]]; then
 else
 	echo "  Created: ${#created_issues[@]} issues"
 	echo "  Skipped: $skipped_count issues"
-	echo "  Checkpoint: $CHECKPOINT_FILE"
+	[[ $failed_count -gt 0 ]] && echo "  Failed:  $failed_count issues"
+	# Archive checkpoint after a fully successful run so a stale file
+	# can't wrongly skip same-titled issues from a future, unrelated run
+	if [[ $failed_count -eq 0 && -f "$CHECKPOINT_FILE" ]]; then
+		mv "$CHECKPOINT_FILE" "${CHECKPOINT_FILE}.done"
+		echo "  Checkpoint: archived (${CHECKPOINT_FILE}.done)"
+	else
+		echo "  Checkpoint: $CHECKPOINT_FILE (kept for retry)"
+	fi
 fi
 echo "═══════════════════════════════════════════════"
 

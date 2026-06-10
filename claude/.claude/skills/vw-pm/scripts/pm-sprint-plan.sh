@@ -98,27 +98,8 @@ if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
 fi
 REPO="${REPO:-$CWD_REPO}"
 
-# Build SCOPE_REPOS
-build_scope_repos() {
-	local result=""
-	if [[ -n "$SCOPE_INPUT" ]]; then
-		result="$SCOPE_INPUT"
-	elif [[ -n "$REPOS_CSV" ]]; then
-		result=$(printf '%s' "$REPOS_CSV" | tr ',' '\n' | sed '/^[[:space:]]*$/d' | jq -R . | jq -s .)
-	elif [[ -n "$REPO" ]]; then
-		result=$(jq -nc --arg r "$REPO" '[$r]')
-	else
-		local resolved
-		resolved=$("$SCRIPT_DIR/pm-resolve-scope.sh" 2>/dev/null) || true
-		if [[ -n "$resolved" ]]; then
-			result=$(echo "$resolved" | jq -c '.scopeRepos')
-		fi
-	fi
-	[[ -z "$result" ]] && result="[]"
-	echo "$result"
-}
-
-SCOPE_REPOS=$(build_scope_repos)
+# Build SCOPE_REPOS (precedence: --scope > --repos > --repo > auto-resolve)
+SCOPE_REPOS=$(pm_scope_from_args "$SCOPE_INPUT" "$REPOS_CSV" "$REPO")
 
 [[ -z "$PROJECT_NUMBER" ]] && {
 	echo "Error: --project required" >&2
@@ -182,94 +163,11 @@ CURRENT_START=$(echo "$CURRENT_SPRINT" | jq -r '.startDate')
 PREVIOUS_SPRINT=$(echo "$ITERATIONS_JSON" | jq -c --arg s "$CURRENT_START" '
   .configuration.completedIterations | map(select(.startDate < $s)) | sort_by(.startDate) | reverse | .[0] // null
 ')
-PREV_SPRINT_ID=$(echo "$PREVIOUS_SPRINT" | jq -r '.id // empty')
 
-# Fetch all project items (paginated)
-ITEMS_RAW="[]"
-CURSOR=""
-HAS_NEXT=true
-while [[ "$HAS_NEXT" == "true" ]]; do
-	if [[ -z "$CURSOR" ]]; then
-		PAGE=$(gh api graphql -f projectId="$PROJECT_ID" -f query='
-      query($projectId: ID!) {
-        node(id: $projectId) {
-          ... on ProjectV2 {
-            items(first: 100) {
-              pageInfo { hasNextPage endCursor }
-              nodes {
-                id
-                fieldValues(first: 30) {
-                  nodes {
-                    ... on ProjectV2ItemFieldSingleSelectValue {
-                      name
-                      field { ... on ProjectV2SingleSelectField { name } }
-                    }
-                    ... on ProjectV2ItemFieldIterationValue {
-                      iterationId
-                      title
-                      field { ... on ProjectV2IterationField { name } }
-                    }
-                  }
-                }
-                content {
-                  ... on Issue {
-                    number
-                    title
-                    state
-                    url
-                    repository { nameWithOwner }
-                    issueType { name }
-                    assignees(first: 5) { nodes { login } }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }')
-	else
-		PAGE=$(gh api graphql -f projectId="$PROJECT_ID" -f cursor="$CURSOR" -f query='
-      query($projectId: ID!, $cursor: String!) {
-        node(id: $projectId) {
-          ... on ProjectV2 {
-            items(first: 100, after: $cursor) {
-              pageInfo { hasNextPage endCursor }
-              nodes {
-                id
-                fieldValues(first: 30) {
-                  nodes {
-                    ... on ProjectV2ItemFieldSingleSelectValue {
-                      name
-                      field { ... on ProjectV2SingleSelectField { name } }
-                    }
-                    ... on ProjectV2ItemFieldIterationValue {
-                      iterationId
-                      title
-                      field { ... on ProjectV2IterationField { name } }
-                    }
-                  }
-                }
-                content {
-                  ... on Issue {
-                    number
-                    title
-                    state
-                    url
-                    repository { nameWithOwner }
-                    issueType { name }
-                    assignees(first: 5) { nodes { login } }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }')
-	fi
-	ITEMS_RAW=$(jq -n --argjson a "$ITEMS_RAW" --argjson b "$(echo "$PAGE" | jq '.data.node.items.nodes')" '$a + $b')
-	HAS_NEXT=$(echo "$PAGE" | jq -r '.data.node.items.pageInfo.hasNextPage')
-	CURSOR=$(echo "$PAGE" | jq -r '.data.node.items.pageInfo.endCursor')
-done
+# Fetch all project items
+# (shared paginated fetch from pm-utils.sh — includes iterationId/Status/
+#  Priority/assignees/issueType needed below)
+ITEMS_RAW=$(get_project_items "$PROJECT_ID")
 
 # Project items normalized (only Open issues with content)
 NORMALIZED=$(echo "$ITEMS_RAW" | jq '
@@ -289,8 +187,10 @@ NORMALIZED=$(echo "$ITEMS_RAW" | jq '
      }
   ]')
 
-# Carryover = In Progress assigned to previous Sprint (or any In Progress)
-CARRYOVER=$(echo "$NORMALIZED" | jq --arg ps "$PREV_SPRINT_ID" '
+# Carryover = ALL In Progress items, regardless of which Sprint they were in
+# (deliberately not filtered to the previous Sprint — In Progress without a
+#  Sprint assignment would otherwise be silently dropped from planning)
+CARRYOVER=$(echo "$NORMALIZED" | jq '
   [.[]
    | select(.status == "In Progress")
    | . + { previousSprint: .sprintTitle }
