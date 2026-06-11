@@ -61,21 +61,9 @@ else
 		if echo "$pane_plain" | grep -qiE "$BUSY_PATTERN"; then
 			echo "${COLOR_GREEN}● BUSY — 処理中${COLOR_RESET}"
 		else
-			# hash 比較で NEW/DONE 判定
-			hash_dir="${TMPDIR:-/tmp}/sesh-pane-hash"
-			safe_name=$(printf '%s' "$session_name" | tr -c 'A-Za-z0-9._-' '_')
-			saved_hash=""
-			[ -f "$hash_dir/$safe_name" ] && saved_hash=$(cat "$hash_dir/$safe_name" 2>/dev/null)
-
-			cur_hash=$(
-				{
-					tmux list-panes -t "$session_name" -F '#{pane_id}' 2>/dev/null | while IFS= read -r pid; do
-						[ -z "$pid" ] && continue
-						printf '=== %s ===\n' "$pid"
-						tmux capture-pane -p -t "$pid" 2>/dev/null || true
-					done
-				} | shasum 2>/dev/null | awk '{print $1}'
-			)
+			# hash 比較で NEW/DONE 判定（ロジックは cc-common.sh に集約）
+			saved_hash=$(load_saved_pane_hash "$session_name")
+			cur_hash=$(compute_pane_hash "$session_name")
 
 			if [ -n "$saved_hash" ] && [ -n "$cur_hash" ] && [ "$cur_hash" != "$saved_hash" ]; then
 				echo "${COLOR_MAGENTA}◇ NEW — 未読の応答${COLOR_RESET}"

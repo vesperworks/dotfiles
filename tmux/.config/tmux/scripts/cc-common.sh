@@ -15,6 +15,68 @@ AI_COMM_NAMES='claude|agent|codex|gemini'
 WAITING_PATTERN='esc to cancel|enter to select|Do you want|Would you like|allow command|Allow execution|\[y/n\]|ready to submit'
 BUSY_PATTERN='esc to interrupt|ctrl\+c to interrupt|[0-9]+s · ↓|· ↑ [0-9]+|tokens\)$|^[[:space:]]*[✶✻✽✢❉✷⋆*][[:space:]]+[^[:space:]].*\([0-9]+'
 
+# === 共有ディレクトリ・Tunables ===
+SESH_STATE_DIR="${TMPDIR:-/tmp}/sesh-state"
+SESH_PANE_HASH_DIR="${TMPDIR:-/tmp}/sesh-pane-hash"
+PS_SNAPSHOT_TTL_SEC=2 # ps スナップショットの再利用 TTL（秒）
+
+# === セッション名 → 安全なファイル名 ===
+# 英数・ハイフン・アンダースコア・ドット以外を _ に変換。
+# 保存名（save-pane-hash.sh）と照合名（sesh-sessions.sh / cc-question-preview.sh）が
+# ズレると NEW 判定がサイレントに壊れるため、必ずこの関数を共用する。
+sanitize_name() {
+	printf '%s' "$1" | tr -c 'A-Za-z0-9._-' '_'
+}
+
+# === ps スナップショット（TTL 付き共有） ===
+# ps -ax の fork は重いので、結果を共有ファイルに保存して短い TTL で再利用する。
+# picker / fzf preview / status-right が同じスナップショットを参照することで、
+# preview のキーストローク毎に ps -ax が走るのを防ぐ。
+# フィールド: $1=pid, $2=ppid, $3=%cpu, $4=rss, $5=comm
+# Usage: snap=$(ensure_ps_snapshot)
+ensure_ps_snapshot() {
+	local snap="$SESH_STATE_DIR/ps-snapshot"
+	mkdir -p "$SESH_STATE_DIR"
+	if [ -f "$snap" ]; then
+		local now mtime age
+		now=$(date +%s)
+		mtime=$(stat -f %m "$snap" 2>/dev/null) || mtime=0
+		age=$((now - mtime))
+		if [ "$age" -ge 0 ] && [ "$age" -le "$PS_SNAPSHOT_TTL_SEC" ]; then
+			echo "$snap"
+			return 0
+		fi
+	fi
+	local tmp="$snap.tmp.$$"
+	ps -ax -o pid=,ppid=,%cpu=,rss=,comm= 2>/dev/null >"$tmp" || true
+	mv "$tmp" "$snap" 2>/dev/null || rm -f "$tmp"
+	echo "$snap"
+}
+
+# === セッションの全ペイン内容を結合して shasum を計算 ===
+# pane_id をマーカーとして含める（pane 構成変化も hash 差分に反映）。
+# capture-pane -p は可視領域のみ（attach 時の表示と一致させる）。
+# 保存側（save-pane-hash.sh）と照合側（cc-question-preview.sh）の両方がこれを使う。
+compute_pane_hash() {
+	local session_name=$1
+	{
+		tmux list-panes -t "$session_name" -F '#{pane_id}' 2>/dev/null | while IFS= read -r pid; do
+			[ -z "$pid" ] && continue
+			printf '=== %s ===\n' "$pid"
+			tmux capture-pane -p -t "$pid" 2>/dev/null || true
+		done
+	} | shasum 2>/dev/null | awk '{print $1}'
+}
+
+# === 保存されたペインハッシュを読み込み（無ければ空文字） ===
+load_saved_pane_hash() {
+	local session_name=$1
+	local hash_file
+	hash_file="$SESH_PANE_HASH_DIR/$(sanitize_name "$session_name")"
+	[ -f "$hash_file" ] || return 0
+	cat "$hash_file" 2>/dev/null || true
+}
+
 # === キャッシュキー生成（sesh-sessions.sh と cc-wait-count.sh で共有） ===
 # 引数列を ASCII 安全な文字列に変換。空なら "default"。
 # Why: cache file path のハードコードと動的算出の暗黙合意を解消。
@@ -59,16 +121,20 @@ trim_blank_lines() {
 
 # === find_waiting_pane ===
 # セッション内の WAITING 状態のペインIDを返す
+# ps -ax は毎回 fork せず TTL 付き共有スナップショットを参照する
+# （fzf preview のキーストローク毎に呼ばれてもプロセス走査は TTL に 1 回）
 # Usage: pane_id=$(find_waiting_pane "session_name")
 find_waiting_pane() {
 	local sess=$1
+	local snap
+	snap=$(ensure_ps_snapshot)
 	while IFS=$'\t' read -r pane_pid pane_id; do
 		[ -z "$pane_pid" ] && continue
 
 		local has_ai
-		has_ai=$(ps -o pid=,ppid=,comm= -ax 2>/dev/null | awk -v root="$pane_pid" -v pat="$AI_COMM_NAMES" '
+		has_ai=$(awk -v root="$pane_pid" -v pat="$AI_COMM_NAMES" '
       BEGIN { queue[root]=1 }
-      { pid[NR]=$1; ppid[NR]=$2; comm[NR]=$3 }
+      { pid[NR]=$1; ppid[NR]=$2; comm[NR]=$5 }
       END {
         changed=1
         while (changed) {
@@ -87,7 +153,7 @@ find_waiting_pane() {
           }
         }
       }
-    ') || true
+    ' "$snap") || true
 
 		[ -z "$has_ai" ] && continue
 
