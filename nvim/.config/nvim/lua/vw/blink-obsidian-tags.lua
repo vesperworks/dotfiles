@@ -130,14 +130,14 @@ function M:get_completions(context, resolve)
 
   local query = line:sub(hash_pos + 1):lower()
 
-  -- frontmatter 判定
+  -- frontmatter 判定（カーソルまでの行を 1 回の API 呼び出しで取得）
   local row = context.cursor[1]
   local in_frontmatter = false
   if row > 1 then
-    local first_line = vim.api.nvim_buf_get_lines(context.bufnr, 0, 1, false)[1] or ""
-    if first_line:match("^%-%-%-") then
+    local head = vim.api.nvim_buf_get_lines(context.bufnr, 0, row, false)
+    if (head[1] or ""):match("^%-%-%-") then
       for i = 1, row - 1 do
-        local l = vim.api.nvim_buf_get_lines(context.bufnr, i, i + 1, false)[1] or ""
+        local l = head[i + 1] or ""
         if l:match("^%-%-%-") then
           in_frontmatter = i >= row
           break
