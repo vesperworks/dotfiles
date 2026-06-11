@@ -90,9 +90,7 @@ end
 
 -- 更新ループ開始（1秒間隔）
 function M.start_update_loop()
-  if update_timer then
-    update_timer:stop()
-  end
+  M.stop_update_loop()
 
   update_timer = vim.uv.new_timer()
   update_timer:start(0, 1000, vim.schedule_wrap(function()
@@ -104,14 +102,18 @@ end
 function M.stop_update_loop()
   if update_timer then
     update_timer:stop()
+    update_timer:close()
     update_timer = nil
   end
 end
 
 -- autocmdを設定
 function M.setup_autocmds()
+  local group = vim.api.nvim_create_augroup("VwTimer", { clear = true })
+
   -- Neovim終了時にデータを保存（安全版）
   vim.api.nvim_create_autocmd("VimLeavePre", {
+    group = group,
     callback = function()
       -- 🔒 各アクティブタイマーを安全に保存
       for task_id, timer_data in pairs(active_timers) do
@@ -123,6 +125,7 @@ function M.setup_autocmds()
 
   -- バッファ切り替え時の表示更新（Markdownファイルのみ）
   vim.api.nvim_create_autocmd({"BufEnter", "BufWinEnter", "TabEnter"}, {
+    group = group,
     callback = function()
       vim.schedule(function()
         local bufnr = vim.api.nvim_get_current_buf()
@@ -136,6 +139,7 @@ function M.setup_autocmds()
 
   -- ファイルタイプ変更時の表示更新
   vim.api.nvim_create_autocmd("FileType", {
+    group = group,
     pattern = "markdown",
     callback = function()
       vim.schedule(function()
@@ -147,6 +151,7 @@ function M.setup_autocmds()
 
   -- Insertモードから抜けた時にタイマー自動復元
   vim.api.nvim_create_autocmd("InsertLeave", {
+    group = group,
     pattern = "*.md",
     callback = function()
       vim.schedule(function()
@@ -160,6 +165,7 @@ function M.setup_autocmds()
 
   -- ノーマルモードで yy/p してそのまま :w するケースもカバー
   vim.api.nvim_create_autocmd("BufWritePost", {
+    group = group,
     pattern = "*.md",
     callback = function()
       vim.schedule(function()
