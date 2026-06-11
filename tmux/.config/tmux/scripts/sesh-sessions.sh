@@ -11,11 +11,21 @@ source "$SCRIPT_DIR/cc-common.sh"
 # === 一時ディレクトリ・スナップショット（init で遅延初期化） ===
 TMPDIR_WORK=""
 PS_SNAPSHOT=""
+SESH_WORK_DIR="${TMPDIR:-/tmp}/sesh-work"
 
 _init_snapshot() {
 	if [ -n "$TMPDIR_WORK" ]; then return; fi
-	TMPDIR_WORK=$(mktemp -d)
+	mkdir -p "$SESH_WORK_DIR"
+	# SIGKILL / tmux server 再起動では trap が走らず作業ディレクトリが残る。
+	# 専用親ディレクトリ配下に限定して 5 分以上古いものを起動時に掃除する
+	# （他用途の $TMPDIR/tmp.* を巻き込まないための専用親ディレクトリ）
+	find "$SESH_WORK_DIR" -mindepth 1 -maxdepth 1 -type d -mmin +5 -exec rm -rf {} + 2>/dev/null || true
+	TMPDIR_WORK=$(mktemp -d "$SESH_WORK_DIR/work.XXXXXX")
 	trap 'rm -rf "$TMPDIR_WORK"' EXIT
+	# シグナル時も EXIT trap 経由でクリーンアップ（HUP は tmux server 終了時）
+	trap 'exit 129' HUP
+	trap 'exit 130' INT
+	trap 'exit 143' TERM
 	# プロセスツリーのスナップショット（TTL 付き共有、cc-common.sh に集約）
 	# fzf preview / status-right と同じファイルを参照するので、picker 起動と
 	# preview 操作が連続しても ps -ax の fork は TTL（2 秒）に 1 回で済む

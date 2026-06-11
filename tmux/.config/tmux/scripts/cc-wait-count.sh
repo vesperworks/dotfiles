@@ -38,7 +38,12 @@ maybe_refresh_cache_async() {
 
 		# 多重起動ガード: 複数 client / 短間隔の重複呼び出しでも 1 つだけ走る
 		lock_file="$CACHE_DIR/$CACHE_KEY.refresh.lock"
-		mkdir "$lock_file" 2>/dev/null || exit 0
+		if ! mkdir "$lock_file" 2>/dev/null; then
+			# SIGKILL 等で trap が走らず残った孤児ロック（5 分以上前）は奪う。
+			# 通常の再計算は数秒で終わるので 5 分は十分なマージン
+			find "$CACHE_DIR" -maxdepth 1 -name "$CACHE_KEY.refresh.lock" -type d -mmin +5 -exec rmdir {} + 2>/dev/null || true
+			mkdir "$lock_file" 2>/dev/null || exit 0
+		fi
 		trap 'rmdir "$lock_file" 2>/dev/null' EXIT
 		"$SCRIPT_DIR/sesh-sessions.sh" -t >/dev/null 2>&1
 	) </dev/null >/dev/null 2>&1 &
