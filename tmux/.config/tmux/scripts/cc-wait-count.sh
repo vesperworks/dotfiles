@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 # tmux status-right widget: WAIT + NEW セッション数を表示
 # Output:
 #   "◐ N WAIT" (yellow)   when WAIT > 0

@@ -574,8 +574,12 @@ run_with_cache() {
 	find "$cache_dir" -maxdepth 1 -name "${key}.cache.tmp.*" -mmin +5 -delete 2>/dev/null || true
 
 	# キャッシュなし or NO_CACHE 指定時 → 同期実行 + fingerprint 保存
+	# tee 直書きだと中断時に部分キャッシュが残り cc-wait-count の集計が壊れる
+	# ため、tmp に書いてから atomic に置換する（bg 再計算パスと同じ要領）
 	if [ ! -f "$cache_file" ] || [ "${SESH_SESSIONS_NO_CACHE:-0}" = "1" ]; then
-		main "$@" | tee "$cache_file"
+		local sync_tmp="$cache_file.tmp.$$"
+		main "$@" | tee "$sync_tmp"
+		mv "$sync_tmp" "$cache_file" 2>/dev/null || rm -f "$sync_tmp"
 		world_state_fingerprint >"$fp_file" 2>/dev/null || true
 		return
 	fi

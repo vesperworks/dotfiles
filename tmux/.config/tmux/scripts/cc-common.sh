@@ -1,6 +1,7 @@
 #!/bin/bash
 # cc-common.sh — CC (Claude Code) 関連スクリプト共通定義
 # sesh-sessions.sh, cc-question-preview.sh, cc-wait-answer.sh, cc-wait-respond.sh から source される
+# shellcheck disable=SC2034  # COLOR_* / *_PATTERN は source 先で使用される
 
 # === ANSI Colors (Tokyo Night) ===
 COLOR_YELLOW=$'\033[38;2;224;175;104m'  # #e0af68 (WAIT = 返答待ち)
