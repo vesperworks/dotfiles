@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tschichold — The Grid as an Ethic</title>
+<style>
+  /* ── Single source of truth ─────────────────────────── */
+  :root {
+    --margin-left: 64px;
+    --margin-right: 192px;       /* strong asymmetry */
+    --margin-y: 64px;
+    --gutter: 32px;
+    --left-fr: 3;
+    --right-fr: 7;
+    --baseline: 8px;
+    --leading: 24px;
+
+    --black: #000;
+    --white: #fff;
+    --red: #E2001A;              /* constructivist red */
+    --grid-line: rgba(226, 0, 26, 0.22);
+    --grid-fill: rgba(226, 0, 26, 0.05);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Helvetica Neue', 'Akzidenz-Grotesk', Helvetica, Arial, sans-serif;
+    background: var(--white);
+    color: var(--black);
+    line-height: var(--leading);
+    text-align: left;            /* ragged-right, flush-left always */
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    padding: var(--margin-y) var(--margin-right) calc(var(--margin-y) * 2) var(--margin-left);
+    max-width: 1200px;
+    position: relative;
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: var(--left-fr)fr var(--right-fr)fr;
+    gap: var(--gutter);
+    margin-bottom: calc(var(--leading) * 1.5);
+  }
+
+  /* the strong left axis: labels/captions live left, content right */
+  .left {
+    text-align: left;
+    border-right: 2px solid var(--black);
+    padding-right: var(--gutter);
+  }
+  .left .label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--red);
+  }
+  .left .meta {
+    font-size: 13px;
+    color: #555;
+    margin-top: 4px;
+  }
+  .right { text-align: left; }
+
+  /* ── System label ───────────────────────────────────── */
+  .system-tag {
+    position: fixed;
+    top: 16px; left: 16px;
+    z-index: 50;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--white);
+    background: var(--black);
+    padding: 7px 11px;
+  }
+  .grid-toggle {
+    position: fixed;
+    top: 16px; right: 16px;
+    z-index: 50;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--white);
+    background: var(--red);
+    border: none;
+    padding: 8px 13px;
+    cursor: pointer;
+  }
+  .grid-toggle:hover { background: var(--black); }
+
+  /* ── Masthead ───────────────────────────────────────── */
+  .masthead h1 {
+    font-size: 58px;
+    font-weight: 700;
+    line-height: 56px;
+    letter-spacing: -0.025em;
+  }
+  .masthead .subtitle {
+    font-size: 17px;
+    color: #555;
+    margin-top: var(--leading);
+    max-width: 36em;
+  }
+
+  .lede {
+    font-size: 22px;
+    font-weight: 500;
+    line-height: 32px;
+  }
+  p.body { font-size: 15px; margin-bottom: var(--leading); }
+  p.body + p.body { margin-top: 0; }
+
+  /* ── Stats ──────────────────────────────────────────── */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--gutter) calc(var(--gutter) * 2);
+  }
+  .stat { border-top: 2px solid var(--black); padding-top: 8px; }
+  .stat .numeral {
+    font-size: 44px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    color: var(--red);
+  }
+  .stat-label {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #555;
+    margin-top: 6px;
+  }
+
+  /* ── Images (stacked in the right column) ───────────── */
+  .imgs { display: flex; flex-direction: column; gap: var(--gutter); }
+  .img {
+    background: #ddd;
+    height: 160px;
+    display: flex;
+    align-items: flex-end;
+    padding: 10px;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #666;
+    border-left: 3px solid var(--red);
+  }
+
+  /* ── Quote ──────────────────────────────────────────── */
+  blockquote {
+    font-size: 30px;
+    font-weight: 500;
+    line-height: 40px;
+    letter-spacing: -0.015em;
+  }
+  blockquote cite {
+    display: block;
+    font-size: 13px;
+    font-style: normal;
+    color: var(--red);
+    margin-top: 16px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  /* ── Footer ─────────────────────────────────────────── */
+  .footer {
+    border-top: 2px solid var(--black);
+    padding-top: 12px;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #444;
+  }
+
+  /* ── Grid overlay (asymmetric 2-col) ────────────────── */
+  .overlay {
+    position: absolute;
+    top: var(--margin-y);
+    left: var(--margin-left);
+    right: var(--margin-right);
+    bottom: calc(var(--margin-y) * 2);
+    pointer-events: none;
+    display: none;
+    z-index: 40;
+    grid-template-columns: var(--left-fr)fr var(--right-fr)fr;
+    gap: var(--gutter);
+  }
+  .overlay.on { display: grid; }
+  .overlay .col {
+    background: var(--grid-fill);
+    border-left: 1px solid var(--grid-line);
+    border-right: 1px solid var(--grid-line);
+    font-size: 9px;
+    color: var(--red);
+    padding: 2px 4px;
+  }
+  .baseline-rule {
+    position: absolute;
+    top: var(--margin-y);
+    left: var(--margin-left);
+    right: var(--margin-right);
+    bottom: calc(var(--margin-y) * 2);
+    pointer-events: none;
+    display: none;
+    z-index: 39;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(var(--baseline) - 1px),
+      rgba(0,0,0,0.06) calc(var(--baseline) - 1px),
+      rgba(0,0,0,0.06) var(--baseline)
+    );
+  }
+  .baseline-rule.on { display: block; }
+  /* left axis marker */
+  .axis-line {
+    position: absolute;
+    top: 0; bottom: 0;
+    left: calc((100% ) * 0.3 - 16px);
+    width: 2px;
+    background: var(--red);
+    opacity: 0.5;
+  }
+</style>
+</head>
+<body>
+  <div class="system-tag">03 · Tschichold · Asymmetric 3 : 7</div>
+  <button class="grid-toggle" onclick="toggleGrid()">Show Grid (G)</button>
+
+  <div class="page">
+    <div class="baseline-rule" id="baseline"></div>
+    <div class="overlay" id="overlay">
+      <div class="col">3fr · axis / labels</div>
+      <div class="col">7fr · content<div class="axis-line"></div></div>
+    </div>
+
+    <!-- Masthead -->
+    <div class="row">
+      <div class="left">
+        <div class="label">№ 03</div>
+        <div class="meta">Die neue Typographie · 1928</div>
+      </div>
+      <div class="right masthead">
+        <h1>The Grid as an Ethic</h1>
+        <p class="subtitle">How nine grid systems shape the same content — a visual comparison</p>
+      </div>
+    </div>
+
+    <!-- Lede -->
+    <div class="row">
+      <div class="left">
+        <div class="label">Thesis</div>
+      </div>
+      <div class="right">
+        <p class="lede">The modular grid divides the type area into fields separated by gutters, creating a rational armature for text and image.</p>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div class="row">
+      <div class="left">
+        <div class="label">Argument</div>
+        <div class="meta">Order &amp; philosophy</div>
+      </div>
+      <div class="right">
+        <p class="body">The modular grid divides the type area into fields separated by gutters, creating a rational armature for text and image. Each system — from Müller-Brockmann's Swiss precision to the medieval scribe's golden canon — encodes a different philosophy of order.</p>
+        <p class="body">Today, CSS Grid and subgrid make every historical grid natively possible on the web. The question is no longer "can we?" but "which system fits the content?"</p>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="row">
+      <div class="left">
+        <div class="label">Measures</div>
+      </div>
+      <div class="right">
+        <div class="stats">
+          <div class="stat"><div class="numeral">12</div><div class="stat-label">Columns</div></div>
+          <div class="stat"><div class="numeral">8px</div><div class="stat-label">Baseline</div></div>
+          <div class="stat"><div class="numeral">24px</div><div class="stat-label">Leading</div></div>
+          <div class="stat"><div class="numeral">9</div><div class="stat-label">Systems</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Images -->
+    <div class="row">
+      <div class="left">
+        <div class="label">Plates</div>
+        <div class="meta">I — III</div>
+      </div>
+      <div class="right">
+        <div class="imgs">
+          <div class="img">Zurich Tonhalle, 1955</div>
+          <div class="img">NYC Subway Map, 1972</div>
+          <div class="img">Grid Systems book, 1981</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quote -->
+    <div class="row">
+      <div class="left">
+        <div class="label">Dictum</div>
+      </div>
+      <div class="right">
+        <blockquote>"The grid system is an aid, not a guarantee."<cite>Josef Müller-Brockmann</cite></blockquote>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="row">
+      <div class="left"><div class="label">Colophon</div></div>
+      <div class="right">
+        <footer class="footer">A visual comparison of grid systems. Press G to toggle grid overlay.</footer>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const overlay = document.getElementById('overlay');
+  const baseline = document.getElementById('baseline');
+  function toggleGrid() {
+    overlay.classList.toggle('on');
+    baseline.classList.toggle('on');
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'g' || e.key === 'G') toggleGrid();
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gerstner Programme — The Grid as an Ethic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #E30613;
+    --ink: #000;
+    --cols: 60;
+    --gutter: 8px;
+    --margin: 48px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    /* Akzidenz-Grotesk surrogate */
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    background: #fff;
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: 'Space Mono', monospace; }
+
+  .sys-label {
+    position: fixed; top: 16px; left: var(--margin); z-index: 50;
+    font-weight: 700; font-size: 12px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--red);
+  }
+  .sys-label span { display: block; font-size: 10px; color: #888; letter-spacing: 0.05em; font-weight: 400; }
+
+  .grid-toggle {
+    position: fixed; top: 16px; right: var(--margin); z-index: 50;
+    font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.1em; padding: 9px 16px;
+    border: 2px solid var(--ink); background: #fff; color: var(--ink);
+    cursor: pointer; text-transform: uppercase; transition: all 0.15s;
+  }
+  .grid-toggle:hover, .grid-toggle.active { background: var(--red); border-color: var(--red); color: #fff; }
+
+  /* The constant: a single 60-micro-column grid */
+  .programme {
+    display: grid;
+    grid-template-columns: repeat(60, 1fr);
+    column-gap: var(--gutter);
+    padding-inline: var(--margin);
+    max-width: 1440px;
+    margin-inline: auto;
+  }
+
+  /* The variable: different sections subdivide the same 60 into 2/3/4/5/6 */
+  header { padding: 104px 0 48px; }
+  .head-title { grid-column: 1 / 41; }   /* spans 40/60 ≈ 2/3 */
+  .head-sub  { grid-column: 43 / 61; }   /* spans 18/60 ≈ 1/3 */
+
+  .eyebrow {
+    font-family: 'Space Mono', monospace; font-size: 12px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--red); margin-bottom: 16px;
+  }
+  h1 {
+    font-size: clamp(44px, 8vw, 84px); font-weight: 700;
+    line-height: 0.98; letter-spacing: -0.03em;
+  }
+  .subtitle { font-size: 17px; color: #333; font-weight: 400; align-self: flex-end; }
+
+  .section-tag {
+    grid-column: 1 / 61;
+    font-family: 'Space Mono', monospace; font-size: 10px;
+    letter-spacing: 0.2em; text-transform: uppercase; color: var(--red);
+    border-top: 2px solid var(--red); padding-top: 8px;
+    margin: 48px 0 24px;
+  }
+
+  /* 2-column body region (each block = 30 micro-cols) */
+  .body-a { grid-column: 1 / 31; }
+  .body-b { grid-column: 31 / 61; }
+  .body-region p { font-size: 17px; }
+
+  /* 3-column quote region */
+  .quote-full { grid-column: 1 / 41; }   /* 2/3 for the quote */
+  .quote-side { grid-column: 43 / 61; }  /* 1/3 attribution column */
+  blockquote {
+    font-size: clamp(24px, 3.5vw, 40px); font-weight: 700;
+    line-height: 1.1; letter-spacing: -0.01em;
+  }
+  blockquote .q-red { color: var(--red); }
+  cite { font-style: normal; font-family: 'Space Mono', monospace; font-size: 13px; color: #888; }
+
+  /* 4-column stat region (each = 15 micro-cols) */
+  .stat-1 { grid-column: 1 / 16; }
+  .stat-2 { grid-column: 16 / 31; }
+  .stat-3 { grid-column: 31 / 46; }
+  .stat-4 { grid-column: 46 / 61; }
+  .stat { border-top: 4px solid var(--ink); padding-top: 12px; }
+  .stat .num { font-family: 'Space Mono', monospace; font-size: 38px; font-weight: 700; line-height: 1; }
+  .stat:nth-child(2) .num, .stat-2 .num { color: var(--red); }
+  .stat .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #888; margin-top: 8px; }
+
+  /* 3-column image region (each = 20 micro-cols) */
+  .img-1 { grid-column: 1 / 21; }
+  .img-2 { grid-column: 21 / 41; }
+  .img-3 { grid-column: 41 / 61; }
+  .imgbox {
+    aspect-ratio: 4 / 3;
+    background: repeating-linear-gradient(45deg, #eee, #eee 9px, #e2e2e2 9px, #e2e2e2 18px);
+    display: flex; align-items: flex-end; padding: 12px;
+    font-family: 'Space Mono', monospace; font-size: 11px; color: #555;
+  }
+
+  /* 6-column footer region (full bleed mono caption) */
+  .foot { grid-column: 1 / 61; }
+  footer { padding: 80px 0 48px; }
+  footer .foot { border-top: 2px solid var(--ink); padding-top: 16px; }
+  footer .mono { font-size: 13px; color: #888; }
+
+  /* responsive collapse */
+  @media (max-width: 720px) {
+    :root { --margin: 20px; }
+    .head-title, .head-sub, .body-a, .body-b,
+    .quote-full, .quote-side,
+    .stat-1, .stat-2, .stat-3, .stat-4,
+    .img-1, .img-2, .img-3 { grid-column: 1 / 61; }
+    .subtitle { margin-top: 16px; }
+  }
+
+  /* 60-micro-column overlay */
+  .overlay { position: fixed; inset: 0; z-index: 40; pointer-events: none; display: none; }
+  .overlay.show { display: block; }
+  .overlay .programme { height: 100%; }
+  .overlay .mc {
+    grid-column: span 1;
+    background: rgba(227,6,19,0.06);
+    border-left: 1px solid rgba(227,6,19,0.18);
+  }
+  .ov-readout {
+    position: fixed; bottom: 16px; left: var(--margin); z-index: 50;
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    background: var(--ink); color: #fff; padding: 7px 13px; display: none;
+  }
+  .overlay.show ~ .ov-readout { display: block; }
+  .ov-readout .r { color: var(--red); }
+</style>
+</head>
+<body>
+  <div class="sys-label">Gerstner Programme<span>60 micro-cols · 2/3/4/6</span></div>
+  <button class="grid-toggle" id="toggle">Show Grid</button>
+
+  <div class="overlay" id="overlay">
+    <div class="programme" id="mcGrid"></div>
+  </div>
+  <div class="ov-readout"><span class="r">60</span> micro-columns · one grid, many subdivisions</div>
+
+  <header>
+    <div class="programme">
+      <div class="head-title">
+        <div class="eyebrow">Grid System 09 / Programmatic</div>
+        <h1>The Grid as an Ethic</h1>
+      </div>
+      <p class="subtitle head-sub">How nine grid systems shape the same content — a visual comparison</p>
+    </div>
+  </header>
+
+  <div class="programme">
+    <div class="section-tag">Subdivision: 2 columns (30 + 30)</div>
+    <div class="body-region body-a"><p>The modular grid divides the type area into fields separated by gutters, creating a rational armature for text and image. Each system — from Müller-Brockmann's Swiss precision to the medieval scribe's golden canon — encodes a different philosophy of order.</p></div>
+    <div class="body-region body-b"><p>Today, CSS Grid and subgrid make every historical grid natively possible on the web. The question is no longer 'can we?' but 'which system fits the content?'</p></div>
+  </div>
+
+  <div class="programme">
+    <div class="section-tag">Subdivision: 3 columns (40 + 20)</div>
+    <div class="quote-full">
+      <blockquote>The grid system is an aid, <span class="q-red">not a guarantee.</span></blockquote>
+    </div>
+    <div class="quote-side" style="align-self:end;"><cite>— Josef Müller-Brockmann</cite></div>
+  </div>
+
+  <div class="programme">
+    <div class="section-tag">Subdivision: 4 columns (15 × 4)</div>
+    <div class="stat-1"><div class="stat"><div class="num">12</div><div class="lbl">Columns</div></div></div>
+    <div class="stat-2"><div class="stat"><div class="num">8px</div><div class="lbl">Baseline</div></div></div>
+    <div class="stat-3"><div class="stat"><div class="num">24px</div><div class="lbl">Leading</div></div></div>
+    <div class="stat-4"><div class="stat"><div class="num">9</div><div class="lbl">Systems</div></div></div>
+  </div>
+
+  <div class="programme">
+    <div class="section-tag">Subdivision: 3 columns (20 × 3)</div>
+    <div class="img-1"><div class="imgbox">Zurich Tonhalle, 1955</div></div>
+    <div class="img-2"><div class="imgbox">NYC Subway Map, 1972</div></div>
+    <div class="img-3"><div class="imgbox">Grid Systems book, 1981</div></div>
+  </div>
+
+  <footer>
+    <div class="programme">
+      <div class="foot"><p class="mono">A visual comparison of grid systems. Press <strong>G</strong> to toggle grid overlay.</p></div>
+    </div>
+  </footer>
+
+<script>
+  // build 60 micro-column overlay cells
+  const mcGrid = document.getElementById('mcGrid');
+  for (let i = 0; i < 60; i++) {
+    const d = document.createElement('div');
+    d.className = 'mc';
+    mcGrid.appendChild(d);
+  }
+  const toggle = document.getElementById('toggle');
+  const overlay = document.getElementById('overlay');
+  function setGrid(on) {
+    overlay.classList.toggle('show', on);
+    toggle.classList.toggle('active', on);
+    toggle.textContent = on ? 'Hide Grid' : 'Show Grid';
+  }
+  toggle.addEventListener('click', () => setGrid(!overlay.classList.contains('show')));
+  document.addEventListener('keydown', e => {
+    if (e.key === 'g' || e.key === 'G') setGrid(!overlay.classList.contains('show'));
+  });
+</script>
+</body>
+</html>

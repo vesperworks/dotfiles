@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Classical Canons — The Grid as an Ethic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  /* ── Single source of truth ─────────────────────────── */
+  :root {
+    /* page proportion 2 : 3 */
+    --page-w: 720px;
+    --page-h: 1080px;
+
+    /* van de Graaf / Tschichold-style margins 3 : 4 : 6 : 2
+       (top : right : bottom : left) */
+    --m-top: 120px;
+    --m-right: 160px;
+    --m-bottom: 240px;
+    --m-left: 80px;
+
+    --leading: 28px;
+
+    --ink: #1A1A1A;
+    --paper: #FBF7EF;          /* laid paper / cream */
+    --rubric: #A41E22;         /* vermilion rubric */
+    --guide: rgba(164, 30, 34, 0.35);
+    --guide-fill: rgba(164, 30, 34, 0.04);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #e7e0d2;
+    color: var(--ink);
+    font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
+    -webkit-font-smoothing: antialiased;
+    padding: 40px 0;
+  }
+
+  /* ── The leaf (page) ────────────────────────────────── */
+  .leaf {
+    position: relative;
+    width: var(--page-w);
+    height: var(--page-h);
+    margin: 0 auto;
+    background: var(--paper);
+    box-shadow: 0 16px 48px rgba(0,0,0,0.22);
+  }
+
+  .type-area {
+    position: absolute;
+    top: var(--m-top);
+    right: var(--m-right);
+    bottom: var(--m-bottom);
+    left: var(--m-left);
+    overflow: hidden;
+  }
+
+  /* ── Single justified text block ────────────────────── */
+  .text {
+    font-size: 17px;
+    line-height: var(--leading);
+    text-align: justify;
+    hyphens: auto;
+    -webkit-hyphens: auto;
+  }
+
+  .masthead {
+    font-size: 40px;
+    font-weight: 600;
+    line-height: 44px;
+    letter-spacing: 0.01em;
+    text-align: left;
+    margin-bottom: 8px;
+  }
+  /* drop-cap initial on title */
+  .masthead .rubric { color: var(--rubric); }
+
+  .subtitle {
+    font-style: italic;
+    font-size: 16px;
+    color: #4a4035;
+    margin-bottom: var(--leading);
+    text-align: left;
+  }
+
+  .rule {
+    border: none;
+    border-top: 1px solid var(--rubric);
+    opacity: 0.5;
+    margin-bottom: var(--leading);
+  }
+
+  .text p { margin-bottom: var(--leading); }
+  /* historiated drop cap */
+  .text p.opening::first-letter {
+    float: left;
+    font-size: 64px;
+    line-height: 52px;
+    font-weight: 600;
+    color: var(--rubric);
+    padding-right: 8px;
+    margin-top: 4px;
+  }
+
+  /* inline stats as a manuscript colophon line */
+  .colophon {
+    font-variant: small-caps;
+    letter-spacing: 0.04em;
+    color: var(--rubric);
+    text-align: center;
+    margin: var(--leading) 0;
+    font-size: 15px;
+  }
+  .colophon .num { font-weight: 600; }
+
+  /* miniature plates (image placeholders) */
+  .plates {
+    display: flex;
+    gap: 12px;
+    margin-bottom: var(--leading);
+  }
+  .img {
+    flex: 1;
+    background: #ddd4c2;
+    height: 84px;
+    border: 1px solid #c4b89e;
+    display: flex;
+    align-items: flex-end;
+    padding: 5px;
+    font-size: 8.5px;
+    font-style: italic;
+    color: #6b5d47;
+    line-height: 1.2;
+  }
+
+  blockquote {
+    font-style: italic;
+    font-size: 19px;
+    line-height: 26px;
+    text-align: center;
+    color: var(--ink);
+    margin: var(--leading) 24px;
+  }
+  blockquote cite {
+    display: block;
+    font-style: normal;
+    font-variant: small-caps;
+    font-size: 13px;
+    color: var(--rubric);
+    margin-top: 10px;
+    letter-spacing: 0.06em;
+  }
+
+  .footer {
+    position: absolute;
+    left: var(--m-left);
+    right: var(--m-right);
+    bottom: 80px;
+    text-align: center;
+    font-style: italic;
+    font-size: 12px;
+    color: #6b5d47;
+    border-top: 1px solid var(--guide);
+    padding-top: 10px;
+  }
+
+  /* ── System label & toggle ──────────────────────────── */
+  .system-tag {
+    position: fixed;
+    top: 16px; left: 16px;
+    z-index: 50;
+    font-family: 'EB Garamond', serif;
+    font-variant: small-caps;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    color: var(--paper);
+    background: var(--ink);
+    padding: 6px 12px;
+  }
+  .grid-toggle {
+    position: fixed;
+    top: 16px; right: 16px;
+    z-index: 50;
+    font-family: 'EB Garamond', serif;
+    font-variant: small-caps;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    color: var(--paper);
+    background: var(--rubric);
+    border: none;
+    padding: 7px 14px;
+    cursor: pointer;
+  }
+  .grid-toggle:hover { background: var(--ink); }
+
+  /* ── Grid overlay: text-block boundary + ratio labels ─ */
+  .overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    display: none;
+    z-index: 40;
+  }
+  .overlay.on { display: block; }
+  /* type area boundary */
+  .ta-box {
+    position: absolute;
+    top: var(--m-top);
+    right: var(--m-right);
+    bottom: var(--m-bottom);
+    left: var(--m-left);
+    border: 1.5px solid var(--rubric);
+    background: var(--guide-fill);
+  }
+  /* baseline rule inside type area */
+  .ta-box::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(var(--leading) - 1px),
+      var(--guide) calc(var(--leading) - 1px),
+      var(--guide) var(--leading)
+    );
+  }
+  /* ratio labels on the four margins */
+  .ratio {
+    position: absolute;
+    font-family: 'EB Garamond', serif;
+    font-size: 12px;
+    font-variant: small-caps;
+    color: var(--rubric);
+    background: var(--paper);
+    padding: 1px 5px;
+  }
+  .ratio.top    { top: calc(var(--m-top)/2 - 9px); left: 50%; transform: translateX(-50%); }
+  .ratio.right  { right: calc(var(--m-right)/2 - 18px); top: 50%; transform: translateY(-50%); }
+  .ratio.bottom { bottom: calc(var(--m-bottom)/2 - 9px); left: 50%; transform: translateX(-50%); }
+  .ratio.left   { left: calc(var(--m-left)/2 - 8px); top: 50%; transform: translateY(-50%); }
+  /* diagonal construction lines (van de Graaf canon) */
+  .diag {
+    position: absolute;
+    inset: 0;
+    width: 100%; height: 100%;
+  }
+</style>
+</head>
+<body>
+  <div class="system-tag">04 · Classical Canons · 2:3 leaf</div>
+  <button class="grid-toggle" onclick="toggleGrid()">Show Grid (G)</button>
+
+  <div class="leaf">
+    <!-- overlay -->
+    <div class="overlay" id="overlay">
+      <svg class="diag" viewBox="0 0 720 1080" preserveAspectRatio="none">
+        <line x1="0" y1="0" x2="720" y2="1080" stroke="rgba(164,30,34,0.25)" stroke-width="1"/>
+        <line x1="720" y1="0" x2="0" y2="1080" stroke="rgba(164,30,34,0.25)" stroke-width="1"/>
+        <line x1="0" y1="0" x2="360" y2="1080" stroke="rgba(164,30,34,0.18)" stroke-width="1"/>
+        <line x1="720" y1="0" x2="360" y2="1080" stroke="rgba(164,30,34,0.18)" stroke-width="1"/>
+      </svg>
+      <div class="ta-box"></div>
+      <div class="ratio top">3</div>
+      <div class="ratio right">4</div>
+      <div class="ratio bottom">6</div>
+      <div class="ratio left">2</div>
+    </div>
+
+    <div class="type-area">
+      <h1 class="masthead">The <span class="rubric">G</span>rid as an Ethic</h1>
+      <p class="subtitle">How nine grid systems shape the same content — a visual comparison</p>
+      <hr class="rule">
+
+      <div class="text">
+        <p class="opening">The modular grid divides the type area into fields separated by gutters, creating a rational armature for text and image. Each system — from Müller-Brockmann's Swiss precision to the medieval scribe's golden canon — encodes a different philosophy of order.</p>
+
+        <p class="colophon"><span class="num">12</span> Columns · <span class="num">8</span>px Baseline · <span class="num">24</span>px Leading · <span class="num">9</span> Systems</p>
+
+        <p>Today, CSS Grid and subgrid make every historical grid natively possible on the web. The question is no longer "can we?" but "which system fits the content?"</p>
+
+        <div class="plates">
+          <div class="img">Zurich Tonhalle, 1955</div>
+          <div class="img">NYC Subway Map, 1972</div>
+          <div class="img">Grid Systems, 1981</div>
+        </div>
+
+        <blockquote>"The grid system is an aid, not a guarantee."<cite>— Josef Müller-Brockmann</cite></blockquote>
+      </div>
+    </div>
+
+    <footer class="footer">A visual comparison of grid systems. Press G to toggle grid overlay.</footer>
+  </div>
+
+<script>
+  const overlay = document.getElementById('overlay');
+  function toggleGrid() { overlay.classList.toggle('on'); }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'g' || e.key === 'G') toggleGrid();
+  });
+</script>
+</body>
+</html>

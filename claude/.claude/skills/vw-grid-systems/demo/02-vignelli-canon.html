@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vignelli Canon — The Grid as an Ethic</title>
+<style>
+  /* ── Single source of truth ─────────────────────────── */
+  :root {
+    --cols: 12;
+    --col-w: 78px;
+    --gutter: 24px;
+    --margin: 48px;
+    --band-h: 64px;
+    --baseline: 8px;
+    --leading: 24px;
+
+    /* content width = 12·78 + 11·24 = 936 + 264 = 1200 */
+    --content-w: 1200px;
+
+    --black: #000;
+    --white: #fff;
+    --red: #E30613;       /* Vignelli red */
+    --grid-line: rgba(227, 6, 19, 0.25);
+    --grid-fill: rgba(227, 6, 19, 0.05);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background: var(--white);
+    color: var(--black);
+    line-height: var(--leading);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    width: calc(var(--content-w) + var(--margin) * 2);
+    max-width: 100%;
+    margin: 0 auto;
+    padding: var(--margin);
+    position: relative;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(var(--cols), var(--col-w));
+    gap: var(--gutter);
+    justify-content: start;
+  }
+
+  /* ── System label ───────────────────────────────────── */
+  .system-tag {
+    position: fixed;
+    top: 0; left: 0;
+    z-index: 50;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--white);
+    background: var(--black);
+    padding: 8px 12px;
+  }
+
+  .grid-toggle {
+    position: fixed;
+    top: 0; right: 0;
+    z-index: 50;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--white);
+    background: var(--red);
+    border: none;
+    padding: 9px 14px;
+    cursor: pointer;
+  }
+  .grid-toggle:hover { background: var(--black); }
+
+  /* ── Black band (section divider) ───────────────────── */
+  .black-band {
+    background: var(--black);
+    color: var(--white);
+    height: var(--band-h);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    margin-bottom: var(--leading);
+    grid-column: 1 / 13;
+  }
+  .black-band h1 {
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  .black-band .band-meta {
+    margin-left: auto;
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--red);
+  }
+
+  .subtitle {
+    grid-column: 1 / 8;
+    font-size: 17px;
+    font-weight: 400;
+    margin-bottom: var(--leading);
+  }
+
+  /* ── Body ───────────────────────────────────────────── */
+  .lede {
+    grid-column: 1 / 9;
+    font-size: 22px;
+    font-weight: 500;
+    line-height: 32px;
+    margin-bottom: var(--leading);
+  }
+  .body-a { grid-column: 1 / 7; }
+  .body-b { grid-column: 7 / 13; }
+  .body p { font-size: 14px; margin-bottom: var(--leading); }
+
+  .section-wrap { margin-bottom: calc(var(--leading) * 1.5); }
+
+  /* ── Stats (on black band) ──────────────────────────── */
+  .stats-band {
+    grid-column: 1 / 13;
+    background: var(--black);
+    color: var(--white);
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    padding: 24px;
+    margin-bottom: var(--leading);
+  }
+  .stat .numeral {
+    font-size: 48px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    color: var(--white);
+  }
+  .stat .numeral em { color: var(--red); font-style: normal; }
+  .stat-label {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #999;
+    margin-top: 8px;
+  }
+
+  /* ── Images ─────────────────────────────────────────── */
+  .img {
+    background: #d8d8d8;
+    height: 180px;
+    display: flex;
+    align-items: flex-end;
+    padding: 10px;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #666;
+    border-top: 4px solid var(--black);
+  }
+  .img-1 { grid-column: 1 / 5; }
+  .img-2 { grid-column: 5 / 9; }
+  .img-3 { grid-column: 9 / 13; }
+
+  /* ── Quote band ─────────────────────────────────────── */
+  .quote-band {
+    grid-column: 1 / 13;
+    background: var(--black);
+    color: var(--white);
+    padding: 40px 24px;
+    margin-bottom: var(--leading);
+  }
+  .quote-band blockquote {
+    font-size: 30px;
+    font-weight: 500;
+    line-height: 40px;
+    letter-spacing: -0.01em;
+    max-width: 700px;
+  }
+  .quote-band cite {
+    display: block;
+    font-size: 13px;
+    font-style: normal;
+    color: var(--red);
+    margin-top: 16px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  /* ── Footer ─────────────────────────────────────────── */
+  .footer {
+    grid-column: 1 / 13;
+    border-top: 2px solid var(--black);
+    padding-top: 12px;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #444;
+  }
+
+  /* ── Grid overlay ───────────────────────────────────── */
+  .overlay {
+    position: absolute;
+    top: var(--margin);
+    left: var(--margin);
+    width: var(--content-w);
+    bottom: var(--margin);
+    pointer-events: none;
+    display: none;
+    z-index: 40;
+  }
+  .overlay.on { display: grid; }
+  .overlay {
+    grid-template-columns: repeat(var(--cols), var(--col-w));
+    gap: var(--gutter);
+    justify-content: start;
+  }
+  .overlay span {
+    background: var(--grid-fill);
+    border-left: 1px solid var(--grid-line);
+    border-right: 1px solid var(--grid-line);
+    font-size: 9px;
+    color: var(--red);
+    text-align: center;
+    padding-top: 2px;
+    height: 100%;
+  }
+  .baseline-rule {
+    position: absolute;
+    top: var(--margin);
+    left: var(--margin);
+    width: var(--content-w);
+    bottom: var(--margin);
+    pointer-events: none;
+    display: none;
+    z-index: 39;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(var(--baseline) - 1px),
+      rgba(0,0,0,0.06) calc(var(--baseline) - 1px),
+      rgba(0,0,0,0.06) var(--baseline)
+    );
+  }
+  .baseline-rule.on { display: block; }
+</style>
+</head>
+<body>
+  <div class="system-tag">02 · Vignelli Canon · Fixed 78px Columns</div>
+  <button class="grid-toggle" onclick="toggleGrid()">Show Grid (G)</button>
+
+  <div class="page">
+    <div class="baseline-rule" id="baseline"></div>
+    <div class="overlay" id="overlay"></div>
+
+    <div class="grid">
+      <!-- Title band -->
+      <div class="black-band">
+        <h1>The Grid as an Ethic</h1>
+        <span class="band-meta">A Visual Comparison</span>
+      </div>
+      <p class="subtitle">How nine grid systems shape the same content — a visual comparison</p>
+
+      <!-- Lede -->
+      <p class="lede">The modular grid divides the type area into fields separated by gutters, creating a rational armature for text and image.</p>
+
+      <!-- Body -->
+      <div class="body-a">
+        <p>The modular grid divides the type area into fields separated by gutters, creating a rational armature for text and image. Each system — from Müller-Brockmann's Swiss precision to the medieval scribe's golden canon — encodes a different philosophy of order.</p>
+      </div>
+      <div class="body-b">
+        <p>Today, CSS Grid and subgrid make every historical grid natively possible on the web. The question is no longer "can we?" but "which system fits the content?" The discipline of Vignelli reduces the answer to a small, repeatable set of decisions.</p>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-band">
+        <div class="stat"><div class="numeral"><em>12</em></div><div class="stat-label">Columns</div></div>
+        <div class="stat"><div class="numeral">8px</div><div class="stat-label">Baseline</div></div>
+        <div class="stat"><div class="numeral">24px</div><div class="stat-label">Leading</div></div>
+        <div class="stat"><div class="numeral"><em>9</em></div><div class="stat-label">Systems</div></div>
+      </div>
+
+      <!-- Images -->
+      <div class="img img-1">Zurich Tonhalle, 1955</div>
+      <div class="img img-2">NYC Subway Map, 1972</div>
+      <div class="img img-3">Grid Systems book, 1981</div>
+
+      <!-- Quote -->
+      <div class="quote-band">
+        <blockquote>"The grid system is an aid, not a guarantee."<cite>Josef Müller-Brockmann</cite></blockquote>
+      </div>
+
+      <!-- Footer -->
+      <footer class="footer">A visual comparison of grid systems. Press G to toggle grid overlay.</footer>
+    </div>
+  </div>
+
+<script>
+  const overlay = document.getElementById('overlay');
+  const baseline = document.getElementById('baseline');
+  for (let i = 1; i <= 12; i++) {
+    const s = document.createElement('span');
+    s.textContent = i;
+    overlay.appendChild(s);
+  }
+  function toggleGrid() {
+    overlay.classList.toggle('on');
+    baseline.classList.toggle('on');
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'g' || e.key === 'G') toggleGrid();
+  });
+</script>
+</body>
+</html>
