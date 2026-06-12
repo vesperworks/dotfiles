@@ -17,6 +17,9 @@ tmux/.config/tmux/tmux.conf.local
 *.swo
 *~
 
+# Python
+__pycache__/
+
 # Backup
 *.bak.*
 
