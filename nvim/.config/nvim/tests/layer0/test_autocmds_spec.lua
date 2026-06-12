@@ -109,19 +109,22 @@ describe("vw autocmds", function()
     end)
   end)
 
-  describe("TaskTimer autocmds", function()
-    it("TaskTimer の autocmd が登録されている", function()
-      -- task-timer.setup_autocmds() で VimLeavePre 等が登録される
-      local autocmds = vim.api.nvim_get_autocmds({ event = "VimLeavePre" })
-      local found = false
-      for _, ac in ipairs(autocmds) do
-        if ac.group_name and ac.group_name:match("TaskTimer") then
-          found = true
-          break
-        end
+  describe("VwTimer autocmds", function()
+    it("VwTimer augroup が存在する", function()
+      assert.is_true(helpers.augroup_exists("VwTimer"))
+    end)
+
+    it("VimLeavePre が登録されている", function()
+      assert.is_true(helpers.autocmd_exists("VwTimer", "VimLeavePre"))
+    end)
+
+    it("setup() を再実行しても autocmd が重複しない", function()
+      local count_autocmds = function()
+        return #vim.api.nvim_get_autocmds({ group = "VwTimer" })
       end
-      -- TaskTimer は augroup 名が不明確なため、VimLeavePre に何かが登録されていることのみ確認
-      assert.is_true(#autocmds > 0, "VimLeavePre の autocmd が未登録")
+      local before = count_autocmds()
+      require("vw.timer").setup()
+      assert.are.equal(before, count_autocmds())
     end)
   end)
 end)

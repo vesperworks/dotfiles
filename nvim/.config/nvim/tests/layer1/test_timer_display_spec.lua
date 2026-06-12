@@ -55,4 +55,50 @@ describe("timer_display", function()
       assert.are.equal(id1, id2)
     end)
   end)
+
+  describe("update_buffer_display", function()
+    local function make_md_buffer(name, lines)
+      local bufnr = vim.api.nvim_create_buf(false, false)
+      vim.api.nvim_buf_set_name(bufnr, name)
+      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+      vim.bo[bufnr].filetype = "markdown"
+      return bufnr
+    end
+
+    local function extmark_count(bufnr)
+      local ns = vim.api.nvim_create_namespace("task_timer")
+      return #vim.api.nvim_buf_get_extmarks(bufnr, ns, 0, -1, {})
+    end
+
+    it("対応するタイマーがある実行中タスクに extmark を付与する", function()
+      local bufnr = make_md_buffer("/tmp/vw-test-display.md", { "- [>] 進行中タスク" })
+      local task_id = display.generate_task_id("/tmp/vw-test-display.md", "- [>] 進行中タスク")
+      local timers = { [task_id] = { start_time = os.time() - 10, file_path = "/tmp/vw-test-display.md" } }
+
+      display.update_buffer_display(bufnr, timers)
+      assert.are.equal(1, extmark_count(bufnr))
+      vim.api.nvim_buf_delete(bufnr, { force = true })
+    end)
+
+    it("タイマーが空なら extmark を付与しない", function()
+      local bufnr = make_md_buffer("/tmp/vw-test-empty.md", { "- [>] 進行中タスク" })
+      display.update_buffer_display(bufnr, {})
+      assert.are.equal(0, extmark_count(bufnr))
+      vim.api.nvim_buf_delete(bufnr, { force = true })
+    end)
+
+    it("タイマーが空になったら残留 extmark がクリアされる", function()
+      local bufnr = make_md_buffer("/tmp/vw-test-clear.md", { "- [>] 進行中タスク" })
+      local task_id = display.generate_task_id("/tmp/vw-test-clear.md", "- [>] 進行中タスク")
+      local timers = { [task_id] = { start_time = os.time() - 10, file_path = "/tmp/vw-test-clear.md" } }
+
+      display.update_all_displays(timers)
+      assert.are.equal(1, extmark_count(bufnr))
+
+      -- 空になった直後の update_all_displays で一掃される
+      display.update_all_displays({})
+      assert.are.equal(0, extmark_count(bufnr))
+      vim.api.nvim_buf_delete(bufnr, { force = true })
+    end)
+  end)
 end)

@@ -11,17 +11,26 @@ source "$SCRIPT_DIR/cc-common.sh"
 # === 一時ディレクトリ・スナップショット（init で遅延初期化） ===
 TMPDIR_WORK=""
 PS_SNAPSHOT=""
+SESH_WORK_DIR="${TMPDIR:-/tmp}/sesh-work"
 
 _init_snapshot() {
 	if [ -n "$TMPDIR_WORK" ]; then return; fi
-	TMPDIR_WORK=$(mktemp -d)
+	mkdir -p "$SESH_WORK_DIR"
+	# SIGKILL / tmux server 再起動では trap が走らず作業ディレクトリが残る。
+	# 専用親ディレクトリ配下に限定して 5 分以上古いものを起動時に掃除する
+	# （他用途の $TMPDIR/tmp.* を巻き込まないための専用親ディレクトリ）
+	find "$SESH_WORK_DIR" -mindepth 1 -maxdepth 1 -type d -mmin +5 -exec rm -rf {} + 2>/dev/null || true
+	TMPDIR_WORK=$(mktemp -d "$SESH_WORK_DIR/work.XXXXXX")
 	trap 'rm -rf "$TMPDIR_WORK"' EXIT
-	# プロセスツリーの一括スナップショット
-	# ps -ax を一度だけ呼び、親子関係・リソース・コマンド名をファイルに保存
-	# commは最後に配置（切り詰め防止のため）
+	# シグナル時も EXIT trap 経由でクリーンアップ（HUP は tmux server 終了時）
+	trap 'exit 129' HUP
+	trap 'exit 130' INT
+	trap 'exit 143' TERM
+	# プロセスツリーのスナップショット（TTL 付き共有、cc-common.sh に集約）
+	# fzf preview / status-right と同じファイルを参照するので、picker 起動と
+	# preview 操作が連続しても ps -ax の fork は TTL（2 秒）に 1 回で済む
 	# フィールド: $1=pid, $2=ppid, $3=%cpu, $4=rss, $5=comm
-	PS_SNAPSHOT="$TMPDIR_WORK/ps_snapshot"
-	ps -ax -o pid=,ppid=,%cpu=,rss=,comm= 2>/dev/null >"$PS_SNAPSHOT" || true
+	PS_SNAPSHOT=$(ensure_ps_snapshot)
 }
 
 # === tmux pane 一覧の一括スナップショット ===
@@ -61,9 +70,7 @@ _init_pane_captures() {
 	done
 }
 
-# === AI CLI検出パターン ===
-# basenameで完全一致させるため、awkでは別ロジックを使用
-AI_COMM_NAMES='claude|agent|codex|gemini'
+# AI CLI 検出パターン (AI_COMM_NAMES) は cc-common.sh で一元管理
 
 # === スナップショットから子孫PIDを取得（再帰なし・awk一発） ===
 get_descendant_pids() {
@@ -170,7 +177,8 @@ get_session_resources() {
 	_init_snapshot
 	_init_panes_snapshot
 	local session_name=$1
-	local pid_file="$TMPDIR_WORK/res_$$_${session_name}"
+	local pid_file
+	pid_file="$TMPDIR_WORK/res_$$_$(sanitize_name "$session_name")"
 
 	# 全ペインPIDとその子孫を収集（snapshot から awk フィルタ）
 	local pane_pids
@@ -227,15 +235,9 @@ format_age() {
 	fi
 }
 
-# === ハッシュ保存ディレクトリ ===
-HASH_DIR="${TMPDIR:-/tmp}/sesh-pane-hash"
+# sanitize_name / load_saved_pane_hash は cc-common.sh で一元管理
 
-# === セッション名 → 安全なファイル名 ===
-sanitize_name() {
-	printf '%s' "$1" | tr -c 'A-Za-z0-9._-' '_'
-}
-
-# === 現在のペイン内容ハッシュ（save-pane-hash.sh と同じロジック） ===
+# === 現在のペイン内容ハッシュ（cc-common.sh compute_pane_hash と同じバイト列） ===
 # pane 順序: list-panes -a も list-panes -t と同じく tmux 内部 linked list 順なので、
 # session でフィルタした結果は -t と同一（Phase 0 で実機検証済み）。
 # capture 内容: _init_pane_captures が事前に取った同じバイト列を使うので、
@@ -251,16 +253,6 @@ get_current_pane_hash() {
 			cat "$PANE_CAP_DIR/${pid//%/_}" 2>/dev/null || true
 		done
 	} | shasum 2>/dev/null | awk '{print $1}'
-}
-
-# === 保存ハッシュ取得（無ければ空文字） ===
-get_saved_pane_hash() {
-	local session_name=$1
-	local safe_name hash_file
-	safe_name=$(sanitize_name "$session_name")
-	hash_file="$HASH_DIR/$safe_name"
-	[ -f "$hash_file" ] || return 0
-	cat "$hash_file" 2>/dev/null || true
 }
 
 # === 未読判定（return 0 = unread, 1 = read） ===
@@ -319,7 +311,7 @@ process_session() {
 		WAITING) display_status="WAIT" ;;
 		DONE)
 			cur_hash=$(get_current_pane_hash "$session_name")
-			saved_hash=$(get_saved_pane_hash "$session_name")
+			saved_hash=$(load_saved_pane_hash "$session_name")
 			if is_unread "$cur_hash" "$saved_hash"; then
 				display_status="NEW"
 			else
@@ -389,7 +381,7 @@ main() {
 
 	# SLEEP/SLEEPY 情報読み込み: env > 共有ファイル の優先順
 	# picker bind での reload では env が引き継がれないため、ファイル fallback で一貫性を保つ
-	local sleep_info_dir="${TMPDIR:-/tmp}/sesh-state"
+	local sleep_info_dir="$SESH_STATE_DIR"
 	if [ -n "${SLEEPING:-}" ]; then
 		SLEEPING_LIST="$SLEEPING"
 	elif [ -f "$sleep_info_dir/sleeping" ]; then
@@ -565,7 +557,7 @@ main() {
 #   SESH_SESSIONS_NO_CACHE=1 でキャッシュを無視して同期実行（デバッグ用）
 #   SLEEPING / CANDIDATE はキャッシュキーに含めない（picker 側で都度渡される）
 run_with_cache() {
-	local cache_dir="${TMPDIR:-/tmp}/sesh-state"
+	local cache_dir="$SESH_STATE_DIR"
 	mkdir -p "$cache_dir"
 
 	# キャッシュキー: 引数のみ
@@ -582,8 +574,12 @@ run_with_cache() {
 	find "$cache_dir" -maxdepth 1 -name "${key}.cache.tmp.*" -mmin +5 -delete 2>/dev/null || true
 
 	# キャッシュなし or NO_CACHE 指定時 → 同期実行 + fingerprint 保存
+	# tee 直書きだと中断時に部分キャッシュが残り cc-wait-count の集計が壊れる
+	# ため、tmp に書いてから atomic に置換する（bg 再計算パスと同じ要領）
 	if [ ! -f "$cache_file" ] || [ "${SESH_SESSIONS_NO_CACHE:-0}" = "1" ]; then
-		main "$@" | tee "$cache_file"
+		local sync_tmp="$cache_file.tmp.$$"
+		main "$@" | tee "$sync_tmp"
+		mv "$sync_tmp" "$cache_file" 2>/dev/null || rm -f "$sync_tmp"
 		world_state_fingerprint >"$fp_file" 2>/dev/null || true
 		return
 	fi

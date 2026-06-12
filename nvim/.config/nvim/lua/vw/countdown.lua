@@ -3,6 +3,8 @@ local M = {}
 local ns_id = vim.api.nvim_create_namespace('markdown_countdown')
 local countdown_timer = nil
 local start_times = {} -- { [bufnr] = { [line_content] = timestamp } }
+-- countdown 行ゼロと判定した時点の changedtick（毎秒ループのスキップ判定用）
+local idle_ticks = {} -- { [bufnr] = changedtick }
 
 -- 相対時間パターン: Nh, Nm, Ns（組み合わせ可: 1h30m, 2m30s 等）
 local function parse_duration_seconds(line)
@@ -107,11 +109,13 @@ function M.update_buffer(bufnr)
 
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
   local seen_lines = {}
+  local found = false
 
   for lnum, line in ipairs(lines) do
     seen_lines[line] = true
     local target_time = parse_target_time(line, bufnr)
     if target_time then
+      found = true
       local text, state = format_remaining(target_time)
       local cfg = state_config[state]
       if cfg then
@@ -136,12 +140,22 @@ function M.update_buffer(bufnr)
       end
     end
   end
+
+  -- countdown 行ゼロならテキストが変わるまで毎秒の再 parse をスキップ
+  if found then
+    idle_ticks[bufnr] = nil
+  else
+    idle_ticks[bufnr] = vim.api.nvim_buf_get_changedtick(bufnr)
+  end
 end
 
 function M.update_all()
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
     if vim.api.nvim_buf_is_loaded(bufnr) and vim.bo[bufnr].filetype == 'markdown' then
-      M.update_buffer(bufnr)
+      local idle_tick = idle_ticks[bufnr]
+      if idle_tick == nil or idle_tick ~= vim.api.nvim_buf_get_changedtick(bufnr) then
+        M.update_buffer(bufnr)
+      end
     end
   end
 end
@@ -179,6 +193,7 @@ function M.setup()
     group = group,
     callback = function(ev)
       start_times[ev.buf] = nil
+      idle_ticks[ev.buf] = nil
     end,
   })
 

@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 # sesh session picker with fzf
 # - Select existing session: choose from list and Enter
 # - Create new session: type new name and Enter
@@ -21,9 +22,9 @@ trap 'rm -f "$KEY_MARKER" "$SLEEP_MARKER"' EXIT
 sleeping_sessions=""
 if [ -s "$SLEEP_LOG" ] && command -v jq >/dev/null 2>&1; then
 	cutoff=$(($(date +%s) - 86400))
-	closed_recent=$(jq -r --argjson c "$cutoff" 'select(.closed_at >= $c) | .session' "$SLEEP_LOG" 2>/dev/null | sort -u)
-	attached_now=$(tmux list-sessions -F '#{?session_attached,#{session_name},}' 2>/dev/null | grep -v '^$' | sort -u)
-	sleeping_sessions=$(comm -23 <(echo "$closed_recent") <(echo "$attached_now") 2>/dev/null)
+	closed_recent=$(jq -r --argjson c "$cutoff" 'select(.closed_at >= $c) | .session' "$SLEEP_LOG" 2>/dev/null | sort -u) || true
+	attached_now=$(tmux list-sessions -F '#{?session_attached,#{session_name},}' 2>/dev/null | grep -v '^$' | sort -u) || true
+	sleeping_sessions=$(comm -23 <(echo "$closed_recent") <(echo "$attached_now") 2>/dev/null) || true
 fi
 if [ -z "$sleeping_sessions" ]; then
 	sleeping_count=0
@@ -76,7 +77,7 @@ result=$(sesh_output_filtered -t | fzf-tmux -p 65%,65% \
 	--bind "ctrl-d:execute-silent(tmux kill-session -t \$(echo {} | awk '{print \$2}'))+change-prompt(  )+reload($SESH_SESSIONS -t)" \
 	--bind "ctrl-e:execute-silent(touch $KEY_MARKER)+accept" \
 	--bind "ctrl-y:execute-silent(tmux send-keys -t \$(echo {} | awk '{print \$2}') Enter)+reload($SESH_SESSIONS -t)" \
-	--bind "ctrl-s:execute-silent(touch $SLEEP_MARKER)+accept")
+	--bind "ctrl-s:execute-silent(touch $SLEEP_MARKER)+accept") || true # fzf キャンセル (ESC, exit 130) は正常フロー
 
 # --expect と --print-query の出力:
 # Line 1: query (入力テキスト)
@@ -97,7 +98,7 @@ fi
 # tmux display-popup を呼ぶ。fzf-tmux 内から入れ子で popup を出すと表示されない。
 if [ -f "$SLEEP_MARKER" ]; then
 	rm -f "$SLEEP_MARKER"
-	tmux display-popup -E -w 70% -h 70% -T ' 💤 Claude Sleep ' "$CLAUDE_SLEEP_CONFIRM"
+	tmux display-popup -E -w 70% -h 70% -T ' 💤 Claude Sleep ' "$CLAUDE_SLEEP_CONFIRM" || true
 	exit 0
 fi
 
@@ -115,25 +116,25 @@ if [ -n "$selection" ]; then
 	case "$key" in
 	ctrl-o)
 		# Ctrl+o: 現在のペインを選択したセッションに移動
-		tmux break-pane
-		tmux move-window -t "$session:"
-		tmux switch-client -t "$session"
+		tmux break-pane || true
+		tmux move-window -t "$session:" || true
+		tmux switch-client -t "$session" || true
 		;;
 	ctrl-e)
 		# Ctrl+e: popup で選択肢表示
 		tmux display-popup -E -w 60% -h 40% -T " $session — 選択肢 " \
-			"$CC_ANSWER '$session'"
+			"$CC_ANSWER '$session'" || true
 		;;
 	*)
 		# Enter: 通常のセッション接続
-		sesh connect "$session"
+		sesh connect "$session" || true
 
 		# SLEEP 中セッションなら、attach 後に claude --resume を自動送信
 		if [ "$is_sleeping" = "1" ] && [ -s "$SLEEP_LOG" ] && command -v jq >/dev/null 2>&1; then
 			# closed-sessions.jsonl から該当 session の最新エントリを引く
 			resume_info=$(jq -r --arg s "$session" \
 				'select(.session == $s) | [(.claude_session_id // ""), (.pwd // "")] | @tsv' \
-				"$SLEEP_LOG" 2>/dev/null | tail -1)
+				"$SLEEP_LOG" 2>/dev/null | tail -1) || true
 			session_id=$(echo "$resume_info" | awk -F'\t' '{print $1}')
 			pwd_path=$(echo "$resume_info" | awk -F'\t' '{print $2}')
 
@@ -153,8 +154,8 @@ if [ -n "$selection" ]; then
 	esac
 elif [ -n "$query" ]; then
 	# No selection but query exists: create new tmux session directly
-	tmux new-session -d -s "$query" 2>/dev/null
-	tmux switch-client -t "$query"
+	tmux new-session -d -s "$query" 2>/dev/null || true
+	tmux switch-client -t "$query" || true
 fi
 
 exit 0

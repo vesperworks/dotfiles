@@ -2,67 +2,13 @@
 -- Phase 1 (full file expansion) + Phase 2 (heading section slicing).
 local M = {}
 
+local ob = require('vw._obsidian')
+
 local ns = vim.api.nvim_create_namespace('vw_transclusion')
 
 local enabled = true
----@type table<string, {mtime:number, lines:string[]}>
-local file_cache = {}
 ---@type table<integer, userdata>
 local debounce_timers = {}
-
--- vault root: obsidian.nvim の API → 環境変数 → デフォルト の順
-local function vault_dir()
-  local ok, api = pcall(require, 'obsidian.api')
-  if ok and api.resolve_workspace_dir then
-    local ok2, root = pcall(api.resolve_workspace_dir)
-    if ok2 and root then return tostring(root) end
-  end
-  return vim.fn.expand(
-    vim.env.OBSIDIAN_VAULT_PATH
-      or '~/Library/Mobile Documents/iCloud~md~obsidian/Documents/MainVault'
-  )
-end
-
-local function read_file_cached(path)
-  local stat = vim.uv.fs_stat(path)
-  if not stat then return nil end
-  local cached = file_cache[path]
-  if cached and cached.mtime == stat.mtime.sec then
-    return cached.lines
-  end
-  local ok, lines = pcall(vim.fn.readfile, path)
-  if not ok then return nil end
-  file_cache[path] = { mtime = stat.mtime.sec, lines = lines }
-  return lines
-end
-
--- name → 絶対パス解決（vault relative / basename anywhere）
-local function resolve_path(name)
-  if not name or name == '' then return nil end
-  name = vim.trim(name)
-
-  -- absolute / home
-  if name:sub(1, 1) == '/' or name:sub(1, 1) == '~' then
-    local expanded = vim.fn.expand(name)
-    if vim.fn.filereadable(expanded) == 1 then return expanded end
-  end
-
-  local root = vault_dir()
-
-  -- vault root relative（拡張子付き/なし両対応）
-  local candidate = root .. '/' .. name
-  if vim.fn.filereadable(candidate) == 1 then return candidate end
-  local with_md = candidate .. '.md'
-  if vim.fn.filereadable(with_md) == 1 then return with_md end
-
-  -- basename anywhere in vault
-  local basename = vim.fs.basename(name)
-  if not basename:match('%.md$') then basename = basename .. '.md' end
-  local found = vim.fs.find(basename, { path = root, type = 'file', limit = 1 })
-  if found and found[1] then return found[1] end
-
-  return nil
-end
 
 local function normalize_heading(text)
   return (text:gsub('%s+', ' '):gsub('^%s+', ''):gsub('%s+$', '')):lower()
@@ -102,6 +48,10 @@ local function slice_section(lines, heading)
   return out
 end
 
+-- テスト用 export（内部 API）
+M._normalize_heading = normalize_heading
+M._slice_section = slice_section
+
 local function build_virt_lines(content)
   local virt = {}
   for _, line in ipairs(content) do
@@ -136,8 +86,8 @@ local function render(bufnr)
       if self_ref then
         file_lines = lines
       else
-        local path = resolve_path(name)
-        if path then file_lines = read_file_cached(path) end
+        local path = ob.resolve_path(name)
+        if path then file_lines = ob.read_file_cached(path) end
       end
 
       if file_lines then
@@ -207,7 +157,7 @@ function M.setup()
   })
 
   vim.api.nvim_create_user_command('VwTransclusionRefresh', function()
-    file_cache = {}
+    ob.clear_cache()
     render(vim.api.nvim_get_current_buf())
   end, { desc = 'Refresh ![[]] embed transclusion (clears cache)' })
 

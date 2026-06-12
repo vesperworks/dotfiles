@@ -104,6 +104,20 @@ function M.update_buffer_display(bufnr, active_timers)
     return
   end
 
+  -- task_id は "<file_name>::<hash>" 形式なので、このバッファのファイル名に
+  -- 紐づくタイマーが 1 つも無ければ全行走査（行ごとの sha256）を省略できる
+  local file_prefix = vim.fn.fnamemodify(file_path, ":t") .. "::"
+  local has_relevant_timer = false
+  for task_id in pairs(active_timers) do
+    if task_id:sub(1, #file_prefix) == file_prefix then
+      has_relevant_timer = true
+      break
+    end
+  end
+  if not has_relevant_timer then
+    return
+  end
+
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
 
   for line_num, line in ipairs(lines) do
@@ -137,8 +151,22 @@ function M.update_buffer_display(bufnr, active_timers)
   end
 end
 
+-- 直前の更新でタイマーが存在したか（空になった直後の 1 回だけクリアするため）
+local had_timers = false
+
 -- 全てのMarkdownバッファの表示更新
 function M.update_all_displays(active_timers)
+  if next(active_timers) == nil then
+    -- アイドル時は毎秒の全バッファ走査をスキップ。
+    -- 直前までタイマーがあった場合のみ残留 extmark を一掃する
+    if had_timers then
+      had_timers = false
+      M.clear_all_displays()
+    end
+    return
+  end
+  had_timers = true
+
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
     if vim.api.nvim_buf_is_loaded(bufnr) and vim.bo[bufnr].filetype == 'markdown' then
       M.update_buffer_display(bufnr, active_timers)

@@ -12,6 +12,10 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=cc-common.sh
+source "$SCRIPT_DIR/cc-common.sh"
+
 session=${1:-}
 [ -z "$session" ] && exit 0
 
@@ -20,20 +24,8 @@ if ! tmux has-session -t "$session" 2>/dev/null; then
 	exit 0
 fi
 
-hash_dir="${TMPDIR:-/tmp}/sesh-pane-hash"
-mkdir -p "$hash_dir"
+mkdir -p "$SESH_PANE_HASH_DIR"
+hash_file="$SESH_PANE_HASH_DIR/$(sanitize_name "$session")"
 
-# session 名を安全なファイル名に変換（英数・ハイフン・アンダースコア・ドット以外を _ に）
-safe_name=$(printf '%s' "$session" | tr -c 'A-Za-z0-9._-' '_')
-hash_file="$hash_dir/$safe_name"
-
-# 全ペインの可視内容を結合して shasum
-# capture-pane -p (stdout 出力)、スクロールバックは含めない（attach 時の表示と一致させる）
-{
-	tmux list-panes -t "$session" -F '#{pane_id}' 2>/dev/null | while IFS= read -r pid; do
-		[ -z "$pid" ] && continue
-		# pane_id をマーカーとして含める（pane 構成変化も hash 差分に反映）
-		printf '=== %s ===\n' "$pid"
-		tmux capture-pane -p -t "$pid" 2>/dev/null || true
-	done
-} | shasum 2>/dev/null | awk '{print $1}' >"$hash_file"
+# 全ペインの可視内容を結合して shasum（ロジックは cc-common.sh に集約）
+compute_pane_hash "$session" >"$hash_file"
