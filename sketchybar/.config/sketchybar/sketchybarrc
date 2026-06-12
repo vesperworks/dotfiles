@@ -228,8 +228,26 @@ sketchybar --add item aerospace_hang right \
 
 add_popup_rows aerospace_hang 3 off
 
+# iCloud Sync Indicator (icloud-doctor). Hidden when healthy; yellow with
+# a count when dataless files exist (their reads hang on-demand download
+# and can block rg-style full scans — see the qmd picker incident); red
+# when bird/fileproviderd is missing or stuck in state=U. Checks every
+# 10 min. Click opens a 3-row popup: summary / copy download / copy nudge.
+sketchybar --add item icloud_status right \
+  --set icloud_status "${status_item[@]}" \
+  icon= \
+  icon.color="$YELLOW" \
+  label.drawing=off \
+  drawing=off \
+  update_freq=600 \
+  "${popup_style[@]}" \
+  script="$PLUGIN_DIR/icloud_status.sh" \
+  --subscribe icloud_status mouse.clicked mouse.exited.global
+
+add_popup_rows icloud_status 3 off
+
 # Unify the items above into a single rounded background.
-sketchybar --add bracket status_group aerospace_hang wifi battery volume keyboard clock \
+sketchybar --add bracket status_group icloud_status aerospace_hang wifi battery volume keyboard clock \
   --set status_group background.color="$BACKGROUND_1" \
   background.corner_radius=5 \
   background.height=26

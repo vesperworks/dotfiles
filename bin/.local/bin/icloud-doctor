@@ -1,0 +1,196 @@
+#!/bin/bash
+set -euo pipefail
+
+# icloud-doctor — iCloud 同期 (bird / fileproviderd) の健全性チェッカー
+#
+# 背景: iCloud の dataless ファイル（実体未ダウンロードのプレースホルダ）は
+# read がオンデマンドダウンロード待ちでハングすることがあり、rg などの
+# 全文走査ツールを巻き込んで永久にブロックする（qmd picker の RG 層が
+# 静かに死んでいた事件の真犯人）。このツールで可視化と回復を行う。
+#
+# Usage:
+#   icloud-doctor [status]            人間向けステータス表示（デフォルト）
+#   icloud-doctor check               機械可読 1 行出力（sketchybar 用）
+#   icloud-doctor download [-n]       dataless ファイルを brctl download
+#                                     (-n / --dry-run で対象表示のみ)
+#   icloud-doctor nudge               bird / fileproviderd を再起動（確認付き）
+#   icloud-doctor watch               brctl monitor のラッパー
+#
+# 対象ディレクトリ: $ICLOUD_DOCTOR_TARGET > $OBSIDIAN_VAULT_PATH > MainVault
+
+TARGET="${ICLOUD_DOCTOR_TARGET:-${OBSIDIAN_VAULT_PATH:-$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/MainVault}}"
+STATE_DIR="${TMPDIR:-/tmp}/icloud-doctor"
+LAST_CHECK_FILE="$STATE_DIR/last-check"
+
+# state=U (uninterruptible) がこの秒数続くと詰まり扱い…は ps 単発では
+# 判定できないため、check 時点の瞬間値で警告のみ出す
+DAEMONS="bird fileproviderd"
+
+# === ps 出力からデーモンの state / %cpu を取得 ===
+# 出力: "S 0.1" 形式（見つからなければ "missing -"）
+# $1: デーモン名（comm の basename 完全一致）
+daemon_state() {
+	local name=$1
+	local ps_output=${2:-}
+	if [ -z "$ps_output" ]; then
+		ps_output=$(ps -axo state=,pcpu=,comm= 2>/dev/null)
+	fi
+	printf '%s\n' "$ps_output" | awk -v n="$name" '
+		{
+			k = split($3, parts, "/")
+			if (parts[k] == n) { print $1, $2; found = 1; exit }
+		}
+		END { if (!found) print "missing", "-" }
+	'
+}
+
+# === ls -lO 出力から dataless ファイルのパスを抽出 ===
+# ls -lO: perms links owner group flags size date... path
+# flags 列に "dataless" を含む行から、最初の "/" 以降（絶対パス）を取り出す
+extract_dataless_paths() {
+	grep dataless 2>/dev/null | sed -nE 's|^[^/]*(/.+)$|\1|p' || true
+}
+
+# === 対象ディレクトリの dataless ファイルを列挙 ===
+list_dataless() {
+	local dir=$1
+	[ -d "$dir" ] || return 0
+	find "$dir" -type f -print0 2>/dev/null |
+		xargs -0 ls -lO 2>/dev/null |
+		extract_dataless_paths
+}
+
+# === 機械可読チェック（sketchybar 用）===
+# 出力例: DATALESS=5 BIRD=S FP=S
+# 実行結果は $LAST_CHECK_FILE にも保存（popup の即時表示用）
+cmd_check() {
+	local dataless_count bird_state fp_state ps_output
+	dataless_count=$(list_dataless "$TARGET" | grep -c . 2>/dev/null) || dataless_count=0
+	ps_output=$(ps -axo state=,pcpu=,comm= 2>/dev/null)
+	bird_state=$(daemon_state bird "$ps_output" | awk '{print $1}')
+	fp_state=$(daemon_state fileproviderd "$ps_output" | awk '{print $1}')
+
+	local line="DATALESS=$dataless_count BIRD=$bird_state FP=$fp_state"
+	mkdir -p "$STATE_DIR"
+	printf '%s\n' "$line" >"$LAST_CHECK_FILE"
+	printf '%s\n' "$line"
+}
+
+# === 人間向けステータス ===
+cmd_status() {
+	echo "☁️  iCloud Sync Doctor"
+	echo "──────────────────────────────"
+	echo "daemons"
+
+	local ps_output name state
+	ps_output=$(ps -axo state=,pcpu=,comm= 2>/dev/null)
+	for name in $DAEMONS; do
+		state=$(daemon_state "$name" "$ps_output")
+		local st cpu icon
+		st=$(printf '%s' "$state" | awk '{print $1}')
+		cpu=$(printf '%s' "$state" | awk '{print $2}')
+		case "$st" in
+		missing) icon="✗" ;;
+		U*) icon="⚠" ;;
+		*) icon="✓" ;;
+		esac
+		printf '  %-14s %s %-3s cpu %s%%\n' "$name" "$icon" "$st" "$cpu"
+	done
+	echo "  (state=U が続く場合はダウンロード詰まりの兆候)"
+	echo ""
+	echo "target  ${TARGET/#$HOME/~}"
+
+	local dataless
+	dataless=$(list_dataless "$TARGET")
+	if [ -z "$dataless" ]; then
+		echo "  dataless 0 ✓"
+		return 0
+	fi
+
+	local count
+	count=$(printf '%s\n' "$dataless" | grep -c .)
+	echo "  dataless $count ⚠ (read すると rg 等がハングする)"
+	printf '%s\n' "$dataless" | while IFS= read -r f; do
+		printf '    %s\n' "${f/#$HOME/~}"
+	done
+	echo ""
+	echo "next: icloud-doctor download   # brctl download で実体化"
+	echo "      icloud-doctor nudge      # bird/fileproviderd 再起動"
+}
+
+# === dataless ファイルの一括マテリアライズ ===
+cmd_download() {
+	local dry_run=0
+	case "${1:-}" in
+	-n | --dry-run) dry_run=1 ;;
+	esac
+
+	local dataless
+	dataless=$(list_dataless "$TARGET")
+	if [ -z "$dataless" ]; then
+		echo "dataless ファイルはありません ✓"
+		return 0
+	fi
+
+	printf '%s\n' "$dataless" | while IFS= read -r f; do
+		if [ "$dry_run" = "1" ]; then
+			echo "[dry-run] brctl download: ${f/#$HOME/~}"
+		else
+			echo "download: ${f/#$HOME/~}"
+			brctl download "$f" || echo "  ⚠ brctl download 失敗: $f"
+		fi
+	done
+
+	if [ "$dry_run" = "0" ]; then
+		echo ""
+		echo "brctl download は非同期キックです。進捗は 'icloud-doctor watch'、"
+		echo "結果は 'icloud-doctor status' で確認してください。"
+	fi
+}
+
+# === デーモン再起動（確認付き）===
+cmd_nudge() {
+	echo "bird / fileproviderd を再起動します（launchd が自動再起動）。"
+	echo "同期中の転送は中断され、最初からやり直しになる可能性があります。"
+	printf '続行しますか？ [y/N] '
+	local answer
+	read -r answer
+	case "$answer" in
+	y | Y)
+		killall bird 2>/dev/null || echo "bird: not running"
+		killall fileproviderd 2>/dev/null || echo "fileproviderd: not running"
+		echo "再起動を要求しました。数秒後に 'icloud-doctor status' で確認してください。"
+		;;
+	*)
+		echo "中止しました。"
+		;;
+	esac
+}
+
+cmd_watch() {
+	exec brctl monitor "$@"
+}
+
+main() {
+	local cmd="${1:-status}"
+	shift 2>/dev/null || true
+	case "$cmd" in
+	status) cmd_status "$@" ;;
+	check) cmd_check "$@" ;;
+	download) cmd_download "$@" ;;
+	nudge) cmd_nudge "$@" ;;
+	watch) cmd_watch "$@" ;;
+	-h | --help)
+		sed -n '4,18p' "$0" | sed 's/^# \{0,1\}//'
+		;;
+	*)
+		echo "unknown command: $cmd (status / check / download / nudge / watch)" >&2
+		exit 1
+		;;
+	esac
+}
+
+# source された場合は関数のみ公開（テスト用）
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+	main "$@"
+fi
