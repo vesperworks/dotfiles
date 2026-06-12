@@ -5,10 +5,14 @@
 -- - heading 抽出
 local M = {}
 
----@type table<string, string> note 名 → 解決済み絶対パス
+---@type table<string, {path: string|false, at: number}> note 名 → 解決結果（false = 解決失敗）
 local resolve_cache = {}
 ---@type table<string, {mtime:number, lines:string[]}>
 local file_cache = {}
+
+-- 解決失敗のキャッシュ保持秒数。[[note# をタイプ中（未確定の名前）に
+-- 毎打鍵で vault 全走査が走るのを防ぎつつ、新規ノートは TTL 後に解決される
+local RESOLVE_NEGATIVE_TTL_SEC = 5
 
 -- vault root: obsidian.nvim の API → 環境変数 → デフォルト の順
 function M.vault_dir()
@@ -24,15 +28,23 @@ function M.vault_dir()
 end
 
 -- name → 絶対パス解決（vault relative / basename anywhere）
--- basename フォールバックは vault 全体の再帰探索なので、成功した解決を
--- キャッシュして 2 回目以降の探索を省略する（stale は filereadable で検出）
+-- basename フォールバックは vault 全体の再帰探索なので、解決結果を
+-- 成功・失敗の両方ともキャッシュする:
+--   成功: filereadable で stale 検出（ファイル削除で自動無効化）
+--   失敗: TTL 付きネガティブキャッシュ（補完タイプ中の全走査連打を防止）
 function M.resolve_path(name)
   if not name or name == '' then return nil end
   name = vim.trim(name)
 
   local cached = resolve_cache[name]
-  if cached and vim.fn.filereadable(cached) == 1 then
-    return cached
+  if cached then
+    if cached.path then
+      if vim.fn.filereadable(cached.path) == 1 then
+        return cached.path
+      end
+    elseif os.time() - cached.at < RESOLVE_NEGATIVE_TTL_SEC then
+      return nil
+    end
   end
 
   local resolved
@@ -61,7 +73,7 @@ function M.resolve_path(name)
     end
   end
 
-  resolve_cache[name] = resolved
+  resolve_cache[name] = { path = resolved or false, at = os.time() }
   return resolved
 end
 
@@ -89,6 +101,42 @@ function M.extract_headings(lines)
     end
   end
   return out
+end
+
+-- カーソル行（1-indexed row）が YAML frontmatter 内かを判定
+-- head_lines: バッファ先頭からの行配列（row-1 行以上あること）
+-- 条件: 1 行目が '---' 単独行で、2〜row-1 行に閉じ（'---' / '...'）が無い
+function M.is_in_frontmatter(head_lines, row)
+  if row <= 1 then return false end
+  if not (head_lines[1] or ''):match('^%-%-%-%s*$') then return false end
+  for i = 2, math.min(#head_lines, row - 1) do
+    local l = head_lines[i]
+    if l:match('^%-%-%-%s*$') or l:match('^%.%.%.%s*$') then
+      return false -- カーソルより前に閉じがある → frontmatter の外
+    end
+  end
+  return true
+end
+
+-- カーソル行（1-indexed row）がコードフェンス（``` / ~~~）内かを判定
+-- row-1 行目までのフェンス開始/終了行の偶奇で判定する
+function M.is_in_code_fence(head_lines, row)
+  local in_fence = false
+  for i = 1, math.min(#head_lines, row - 1) do
+    local l = head_lines[i]
+    if l:match('^%s*```') or l:match('^%s*~~~') then
+      in_fence = not in_fence
+    end
+  end
+  return in_fence
+end
+
+-- バイトカラム（0-indexed）を UTF-16 オフセットへ変換（LSP Position 用）
+-- blink.cmp は textEdit の range.character を offset_encoding（既定 utf-16）
+-- として再変換するため、バイト値をそのまま渡すと日本語行で範囲がズレる
+function M.utf16_col(line, byte_col)
+  byte_col = math.max(0, math.min(byte_col, #line))
+  return vim.str_utfindex(line, 'utf-16', byte_col, false)
 end
 
 -- 全キャッシュをクリア（VwTransclusionRefresh などから呼ぶ）

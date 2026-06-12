@@ -108,4 +108,29 @@ describe("_obsidian", function()
     -- キャッシュ済みでも filereadable で stale を検出して再解決（→ 失敗）する
     assert.is_nil(ob.resolve_path(path))
   end)
+
+  it("解決失敗はネガティブキャッシュされ vault 全走査が繰り返されない (FM-9)", function()
+    vim.env.OBSIDIAN_VAULT_PATH = tmpdir
+    local find_calls = 0
+    local orig_find = vim.fs.find
+    vim.fs.find = function(...)
+      find_calls = find_calls + 1
+      return orig_find(...)
+    end
+
+    -- 1 回目: 解決失敗、basename 探索（vim.fs.find）まで落ちる
+    assert.is_nil(ob.resolve_path("存在しないノート"))
+    assert.are.equal(1, find_calls)
+    -- 2 回目（TTL 内）: ネガティブキャッシュにヒットし全走査しない
+    assert.is_nil(ob.resolve_path("存在しないノート"))
+    assert.are.equal(1, find_calls)
+
+    -- clear_cache 後は再解決される（新規ノート即時反映の経路）
+    ob.clear_cache()
+    vim.fn.writefile({ "x" }, tmpdir .. "/存在しないノート.md")
+    assert.are.equal(tmpdir .. "/存在しないノート.md", ob.resolve_path("存在しないノート"))
+
+    vim.fs.find = orig_find
+    vim.env.OBSIDIAN_VAULT_PATH = nil
+  end)
 end)

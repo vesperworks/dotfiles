@@ -32,6 +32,10 @@ function M:get_completions(context, resolve)
   local hash_pos = after:find('#[^#]*$')
   if not hash_pos then return empty() end
 
+  -- コードフェンス内の [[...# は補完しない
+  local head = vim.api.nvim_buf_get_lines(context.bufnr, 0, context.cursor[1], false)
+  if ob.is_in_code_fence(head, context.cursor[1]) then return empty() end
+
   local note_name = after:sub(1, hash_pos - 1)
   local query = after:sub(hash_pos + 1):lower()
 
@@ -48,7 +52,10 @@ function M:get_completions(context, resolve)
   local headings = ob.extract_headings(lines)
   local items = {}
   local row = context.cursor[1]
-  local replace_start = context.cursor[2] - #after:sub(hash_pos + 1)
+  -- textEdit の character は UTF-16 単位（バイト値のままだと日本語行でズレる）
+  local replace_start_byte = context.cursor[2] - #after:sub(hash_pos + 1)
+  local edit_start = ob.utf16_col(context.line, replace_start_byte)
+  local edit_end = ob.utf16_col(context.line, context.cursor[2])
   for _, h in ipairs(headings) do
     if query == '' or h.text:lower():find(query, 1, true) then
       items[#items + 1] = {
@@ -60,16 +67,17 @@ function M:get_completions(context, resolve)
         textEdit = {
           newText = h.text,
           range = {
-            start = { line = row - 1, character = replace_start },
-            ['end'] = { line = row - 1, character = context.cursor[2] },
+            start = { line = row - 1, character = edit_start },
+            ['end'] = { line = row - 1, character = edit_end },
           },
         },
       }
     end
   end
 
+  -- 日本語 heading 入力中も打鍵ごとに再クエリさせる（tags 側と同じ理由）
   resolve({
-    is_incomplete_forward = false,
+    is_incomplete_forward = true,
     is_incomplete_backward = false,
     items = items,
   })
