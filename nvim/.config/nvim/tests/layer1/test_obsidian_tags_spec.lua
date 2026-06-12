@@ -55,6 +55,48 @@ describe("blink-obsidian-tags", function()
     end)
   end)
 
+  describe("textEdit UTF-16 変換 (FM-2)", function()
+    local ob = require("vw._obsidian")
+
+    it("utf16_col: ASCII のみなら byte == utf16", function()
+      assert.are.equal(5, ob.utf16_col("#tag5", 5))
+    end)
+
+    it("utf16_col: 日本語（3 byte → 1 unit）を正しく変換する", function()
+      -- "あいう " = 3*3+1 = 10 bytes, UTF-16 では 4 units
+      local line = "あいう #日本"
+      assert.are.equal(4, ob.utf16_col(line, 10))
+      -- 行末（"#日本" = 1+6 bytes 追加）
+      assert.are.equal(7, ob.utf16_col(line, #line))
+    end)
+
+    it("utf16_col: サロゲートペア（絵文字）は 2 units", function()
+      assert.are.equal(2, ob.utf16_col("😀x", 4))
+    end)
+
+    it("日本語行で補完確定するとカーソル位置のタグだけが置換される", function()
+      local line = "あいう #日本"
+      local bufnr = vim.api.nvim_create_buf(false, true)
+      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { line })
+
+      tags._set_tag_cache({ "日本語タグ" })
+      local result
+      local source = tags.new()
+      source:get_completions(
+        { line = line, cursor = { 1, #line }, bufnr = bufnr },
+        function(r) result = r end
+      )
+
+      assert.is_not_nil(result)
+      assert.are.equal(1, #result.items)
+      -- blink.cmp と同じく LSP 規約（UTF-16）で textEdit を適用
+      vim.lsp.util.apply_text_edits({ result.items[1].textEdit }, bufnr, "utf-16")
+      local applied = vim.api.nvim_buf_get_lines(bufnr, 0, 1, false)[1]
+      assert.are.equal("あいう #日本語タグ", applied)
+      vim.api.nvim_buf_delete(bufnr, { force = true })
+    end)
+  end)
+
   describe("rg 実機: TAG_RG_PATTERN が日本語タグを抽出する (FM-1)", function()
     it("ASCII / 日本語 / ネストタグを全部拾い、句読点で終端する", function()
       local tmpfile = vim.fn.tempname() .. ".md"

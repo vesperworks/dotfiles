@@ -4,6 +4,8 @@
 
 local M = {}
 
+local ob = require("vw._obsidian")
+
 ---@type string[]
 local tag_cache = {}
 local cache_file = vim.fn.stdpath("cache") .. "/obsidian-tags.json"
@@ -160,6 +162,11 @@ function M._find_tag_context(line)
   return hash_pos, query
 end
 
+--- テスト用: タグキャッシュを直接差し替える（内部 API）
+function M._set_tag_cache(tags)
+  tag_cache = tags
+end
+
 function M.new()
   return setmetatable({}, { __index = M })
 end
@@ -196,6 +203,10 @@ function M:get_completions(context, resolve)
     end
   end
 
+  -- textEdit の character は UTF-16 単位（バイト値のままだと日本語行でズレる）
+  local edit_start = ob.utf16_col(context.line, hash_pos - 1)
+  local edit_end = ob.utf16_col(context.line, context.cursor[2])
+
   local items = {}
   for _, tag in ipairs(tag_cache) do
     if query == "" or tag:lower():find(query, 1, true) then
@@ -208,8 +219,8 @@ function M:get_completions(context, resolve)
         textEdit = {
           newText = insert_text,
           range = {
-            start = { line = row - 1, character = hash_pos - 1 },
-            ["end"] = { line = row - 1, character = context.cursor[2] },
+            start = { line = row - 1, character = edit_start },
+            ["end"] = { line = row - 1, character = edit_end },
           },
         },
       }

@@ -48,7 +48,10 @@ function M:get_completions(context, resolve)
   local headings = ob.extract_headings(lines)
   local items = {}
   local row = context.cursor[1]
-  local replace_start = context.cursor[2] - #after:sub(hash_pos + 1)
+  -- textEdit の character は UTF-16 単位（バイト値のままだと日本語行でズレる）
+  local replace_start_byte = context.cursor[2] - #after:sub(hash_pos + 1)
+  local edit_start = ob.utf16_col(context.line, replace_start_byte)
+  local edit_end = ob.utf16_col(context.line, context.cursor[2])
   for _, h in ipairs(headings) do
     if query == '' or h.text:lower():find(query, 1, true) then
       items[#items + 1] = {
@@ -60,8 +63,8 @@ function M:get_completions(context, resolve)
         textEdit = {
           newText = h.text,
           range = {
-            start = { line = row - 1, character = replace_start },
-            ['end'] = { line = row - 1, character = context.cursor[2] },
+            start = { line = row - 1, character = edit_start },
+            ['end'] = { line = row - 1, character = edit_end },
           },
         },
       }

@@ -91,6 +91,14 @@ function M.extract_headings(lines)
   return out
 end
 
+-- バイトカラム（0-indexed）を UTF-16 オフセットへ変換（LSP Position 用）
+-- blink.cmp は textEdit の range.character を offset_encoding（既定 utf-16）
+-- として再変換するため、バイト値をそのまま渡すと日本語行で範囲がズレる
+function M.utf16_col(line, byte_col)
+  byte_col = math.max(0, math.min(byte_col, #line))
+  return vim.str_utfindex(line, 'utf-16', byte_col, false)
+end
+
 -- 全キャッシュをクリア（VwTransclusionRefresh などから呼ぶ）
 function M.clear_cache()
   resolve_cache = {}
