@@ -9,6 +9,23 @@ local tag_cache = {}
 local cache_file = vim.fn.stdpath("cache") .. "/obsidian-tags.json"
 local STALE_SEC = 300 -- 5分
 
+-- タグ抽出の正規表現（rg / Rust regex、Unicode 対応）
+-- \w は Unicode word（日本語等のマルチバイト文字を含む）。
+-- full_refresh と incremental_update の両方がこの 1 本を使う
+local TAG_RG_PATTERN = "#[\\w/-]+"
+
+--- rg -oN の出力（1 行 1 マッチ "#tag" 形式）からタグ集合を抽出
+---@param stdout string
+---@return table<string, boolean> seen
+function M._parse_rg_tags(stdout)
+  local seen = {}
+  for line in stdout:gmatch("[^\n]+") do
+    local tag = line:match("^#(.+)$")
+    if tag then seen[tag] = true end
+  end
+  return seen
+end
+
 --- JSON からタグを読み込み
 local function load_from_file()
   local f = io.open(cache_file, "r")
@@ -49,14 +66,11 @@ end
 local function full_refresh()
   local dir = get_vault_dir()
   vim.system(
-    { "rg", "--no-config", "--type=md", "-oN", "#[a-zA-Z0-9_/-]+", dir },
+    { "rg", "--no-config", "--type=md", "-oN", TAG_RG_PATTERN, dir },
     { text = true },
     function(result)
       if result.code ~= 0 then return end
-      local seen = {}
-      for tag in result.stdout:gmatch("#([a-zA-Z0-9_/-]+)") do
-        seen[tag] = true
-      end
+      local seen = M._parse_rg_tags(result.stdout)
       local tags = vim.tbl_keys(seen)
       table.sort(tags)
       tag_cache = tags
@@ -76,27 +90,35 @@ local function refresh_if_stale()
   full_refresh()
 end
 
---- BufWritePost: 現在バッファのタグを差分でキャッシュに追加
-local function incremental_update()
-  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-  local seen = {}
-  for _, tag in ipairs(tag_cache) do
-    seen[tag] = true
-  end
-  local added = false
-  for _, line in ipairs(lines) do
-    for tag in line:gmatch("#([%w_/-]+)") do
-      if not seen[tag] then
+--- BufWritePost: 保存されたファイルのタグを差分でキャッシュに追加
+--- full_refresh と同じ rg 正規表現を使うことで、Lua パターン（%w が
+--- ASCII のみで日本語タグを取りこぼす）との抽出結果のズレを根絶する
+local function incremental_update(ev)
+  local path = (ev and ev.file ~= "" and ev.file) or vim.api.nvim_buf_get_name(0)
+  if path == "" then return end
+  vim.system(
+    { "rg", "--no-config", "-oN", TAG_RG_PATTERN, path },
+    { text = true },
+    function(result)
+      if result.code ~= 0 then return end -- マッチなし (code 1) も含む
+      local seen = {}
+      for _, tag in ipairs(tag_cache) do
         seen[tag] = true
-        tag_cache[#tag_cache + 1] = tag
-        added = true
+      end
+      local added = false
+      for tag in pairs(M._parse_rg_tags(result.stdout)) do
+        if not seen[tag] then
+          seen[tag] = true
+          tag_cache[#tag_cache + 1] = tag
+          added = true
+        end
+      end
+      if added then
+        table.sort(tag_cache)
+        save_to_file(tag_cache)
       end
     end
-  end
-  if added then
-    table.sort(tag_cache)
-    save_to_file(tag_cache)
-  end
+  )
 end
 
 -- autocmd 登録
@@ -113,6 +135,31 @@ vim.api.nvim_create_autocmd("BufWritePost", {
 -- ユーザーコマンド: 強制リフレッシュ
 vim.api.nvim_create_user_command("ObsidianTagsRefresh", full_refresh, {})
 
+--- カーソル前テキストから補完対象タグを切り出す
+--- 「最後の '#' から行末まで」に空白（半角・タブ・全角）を含まない場合のみ有効。
+--- バイト単位の逆走査だが、判定対象が ASCII（# / space / tab）のみなので
+--- UTF-8 マルチバイト文字を壊さない。全角スペースは plain find で別途検出
+--- （Lua の文字クラスはバイト単位のため [　] のような書き方は不可）。
+---@param line string カーソルまでの行テキスト
+---@return integer|nil hash_pos '#' の 1-indexed バイト位置
+---@return string|nil query '#' より後ろのクエリ文字列
+function M._find_tag_context(line)
+  local hash_pos
+  for i = #line, 1, -1 do
+    local b = line:byte(i)
+    if b == 35 then -- '#'
+      hash_pos = i
+      break
+    elseif b == 32 or b == 9 then -- ' ' / '\t' が先に出たらタグ入力中ではない
+      return nil
+    end
+  end
+  if not hash_pos then return nil end
+  local query = line:sub(hash_pos + 1)
+  if query:find("　", 1, true) then return nil end
+  return hash_pos, query
+end
+
 function M.new()
   return setmetatable({}, { __index = M })
 end
@@ -123,12 +170,12 @@ end
 
 function M:get_completions(context, resolve)
   local line = context.line:sub(1, context.cursor[2])
-  local hash_pos = line:find("#[^%s]*$")
+  local hash_pos, raw_query = M._find_tag_context(line)
   if not hash_pos then
     return resolve({ is_incomplete_forward = false, items = {} })
   end
 
-  local query = line:sub(hash_pos + 1):lower()
+  local query = raw_query:lower()
 
   -- frontmatter 判定（カーソルまでの行を 1 回の API 呼び出しで取得）
   local row = context.cursor[1]
