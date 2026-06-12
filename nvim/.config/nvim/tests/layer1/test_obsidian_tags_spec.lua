@@ -97,6 +97,63 @@ describe("blink-obsidian-tags", function()
     end)
   end)
 
+  describe("frontmatter / コードフェンス判定 (FM-6/FM-7)", function()
+    local ob = require("vw._obsidian")
+
+    it("frontmatter 内（閉じ前）は true", function()
+      local head = { "---", "tags:" }
+      assert.is_true(ob.is_in_frontmatter(head, 3))
+    end)
+
+    it("frontmatter 閉じ後は false", function()
+      local head = { "---", "tags:", "---", "本文" }
+      assert.is_false(ob.is_in_frontmatter(head, 5))
+    end)
+
+    it("1 行目が --- でなければ false", function()
+      assert.is_false(ob.is_in_frontmatter({ "本文", "つづき" }, 3))
+    end)
+
+    it("--- に後続テキストがある行は frontmatter 開始と見なさない", function()
+      assert.is_false(ob.is_in_frontmatter({ "--- 区切りっぽい本文" }, 2))
+    end)
+
+    it("コードフェンス内は true、閉じ後は false", function()
+      local head = { "本文", "```bash", "# comment" }
+      assert.is_true(ob.is_in_code_fence(head, 4))
+      local closed = { "本文", "```bash", "# comment", "```", "本文" }
+      assert.is_false(ob.is_in_code_fence(closed, 6))
+    end)
+
+    it("get_completions: frontmatter 内では # なしで挿入される", function()
+      local bufnr = vim.api.nvim_create_buf(false, true)
+      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { "---", "tags:", "  - #" })
+      tags._set_tag_cache({ "mytag" })
+      local result
+      local source = tags.new()
+      source:get_completions(
+        { line = "  - #", cursor = { 3, 5 }, bufnr = bufnr },
+        function(r) result = r end
+      )
+      assert.are.equal("mytag", result.items[1].insertText)
+      vim.api.nvim_buf_delete(bufnr, { force = true })
+    end)
+
+    it("get_completions: コードフェンス内では候補を出さない", function()
+      local bufnr = vim.api.nvim_create_buf(false, true)
+      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { "```bash", "#co" })
+      tags._set_tag_cache({ "comment-tag" })
+      local result
+      local source = tags.new()
+      source:get_completions(
+        { line = "#co", cursor = { 2, 3 }, bufnr = bufnr },
+        function(r) result = r end
+      )
+      assert.are.equal(0, #result.items)
+      vim.api.nvim_buf_delete(bufnr, { force = true })
+    end)
+  end)
+
   describe("rg 実機: TAG_RG_PATTERN が日本語タグを抽出する (FM-1)", function()
     it("ASCII / 日本語 / ネストタグを全部拾い、句読点で終端する", function()
       local tmpfile = vim.fn.tempname() .. ".md"

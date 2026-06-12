@@ -184,24 +184,14 @@ function M:get_completions(context, resolve)
 
   local query = raw_query:lower()
 
-  -- frontmatter 判定（カーソルまでの行を 1 回の API 呼び出しで取得）
+  -- frontmatter / コードフェンス判定（カーソルまでの行を 1 回で取得）
   local row = context.cursor[1]
-  local in_frontmatter = false
-  if row > 1 then
-    local head = vim.api.nvim_buf_get_lines(context.bufnr, 0, row, false)
-    if (head[1] or ""):match("^%-%-%-") then
-      for i = 1, row - 1 do
-        local l = head[i + 1] or ""
-        if l:match("^%-%-%-") then
-          in_frontmatter = i >= row
-          break
-        end
-        if i == row - 1 then
-          in_frontmatter = true
-        end
-      end
-    end
+  local head = vim.api.nvim_buf_get_lines(context.bufnr, 0, row, false)
+  if ob.is_in_code_fence(head, row) then
+    -- コードブロック内の '# comment' 等での誤発火を防ぐ
+    return resolve({ is_incomplete_forward = false, items = {} })
   end
+  local in_frontmatter = ob.is_in_frontmatter(head, row)
 
   -- textEdit の character は UTF-16 単位（バイト値のままだと日本語行でズレる）
   local edit_start = ob.utf16_col(context.line, hash_pos - 1)
@@ -227,8 +217,11 @@ function M:get_completions(context, resolve)
     end
   end
 
+  -- is_incomplete_forward = true: 日本語は blink の keyword 文字でないため、
+  -- '#' の後に日本語を打っても source が自動再起動しない。打鍵ごとに
+  -- 再クエリさせて候補の stale 化を防ぐ（コストはキャッシュ走査のみ）
   resolve({
-    is_incomplete_forward = false,
+    is_incomplete_forward = true,
     is_incomplete_backward = false,
     items = items,
   })

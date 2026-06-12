@@ -32,6 +32,10 @@ function M:get_completions(context, resolve)
   local hash_pos = after:find('#[^#]*$')
   if not hash_pos then return empty() end
 
+  -- コードフェンス内の [[...# は補完しない
+  local head = vim.api.nvim_buf_get_lines(context.bufnr, 0, context.cursor[1], false)
+  if ob.is_in_code_fence(head, context.cursor[1]) then return empty() end
+
   local note_name = after:sub(1, hash_pos - 1)
   local query = after:sub(hash_pos + 1):lower()
 
@@ -71,8 +75,9 @@ function M:get_completions(context, resolve)
     end
   end
 
+  -- 日本語 heading 入力中も打鍵ごとに再クエリさせる（tags 側と同じ理由）
   resolve({
-    is_incomplete_forward = false,
+    is_incomplete_forward = true,
     is_incomplete_backward = false,
     items = items,
   })

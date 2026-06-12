@@ -91,6 +91,34 @@ function M.extract_headings(lines)
   return out
 end
 
+-- カーソル行（1-indexed row）が YAML frontmatter 内かを判定
+-- head_lines: バッファ先頭からの行配列（row-1 行以上あること）
+-- 条件: 1 行目が '---' 単独行で、2〜row-1 行に閉じ（'---' / '...'）が無い
+function M.is_in_frontmatter(head_lines, row)
+  if row <= 1 then return false end
+  if not (head_lines[1] or ''):match('^%-%-%-%s*$') then return false end
+  for i = 2, math.min(#head_lines, row - 1) do
+    local l = head_lines[i]
+    if l:match('^%-%-%-%s*$') or l:match('^%.%.%.%s*$') then
+      return false -- カーソルより前に閉じがある → frontmatter の外
+    end
+  end
+  return true
+end
+
+-- カーソル行（1-indexed row）がコードフェンス（``` / ~~~）内かを判定
+-- row-1 行目までのフェンス開始/終了行の偶奇で判定する
+function M.is_in_code_fence(head_lines, row)
+  local in_fence = false
+  for i = 1, math.min(#head_lines, row - 1) do
+    local l = head_lines[i]
+    if l:match('^%s*```') or l:match('^%s*~~~') then
+      in_fence = not in_fence
+    end
+  end
+  return in_fence
+end
+
 -- バイトカラム（0-indexed）を UTF-16 オフセットへ変換（LSP Position 用）
 -- blink.cmp は textEdit の range.character を offset_encoding（既定 utf-16）
 -- として再変換するため、バイト値をそのまま渡すと日本語行で範囲がズレる
