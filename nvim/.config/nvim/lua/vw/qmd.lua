@@ -124,6 +124,29 @@ local function get_collection_path(name)
   return collection_cache[name]
 end
 
+--- 他のパスに包含されるパスを除外する
+--- （コレクションの大半が MainVault のサブディレクトリなので、全部
+--- 並べて rg に渡すと同じファイルを二重に read してしまう）
+function M._dedup_paths(paths)
+  local sorted = {}
+  for _, p in ipairs(paths) do
+    table.insert(sorted, p)
+  end
+  table.sort(sorted)
+  local out = {}
+  for _, p in ipairs(sorted) do
+    local covered = false
+    for _, kept in ipairs(out) do
+      if p == kept or p:sub(1, #kept + 1) == kept .. "/" then
+        covered = true
+        break
+      end
+    end
+    if not covered then table.insert(out, p) end
+  end
+  return out
+end
+
 local function get_search_paths(collection)
   local paths = {}
   if collection then
@@ -135,7 +158,7 @@ local function get_search_paths(collection)
       if p then table.insert(paths, p) end
     end
   end
-  return paths
+  return M._dedup_paths(paths)
 end
 
 local function resolve_qmd_uri(uri)
@@ -476,6 +499,7 @@ function M.search()
   -- 単一の uv timer を使い回す（vim.defer_fn を stop で捨てると
   -- 発火しなかった timer ハンドルが close されず毎打鍵リークする）
   local debounce_timer = vim.uv.new_timer()
+  local rg_timeout_timer = vim.uv.new_timer()
 
   --- ジョブ停止
   local function stop_job(key)
@@ -526,19 +550,50 @@ function M.search()
 
     local cmd = { "rg", "-c", "-i", "--glob", "*.md", query }
     vim.list_extend(cmd, paths)
+
+    -- streaming 受信 + タイムアウト打ち切り。
+    -- iCloud の dataless ファイルは read がオンデマンドダウンロード待ちで
+    -- ハングすることがあり（実測 8s+）、rg ワーカーが 1 つでも掴むと
+    -- プロセスが終了しない。stdout_buffered（exit 時一括）だとヒットが
+    -- 857 件出ていても 1 件も届かないため、行を逐次取り込み、
+    -- RG_TIMEOUT_MS 経過時点で jobstop してそれまでの結果を確定する
+    local RG_TIMEOUT_MS = 2000
+    local out_lines = {}
+    local pending_line = ""
+    local function finalize()
+      if my_gen ~= gen.rg then return end
+      if pending_line ~= "" then
+        table.insert(out_lines, pending_line)
+        pending_line = ""
+      end
+      results.rg = normalize_rg(out_lines)
+      status.rg = "done"
+      update_title()
+      refresh()
+    end
+
     jobs.rg = vim.fn.jobstart(cmd, {
-      stdout_buffered = true,
       on_stdout = function(_, data)
-        vim.schedule(function()
-          if my_gen ~= gen.rg then return end
-          results.rg = normalize_rg(data)
-          status.rg = "done"
-          update_title()
-          refresh()
-        end)
+        if my_gen ~= gen.rg then return end
+        -- チャンク境界で割れた行を連結する（:h channel-lines）
+        pending_line = pending_line .. (data[1] or "")
+        for i = 2, #data do
+          table.insert(out_lines, pending_line)
+          pending_line = data[i]
+        end
       end,
-      on_exit = function() jobs.rg = nil end,
+      on_exit = function()
+        jobs.rg = nil
+        rg_timeout_timer:stop()
+        vim.schedule(finalize)
+      end,
     })
+
+    rg_timeout_timer:stop()
+    rg_timeout_timer:start(RG_TIMEOUT_MS, 0, vim.schedule_wrap(function()
+      if my_gen ~= gen.rg then return end
+      stop_job("rg") -- SIGTERM → on_exit 経由で finalize される
+    end))
   end
 
   --- BM25 実行
@@ -718,6 +773,8 @@ function M.search()
         callback = function()
           debounce_timer:stop()
           debounce_timer:close()
+          rg_timeout_timer:stop()
+          rg_timeout_timer:close()
           stop_job("rg")
           stop_job("bm25")
           stop_job("hybrid")

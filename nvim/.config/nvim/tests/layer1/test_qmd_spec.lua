@@ -75,6 +75,27 @@ describe("qmd", function()
     end)
   end)
 
+  describe("_dedup_paths", function()
+    it("親ディレクトリに包含されるパスを除外する", function()
+      local out = qmd._dedup_paths({
+        "/vault/Main",
+        "/vault/Main/Daily",
+        "/vault/Main/Readwise/Articles",
+        "/other/Think",
+      })
+      assert.are.same({ "/other/Think", "/vault/Main" }, out)
+    end)
+
+    it("prefix が似ているだけの兄弟パスは除外しない", function()
+      local out = qmd._dedup_paths({ "/vault/Main", "/vault/Main2" })
+      assert.are.same({ "/vault/Main", "/vault/Main2" }, out)
+    end)
+
+    it("空入力で空", function()
+      assert.are.same({}, qmd._dedup_paths({}))
+    end)
+  end)
+
   describe("_normalize_rg", function()
     it("rg -c 出力をエントリ化し 20 件に制限する", function()
       local data = {}
