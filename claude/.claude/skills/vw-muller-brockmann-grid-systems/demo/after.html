@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="ja"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Grid as an Ethic — Müller-Brockmann Grid System</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ================================================================
+   :root — ONE source of truth. Content + overlay both read these.
+   ================================================================ */
+:root{
+  --cols:12;
+  --bl:8px;
+  --lh:24px;
+  --gutter:24px;
+  --margin:72px;
+  --pad:96px;
+  --maxw:1296px;
+
+  --paper:#ffffff;
+  --ink:#111315;
+  --ink-soft:#5b6066;
+  --accent:#e4002b;
+
+  --g-col:rgba(228,0,43,.075);
+  --g-edge:rgba(228,0,43,.40);
+  --g-base:rgba(0,150,140,.34);
+  --g-base-min:rgba(0,150,140,.12);
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"Inter",system-ui,sans-serif;font-size:16px;line-height:var(--lh);
+  -webkit-font-smoothing:antialiased;}
+img{display:block;width:100%;height:100%;object-fit:cover;}
+
+/* ---- spread + grid scaffold ---- */
+.spread{position:relative;width:100%;}
+.wrap{position:relative;max-width:var(--maxw);margin:0 auto;padding:var(--pad) var(--margin);}
+.grid{display:grid;grid-template-columns:repeat(var(--cols),1fr);
+  column-gap:var(--gutter);row-gap:var(--lh);}
+.band{grid-column:1 / -1;display:grid;grid-template-columns:subgrid;
+  column-gap:var(--gutter);align-items:start;}
+@supports not (grid-template-columns:subgrid){
+  .band{grid-template-columns:repeat(var(--cols),1fr);}
+}
+
+/* ---- overlay (INSIDE .wrap — same content box) ---- */
+.guides{position:absolute;inset:0;pointer-events:none;z-index:60;opacity:0;
+  transition:opacity .26s ease;}
+body.grid-on .guides{opacity:1;}
+.guides .cols{position:absolute;top:0;bottom:0;left:var(--margin);right:var(--margin);
+  display:grid;grid-template-columns:repeat(var(--cols),1fr);column-gap:var(--gutter);}
+.guides .col{background:var(--g-col);
+  box-shadow:inset 1px 0 0 var(--g-edge),inset -1px 0 0 var(--g-edge);position:relative;}
+.guides .col span{position:absolute;top:32px;left:0;right:0;text-align:center;
+  font-family:"Space Mono",monospace;font-size:10px;line-height:1;color:var(--accent);}
+.guides .rows{position:absolute;left:var(--margin);right:var(--margin);top:var(--pad);bottom:0;
+  background-image:
+    repeating-linear-gradient(to bottom,var(--g-base) 0 1px,transparent 1px var(--lh)),
+    repeating-linear-gradient(to bottom,var(--g-base-min) 0 1px,transparent 1px var(--bl));}
+.guides .mline{position:absolute;top:0;bottom:0;width:1px;background:var(--g-edge);}
+.guides .mline.l{left:var(--margin);} .guides .mline.r{right:var(--margin);}
+
+/* ---- toggle ---- */
+.toggle{position:fixed;top:18px;right:18px;z-index:200;display:flex;align-items:center;gap:10px;
+  background:var(--ink);color:#fff;border:none;cursor:pointer;font-family:"Space Mono",monospace;
+  font-size:12px;letter-spacing:.14em;text-transform:uppercase;padding:11px 14px;}
+.toggle .dot{width:9px;height:9px;border-radius:50%;background:#555;}
+body.grid-on .toggle{background:var(--accent);} body.grid-on .toggle .dot{background:#fff;}
+
+/* ================================================================
+   TYPOGRAPHY — all line-heights px multiples of --bl
+   ================================================================ */
+.folio{font-family:"Space Mono",monospace;font-size:11px;line-height:24px;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);}
+.masthead{font-size:96px;font-weight:900;line-height:96px;/* 12×8 */
+  letter-spacing:-.02em;margin:0;padding:0;}
+.subtitle{font-size:20px;font-weight:300;line-height:var(--lh);color:var(--ink-soft);margin:0;}
+.body-text{font-size:16px;line-height:var(--lh);margin:0;}
+.body-text + .body-text{margin-top:var(--lh);}
+.caption{font-family:"Space Mono",monospace;font-size:11px;line-height:var(--lh);
+  color:var(--ink-soft);letter-spacing:.04em;}
+.shead h2{font-size:48px;font-weight:800;line-height:48px;/* 6×8 */
+  margin:0;letter-spacing:-.01em;}
+.numeral{font-size:72px;font-weight:700;line-height:72px;/* 9×8 */
+  color:var(--accent);margin:0;}
+.stat-label{font-family:"Space Mono",monospace;font-size:11px;line-height:var(--lh);
+  text-transform:uppercase;letter-spacing:.1em;color:var(--ink-soft);margin:0;}
+.rule{border:none;border-top:1px solid var(--ink);margin:0;height:0;}
+.rule-accent{border-top-color:var(--accent);}
+
+blockquote{font-size:28px;font-weight:300;line-height:40px;/* 5×8 */
+  margin:0;color:var(--ink);border-left:4px solid var(--accent);
+  padding-left:var(--gutter);}
+
+.img-placeholder{background:#e8e8e8;display:flex;align-items:center;justify-content:center;
+  font-family:"Space Mono",monospace;font-size:11px;color:#999;letter-spacing:.06em;}
+
+/* ---- spacing helpers (all multiples of --bl) ---- */
+.mt1{margin-top:var(--lh);}
+.mt2{margin-top:48px;}
+.mt3{margin-top:72px;}
+.mb1{margin-bottom:var(--lh);}
+.mb2{margin-bottom:48px;}
+.pt1{padding-top:var(--lh);}
+.pb1{padding-bottom:var(--lh);}
+
+/* ---- footer ---- */
+.footer-rule{border-top:1px solid var(--ink);margin:0;height:0;}
+</style>
+</head>
+<body>
+<button class="toggle" id="gridToggle" aria-pressed="false"><span class="dot"></span><span class="lbl">Show grid</span></button>
+
+<!-- ================================================================
+     SPREAD 1 — HERO
+     ================================================================ -->
+<section class="spread">
+  <div class="wrap">
+    <div class="grid">
+
+      <!-- folio -->
+      <div class="band mb1">
+        <p class="folio" style="grid-column:1/7;">Design Research Report — 2026</p>
+        <p class="folio" style="grid-column:10/13;text-align:right;">001</p>
+      </div>
+
+      <!-- accent rule -->
+      <div class="band">
+        <hr class="rule rule-accent" style="grid-column:1/-1;">
+      </div>
+
+      <!-- masthead -->
+      <div class="band mt2">
+        <h1 class="masthead" style="grid-column:1/10;">The Grid as<br>an Ethic</h1>
+      </div>
+
+      <!-- subtitle -->
+      <div class="band mt1">
+        <p class="subtitle" style="grid-column:1/8;">Josef Müller-Brockmann and the discipline of modular layout — how a Zurich typographer's 1981 manual became the backbone of modern editorial design.</p>
+      </div>
+
+      <!-- hero image — height = 480px = 20×24 (multiple of --lh) -->
+      <div class="band mt2">
+        <div class="img-placeholder" style="grid-column:1/-1;height:480px;">
+          960 × 480 — Hero photograph
+        </div>
+      </div>
+
+    </div>
+    <!-- overlay INSIDE .wrap -->
+    <div class="guides" aria-hidden="true">
+      <div class="cols"></div><div class="rows"></div>
+      <div class="mline l"></div><div class="mline r"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     SPREAD 2 — TWO-COLUMN BODY TEXT
+     ================================================================ -->
+<section class="spread">
+  <div class="wrap">
+    <div class="grid">
+
+      <div class="band">
+        <p class="folio" style="grid-column:1/7;">The Discipline</p>
+        <p class="folio" style="grid-column:10/13;text-align:right;">002</p>
+      </div>
+
+      <div class="band">
+        <hr class="rule" style="grid-column:1/-1;">
+      </div>
+
+      <!-- section head -->
+      <div class="band mt2">
+        <h2 class="shead" style="grid-column:1/7;"><h2>Modular Grid<br>+ Baseline</h2></h2>
+      </div>
+
+      <!-- two-column body -->
+      <div class="band mt1">
+        <div style="grid-column:1/6;">
+          <p class="body-text">The modular grid divides the type area into fields separated by gutters, creating a rational armature for text and image. Müller-Brockmann insisted the grid was "an aid, not a guarantee" — it permits many solutions, but demands practice.</p>
+          <p class="body-text">His system starts with the baseline: a fixed vertical rhythm (typically 8px on the web) to which every element snaps. Columns subdivide the horizontal axis; modules are the intersection of column and row.</p>
+        </div>
+        <div style="grid-column:7/13;">
+          <p class="body-text">The International Typographic Style — born in Basel and Zurich in the 1950s — stripped decoration to reveal structure. Grotesque sans-serifs (Helvetica, Univers, Akzidenz-Grotesk), flush-left ragged-right setting, and generous white space became its signatures.</p>
+          <p class="body-text">Today, CSS Grid and subgrid make the modular grid natively possible on the web for the first time. The question is no longer "can we?" but "will we do it rigorously?"</p>
+        </div>
+      </div>
+
+    </div>
+    <div class="guides" aria-hidden="true">
+      <div class="cols"></div><div class="rows"></div>
+      <div class="mline l"></div><div class="mline r"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     SPREAD 3 — STATS (large numerals)
+     ================================================================ -->
+<section class="spread">
+  <div class="wrap">
+    <div class="grid">
+
+      <div class="band">
+        <p class="folio" style="grid-column:1/7;">By the Numbers</p>
+        <p class="folio" style="grid-column:10/13;text-align:right;">003</p>
+      </div>
+
+      <div class="band">
+        <hr class="rule" style="grid-column:1/-1;">
+      </div>
+
+      <!-- 4 stat blocks, each 3 columns -->
+      <div class="band mt2">
+        <div style="grid-column:1/4;">
+          <p class="numeral">12</p>
+          <p class="stat-label mt1">Column Grid</p>
+        </div>
+        <div style="grid-column:4/7;">
+          <p class="numeral">8px</p>
+          <p class="stat-label mt1">Baseline Unit</p>
+        </div>
+        <div style="grid-column:7/10;">
+          <p class="numeral">24px</p>
+          <p class="stat-label mt1">Leading (3×BL)</p>
+        </div>
+        <div style="grid-column:10/13;">
+          <p class="numeral">0px</p>
+          <p class="stat-label mt1">Verified Adherence</p>
+        </div>
+      </div>
+
+      <!-- pull quote -->
+      <div class="band mt3">
+        <blockquote style="grid-column:1/9;">"The grid system is an aid, not a guarantee. It permits a number of possible uses and each designer can look for a solution appropriate to his personal style."</blockquote>
+        <p class="caption" style="grid-column:10/13;align-self:end;">— Josef Müller-Brockmann<br><em>Grid Systems in Graphic Design</em>, 1981</p>
+      </div>
+
+    </div>
+    <div class="guides" aria-hidden="true">
+      <div class="cols"></div><div class="rows"></div>
+      <div class="mline l"></div><div class="mline r"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     SPREAD 4 — GALLERY
+     ================================================================ -->
+<section class="spread">
+  <div class="wrap">
+    <div class="grid">
+
+      <div class="band">
+        <p class="folio" style="grid-column:1/7;">Visual Archive</p>
+        <p class="folio" style="grid-column:10/13;text-align:right;">004</p>
+      </div>
+
+      <div class="band">
+        <hr class="rule" style="grid-column:1/-1;">
+      </div>
+
+      <!-- gallery — 3 images: 5+2+5 columns, heights = 360px = 15×24 -->
+      <div class="band mt2">
+        <div style="grid-column:1/6;">
+          <div class="img-placeholder" style="height:360px;">Zurich Tonhalle poster, 1955</div>
+          <p class="caption mt1">Fig. 1 — Tonhalle concert poster. Geometric forms, single accent color.</p>
+        </div>
+        <div style="grid-column:6/8;">
+          <!-- gutter column — intentionally empty for asymmetry -->
+        </div>
+        <div style="grid-column:8/13;">
+          <div class="img-placeholder" style="height:360px;">Musica Viva concert series</div>
+          <p class="caption mt1">Fig. 2 — Musica Viva. Constructive abstraction as visual rhythm.</p>
+        </div>
+      </div>
+
+      <!-- wide image -->
+      <div class="band mt2">
+        <div style="grid-column:1/-1;">
+          <div class="img-placeholder" style="height:240px;">Grid Systems in Graphic Design — book cover, 1981</div>
+          <p class="caption mt1">Fig. 3 — The book that codified the system. Niggli Verlag, 1981.</p>
+        </div>
+      </div>
+
+    </div>
+    <div class="guides" aria-hidden="true">
+      <div class="cols"></div><div class="rows"></div>
+      <div class="mline l"></div><div class="mline r"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     SPREAD 5 — ENGINEERING NOTES (two-column)
+     ================================================================ -->
+<section class="spread">
+  <div class="wrap">
+    <div class="grid">
+
+      <div class="band">
+        <p class="folio" style="grid-column:1/7;">Engineering the Grid</p>
+        <p class="folio" style="grid-column:10/13;text-align:right;">005</p>
+      </div>
+
+      <div class="band">
+        <hr class="rule" style="grid-column:1/-1;">
+      </div>
+
+      <div class="band mt2">
+        <div style="grid-column:1/6;">
+          <h2 class="shead"><h2>The Overlay<br>Problem</h2></h2>
+          <p class="body-text mt1">Most web "grid systems" draw guide lines as a full-viewport overlay disconnected from the content container. When the content sits in a centered max-width wrapper, the overlay columns drift at wider viewports.</p>
+          <p class="body-text">The fix: put the overlay inside the same container, reading the same CSS variables. Then the overlay columns <strong>are</strong> the content columns at every width.</p>
+        </div>
+        <div style="grid-column:7/13;">
+          <h2 class="shead"><h2>Optical<br>Alignment</h2></h2>
+          <p class="body-text mt1">A 180px headline whose layout box sits exactly on column line 1 still looks misaligned — because the letterform's ink is inset by its left side-bearing.</p>
+          <p class="body-text">Runtime canvas measurement of <code style="font-family:'Space Mono',monospace;font-size:14px;">actualBoundingBoxLeft</code> corrects this, nudging the element so the ink, not the box, lands on the grid.</p>
+        </div>
+      </div>
+
+    </div>
+    <div class="guides" aria-hidden="true">
+      <div class="cols"></div><div class="rows"></div>
+      <div class="mline l"></div><div class="mline r"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     SPREAD 6 — FOOTER
+     ================================================================ -->
+<section class="spread">
+  <div class="wrap">
+    <div class="grid">
+      <div class="band">
+        <hr class="footer-rule" style="grid-column:1/-1;">
+      </div>
+      <div class="band mt1">
+        <p class="caption" style="grid-column:1/7;">A design research document. Content derived from Josef Müller-Brockmann, <em>Grid Systems in Graphic Design</em> (Niggli, 1981).</p>
+        <p class="caption" style="grid-column:10/13;text-align:right;">Press <strong>G</strong> to toggle the grid overlay.</p>
+      </div>
+    </div>
+    <div class="guides" aria-hidden="true">
+      <div class="cols"></div><div class="rows"></div>
+      <div class="mline l"></div><div class="mline r"></div>
+    </div>
+  </div>
+</section>
+
+<script>
+/* ---- toggle: button + G key ---- */
+var btn=document.getElementById('gridToggle');
+function setGrid(on){document.body.classList.toggle('grid-on',on);
+  if(btn){btn.setAttribute('aria-pressed',on?'true':'false');
+    var l=btn.querySelector('.lbl'); if(l) l.textContent=on?'Hide grid':'Show grid';}}
+if(btn) btn.addEventListener('click',function(){setGrid(!document.body.classList.contains('grid-on'));});
+document.addEventListener('keydown',function(e){
+  if((e.key==='g'||e.key==='G')&&!e.metaKey&&!e.ctrlKey&&!e.altKey){
+    setGrid(!document.body.classList.contains('grid-on'));}});
+
+/* ---- populate overlay columns (numbered) ---- */
+document.querySelectorAll('.guides .cols').forEach(function(h){
+  var n=getComputedStyle(document.documentElement).getPropertyValue('--cols').trim()||'12';
+  for(var i=1;i<=parseInt(n,10);i++){var c=document.createElement('div');c.className='col';
+    var s=document.createElement('span');s.textContent=i;c.appendChild(s);h.appendChild(c);}});
+
+/* ---- OPTICAL ALIGNMENT — ink on line, not box on line ---- */
+(function(){
+  var cvs=document.createElement('canvas'),ctx=cvs.getContext('2d');
+  var sel='.masthead, .numeral, .shead h2';
+  function align(){
+    document.querySelectorAll(sel).forEach(function(el){
+      el.style.marginLeft='0px';
+      var cs=getComputedStyle(el),ch=(el.textContent||'').trim().charAt(0); if(!ch) return;
+      if(cs.textTransform==='uppercase') ch=ch.toUpperCase();
+      ctx.font=cs.fontStyle+' '+cs.fontWeight+' '+cs.fontSize+' '+cs.fontFamily;
+      ctx.textAlign='left';
+      var abl=ctx.measureText(ch).actualBoundingBoxLeft;
+      if(isFinite(abl)) el.style.marginLeft=abl.toFixed(2)+'px';
+    });
+  }
+  if(document.fonts&&document.fonts.ready){document.fonts.ready.then(align);}
+  align();
+  var t;window.addEventListener('resize',function(){clearTimeout(t);t=setTimeout(align,120);});
+})();
+</script>
+</body>
+</html>
