@@ -8,8 +8,14 @@ local qmd_bin = vim.fn.exepath("qmd")
 if qmd_bin == "" then qmd_bin = vim.fn.expand("~/.bun/bin/qmd") end
 
 -- キャッシュ
+-- collection_cache: { name → path }。qmd CLI は 1 呼び出し ~100-300ms かかる
+-- （bun 起動コスト）ため、picker 起動時の同期呼び出しは禁止。JSON に永続化し、
+-- 起動時はキャッシュ読みのみ + バックグラウンドで非同期更新する
 local collection_cache = {}
+local collection_names = {} -- 表示順を保持した name 配列
 local preview_cache = {}
+local PREVIEW_CACHE_MAX = 100 -- preview_cache の上限（超えたら全クリア）
+local collections_file = vim.fn.stdpath("cache") .. "/qmd-collections.json"
 
 -- ソース別の表示設定
 local SOURCE_CONFIG = {
@@ -20,45 +26,139 @@ local SOURCE_CONFIG = {
 
 -------------------------------------------------------------------------------
 -- ヘルパー: コレクション・パス解決
+-- すべてメモリキャッシュ参照のみ。CLI 呼び出しは refresh_collections_async に
+-- 集約（picker のホットパスから qmd プロセス起動を完全排除）
 -------------------------------------------------------------------------------
 
-local function get_collection_path(name)
-  if collection_cache[name] then return collection_cache[name] end
-  local result = vim.system({ qmd_bin, "collection", "show", name }, { text = true }):wait()
-  if result.code ~= 0 then return nil end
-  for line in result.stdout:gmatch("[^\n]+") do
-    local path = line:match("Path:%s+(.+)")
-    if path then
-      path = vim.trim(path)
-      collection_cache[name] = path
-      return path
-    end
-  end
-  return nil
-end
-
-local function get_collection_names()
-  local result = vim.system({ qmd_bin, "collection", "list" }, { text = true }):wait()
-  if result.code ~= 0 then return {} end
+--- qmd collection list の出力から name 配列を抽出
+function M._parse_collection_list(stdout)
   local names = {}
-  for name in result.stdout:gmatch("(%S+)%s+%(qmd://") do
+  for name in (stdout or ""):gmatch("(%S+)%s+%(qmd://") do
     table.insert(names, name)
   end
   return names
 end
 
+--- qmd collection show の出力から Path を抽出
+function M._parse_collection_show(stdout)
+  for line in (stdout or ""):gmatch("[^\n]+") do
+    local path = line:match("Path:%s+(.+)")
+    if path then return vim.trim(path) end
+  end
+  return nil
+end
+
+--- JSON キャッシュ読み込み（成功で true）
+local function load_collections_file()
+  local f = io.open(collections_file, "r")
+  if not f then return false end
+  local raw = f:read("*a")
+  f:close()
+  local ok, data = pcall(vim.json.decode, raw)
+  if ok and type(data) == "table" and type(data.names) == "table" and type(data.paths) == "table" then
+    collection_names = data.names
+    collection_cache = data.paths
+    return true
+  end
+  return false
+end
+
+--- JSON キャッシュ書き出し（非同期）
+local function save_collections_file()
+  local raw = vim.json.encode({ names = collection_names, paths = collection_cache })
+  vim.uv.fs_open(collections_file, "w", 438, function(err, fd)
+    if err or not fd then return end
+    vim.uv.fs_write(fd, raw, nil, function()
+      vim.uv.fs_close(fd)
+    end)
+  end)
+end
+
+--- コレクション情報を非同期で再取得（list 1 回 + show を全コレクション並列）
+--- 完了時に on_done（任意）を main loop で呼ぶ
+local refreshing = false
+local function refresh_collections_async(on_done)
+  if refreshing then return end
+  refreshing = true
+  vim.system({ qmd_bin, "collection", "list" }, { text = true }, function(list_result)
+    if list_result.code ~= 0 then
+      refreshing = false
+      return
+    end
+    local names = M._parse_collection_list(list_result.stdout)
+    if #names == 0 then
+      refreshing = false
+      return
+    end
+    local paths = {}
+    local pending = #names
+    for _, name in ipairs(names) do
+      vim.system({ qmd_bin, "collection", "show", name }, { text = true }, function(show_result)
+        if show_result.code == 0 then
+          paths[name] = M._parse_collection_show(show_result.stdout)
+        end
+        pending = pending - 1
+        if pending == 0 then
+          collection_names = names
+          collection_cache = paths
+          save_collections_file()
+          refreshing = false
+          if on_done then vim.schedule(on_done) end
+        end
+      end)
+    end
+  end)
+end
+
+--- JSON キャッシュが古い場合のみ非同期更新（stale-while-revalidate）
+local COLLECTIONS_STALE_SEC = 300
+local function refresh_collections_if_stale(on_done)
+  local stat = vim.uv.fs_stat(collections_file)
+  if stat and (os.time() - stat.mtime.sec) < COLLECTIONS_STALE_SEC and #collection_names > 0 then
+    return
+  end
+  refresh_collections_async(on_done)
+end
+
+local function get_collection_path(name)
+  return collection_cache[name]
+end
+
+--- 他のパスに包含されるパスを除外する
+--- （コレクションの大半が MainVault のサブディレクトリなので、全部
+--- 並べて rg に渡すと同じファイルを二重に read してしまう）
+function M._dedup_paths(paths)
+  local sorted = {}
+  for _, p in ipairs(paths) do
+    table.insert(sorted, p)
+  end
+  table.sort(sorted)
+  local out = {}
+  for _, p in ipairs(sorted) do
+    local covered = false
+    for _, kept in ipairs(out) do
+      if p == kept or p:sub(1, #kept + 1) == kept .. "/" then
+        covered = true
+        break
+      end
+    end
+    if not covered then table.insert(out, p) end
+  end
+  return out
+end
+
 local function get_search_paths(collection)
   local paths = {}
   if collection then
-    local p = get_collection_path(collection)
+    local p = collection_cache[collection]
     if p then table.insert(paths, p) end
   else
-    for _, name in ipairs(get_collection_names()) do
-      local p = get_collection_path(name)
+    for _, name in ipairs(collection_names) do
+      local p = collection_cache[name]
       if p then table.insert(paths, p) end
     end
   end
-  return paths
+  return M._dedup_paths(paths)
 end
 
 local function resolve_qmd_uri(uri)
@@ -124,15 +224,32 @@ local function extract_chunk_range(snippet)
   return nil
 end
 
+--- 検索結果に未知のコレクションがあれば裏でキャッシュを更新する
+--- （同期 CLI は呼ばない。次の resolve から効けば十分）
 local function preload_collections(results)
-  local seen = {}
   for _, entry in ipairs(results) do
     local col = (entry.file or ""):match("^qmd://([^/]+)/")
-    if col and not seen[col] then
-      seen[col] = true
-      get_collection_path(col)
+    if col and not collection_cache[col] then
+      refresh_collections_async()
+      return
     end
   end
+end
+
+-------------------------------------------------------------------------------
+-- ヘルパー: プレビューキャッシュ（上限付き）
+-------------------------------------------------------------------------------
+
+local preview_cache_count = 0
+local function put_preview_cache(key, lines)
+  if not preview_cache[key] then
+    if preview_cache_count >= PREVIEW_CACHE_MAX then
+      preview_cache = {}
+      preview_cache_count = 0
+    end
+    preview_cache_count = preview_cache_count + 1
+  end
+  preview_cache[key] = lines
 end
 
 -------------------------------------------------------------------------------
@@ -289,6 +406,25 @@ local function make_previewer(get_query)
       local query = get_query()
       local cache_key = val.real_path or val.qmd_uri or val.display_path
 
+      -- バッファに描画 + ハイライト + チャンク先頭へスクロール
+      local function render(lines)
+        if not vim.api.nvim_buf_is_valid(self.state.bufnr) then return end
+        if cache_key then put_preview_cache(cache_key, lines) end
+        vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
+        vim.bo[self.state.bufnr].syntax = "markdown"
+        highlight_preview(self.state.bufnr, lines, query, val.chunk_range)
+
+        local target_line = entry.lnum or 1
+        if val.chunk_range then
+          target_line = math.max(val.chunk_range.start, 1)
+        end
+        if target_line > 1 then
+          pcall(vim.api.nvim_win_set_cursor, self.state.winid, { math.min(target_line, #lines), 0 })
+          -- チャンクが画面上部に来るよう調整
+          pcall(vim.api.nvim_win_call, self.state.winid, function() vim.cmd("normal! zt") end)
+        end
+      end
+
       -- コンテンツ取得（キャッシュ or 読み取り）
       local lines = cache_key and preview_cache[cache_key]
 
@@ -302,10 +438,16 @@ local function make_previewer(get_query)
       end
 
       if not lines and val.qmd_uri then
-        local result = vim.system({ qmd_bin, "get", val.qmd_uri, "-l", "200" }, { text = true }):wait()
-        if result.code == 0 and result.stdout and result.stdout ~= "" then
-          lines = vim.split(result.stdout, "\n")
-        end
+        -- qmd get（CLI ~100ms+）は同期 wait するとカーソル移動毎にブロック
+        -- するため非同期で取得し、完了時にまだ同じバッファなら描画する
+        vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, { "読み込み中…" })
+        vim.system({ qmd_bin, "get", val.qmd_uri, "-l", "200" }, { text = true }, function(result)
+          if result.code ~= 0 or not result.stdout or result.stdout == "" then return end
+          vim.schedule(function()
+            render(vim.split(result.stdout, "\n"))
+          end)
+        end)
+        return
       end
 
       if not lines then
@@ -313,21 +455,7 @@ local function make_previewer(get_query)
         return
       end
 
-      if cache_key then preview_cache[cache_key] = lines end
-      vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
-      vim.bo[self.state.bufnr].syntax = "markdown"
-      highlight_preview(self.state.bufnr, lines, query, val.chunk_range)
-
-      -- チャンク範囲の先頭にスクロール（なければ lnum）
-      local target_line = entry.lnum or 1
-      if val.chunk_range then
-        target_line = math.max(val.chunk_range.start, 1)
-      end
-      if target_line > 1 then
-        pcall(vim.api.nvim_win_set_cursor, self.state.winid, { math.min(target_line, #lines), 0 })
-        -- チャンクが画面上部に来るよう調整
-        pcall(vim.api.nvim_win_call, self.state.winid, function() vim.cmd("normal! zt") end)
-      end
+      render(lines)
     end,
   })
 end
@@ -354,11 +482,12 @@ function M.search()
   local actions = require("telescope.actions")
   local action_state = require("telescope.actions.state")
 
-  -- コレクション
-  local col_names = get_collection_names()
-  local col_list = { nil } -- nil = All
-  for _, n in ipairs(col_names) do table.insert(col_list, n) end
-  local col_idx = 1
+  -- コレクション（メモリ/JSON キャッシュから即時利用。CLI は裏で非同期更新）
+  -- col_idx: 0 = All、1..N = collection_names のインデックス
+  if #collection_names == 0 then
+    load_collections_file()
+  end
+  local col_idx = 0
   local current_col = nil
 
   -- 検索状態
@@ -367,7 +496,10 @@ function M.search()
   local jobs = { rg = nil, bm25 = nil, hybrid = nil }
   local status = { rg = "—", bm25 = "—", hybrid = "—" }
   local gen = { rg = 0, bm25 = 0, hybrid = 0 }  -- 世代カウンタ（古い結果を無視）
-  local debounce_timer = nil
+  -- 単一の uv timer を使い回す（vim.defer_fn を stop で捨てると
+  -- 発火しなかった timer ハンドルが close されず毎打鍵リークする）
+  local debounce_timer = vim.uv.new_timer()
+  local rg_timeout_timer = vim.uv.new_timer()
 
   --- ジョブ停止
   local function stop_job(key)
@@ -416,20 +548,52 @@ function M.search()
       status.rg = "done"; results.rg = {}; update_title(); return
     end
 
-    local cmd = vim.tbl_flatten({ "rg", "-c", "-i", "--glob", "*.md", query, paths })
+    local cmd = { "rg", "-c", "-i", "--glob", "*.md", query }
+    vim.list_extend(cmd, paths)
+
+    -- streaming 受信 + タイムアウト打ち切り。
+    -- iCloud の dataless ファイルは read がオンデマンドダウンロード待ちで
+    -- ハングすることがあり（実測 8s+）、rg ワーカーが 1 つでも掴むと
+    -- プロセスが終了しない。stdout_buffered（exit 時一括）だとヒットが
+    -- 857 件出ていても 1 件も届かないため、行を逐次取り込み、
+    -- RG_TIMEOUT_MS 経過時点で jobstop してそれまでの結果を確定する
+    local RG_TIMEOUT_MS = 2000
+    local out_lines = {}
+    local pending_line = ""
+    local function finalize()
+      if my_gen ~= gen.rg then return end
+      if pending_line ~= "" then
+        table.insert(out_lines, pending_line)
+        pending_line = ""
+      end
+      results.rg = normalize_rg(out_lines)
+      status.rg = "done"
+      update_title()
+      refresh()
+    end
+
     jobs.rg = vim.fn.jobstart(cmd, {
-      stdout_buffered = true,
       on_stdout = function(_, data)
-        vim.schedule(function()
-          if my_gen ~= gen.rg then return end
-          results.rg = normalize_rg(data)
-          status.rg = "done"
-          update_title()
-          refresh()
-        end)
+        if my_gen ~= gen.rg then return end
+        -- チャンク境界で割れた行を連結する（:h channel-lines）
+        pending_line = pending_line .. (data[1] or "")
+        for i = 2, #data do
+          table.insert(out_lines, pending_line)
+          pending_line = data[i]
+        end
       end,
-      on_exit = function() jobs.rg = nil end,
+      on_exit = function()
+        jobs.rg = nil
+        rg_timeout_timer:stop()
+        vim.schedule(finalize)
+      end,
     })
+
+    rg_timeout_timer:stop()
+    rg_timeout_timer:start(RG_TIMEOUT_MS, 0, vim.schedule_wrap(function()
+      if my_gen ~= gen.rg then return end
+      stop_job("rg") -- SIGTERM → on_exit 経由で finalize される
+    end))
   end
 
   --- BM25 実行
@@ -473,10 +637,11 @@ function M.search()
     update_title()
 
     local stdout_chunks = {}
-    local cmd = vim.tbl_flatten({
-      qmd_bin, "query", query, "--json", "-n", "20",
-      current_col and { "-c", current_col } or {},
-    })
+    local cmd = { qmd_bin, "query", query, "--json", "-n", "20" }
+    if current_col then
+      table.insert(cmd, "-c")
+      table.insert(cmd, current_col)
+    end
 
     jobs.hybrid = vim.fn.jobstart(cmd, {
       stdout_buffered = true,
@@ -533,10 +698,10 @@ function M.search()
 
     run_rg(query)
 
-    if debounce_timer then debounce_timer:stop() end
-    debounce_timer = vim.defer_fn(function()
+    debounce_timer:stop()
+    debounce_timer:start(300, 0, vim.schedule_wrap(function()
       run_bm25(query)
-    end, 300)
+    end))
   end
 
   -- Picker 構築
@@ -572,10 +737,10 @@ function M.search()
       map("n", "<C-n>", actions.preview_scrolling_down)
       map("n", "<C-p>", actions.preview_scrolling_up)
 
-      -- Tab → コレクション切替
+      -- Tab → コレクション切替（0 = All に一周で戻る）
       map("i", "<Tab>", function()
-        col_idx = (col_idx % #col_list) + 1
-        current_col = col_list[col_idx]
+        col_idx = (col_idx + 1) % (#collection_names + 1)
+        current_col = col_idx == 0 and nil or collection_names[col_idx]
         -- 結果クリアして再検索
         results = { rg = {}, bm25 = {}, hybrid = {} }
         status = { rg = "—", bm25 = "—", hybrid = "—" }
@@ -599,9 +764,31 @@ function M.search()
         end,
       })
 
+      -- picker 終了時のクリーンアップ:
+      -- uv timer の解放 + 走行中ジョブの停止（閉じた後も hybrid が
+      -- 走り続けて CPU を食う孤児ジョブ化を防ぐ）
+      vim.api.nvim_create_autocmd("BufWipeout", {
+        buffer = prompt_bufnr,
+        once = true,
+        callback = function()
+          debounce_timer:stop()
+          debounce_timer:close()
+          rg_timeout_timer:stop()
+          rg_timeout_timer:close()
+          stop_job("rg")
+          stop_job("bm25")
+          stop_job("hybrid")
+        end,
+      })
+
       return true
     end,
   })
+
+  -- コレクション情報が古ければ裏で更新（picker 起動はブロックしない）
+  refresh_collections_if_stale(function()
+    update_title()
+  end)
 
   picker:find()
 end
@@ -609,6 +796,22 @@ end
 function M.setup()
   vim.api.nvim_set_hl(0, "QmdChunk", { bg = "#4a5080", default = true })
   vim.keymap.set("n", "<leader>q", M.search, { desc = "QMD セマンティック検索" })
+  -- 起動時に JSON キャッシュを温めておく（読みのみ、CLI は呼ばない）
+  load_collections_file()
 end
+
+--- テスト用: 内部状態の注入・内部関数の公開（内部 API）
+function M._set_collections(names, paths)
+  collection_names = names
+  collection_cache = paths
+end
+M._get_search_paths = function(col) return get_search_paths(col) end
+M._load_collections_file = load_collections_file
+M._collections_file = collections_file
+M._refresh_collections_async = refresh_collections_async
+M._merge_results = merge_results
+M._normalize_rg = normalize_rg
+M._parse_qmd_json = parse_qmd_json
+M._extract_chunk_range = extract_chunk_range
 
 return M
