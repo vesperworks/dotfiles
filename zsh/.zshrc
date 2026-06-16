@@ -71,7 +71,7 @@ _evalcache() {
 }
 
 # 1Password
-[[ -f ~/.secrets.env ]] && source ~/.secrets.env
+[[ -r ~/.secrets.env ]] && set -a && source ~/.secrets.env && set +a
 _evalcache op completion zsh
 
 # Environment
