@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bootstrap 12-Column Grid — The Grid as an Ethic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bs-blue: #0d6efd;
+    --ink: #1a1a1a;
+    --gutter: 1.5rem; /* 24px */
+    --max-xxl: 1320px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    color: var(--ink);
+    background: #fff;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: 'Space Mono', monospace; }
+
+  /* System label top-left */
+  .sys-label {
+    position: fixed;
+    top: 1rem; left: 1.5rem;
+    z-index: 50;
+    font-weight: 700;
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--bs-blue);
+  }
+  .sys-label span { display: block; font-size: 0.65rem; color: #888; letter-spacing: 0.05em; font-weight: 400; }
+
+  /* Toggle button top-right */
+  .grid-toggle {
+    position: fixed;
+    top: 1rem; right: 1.5rem;
+    z-index: 50;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    padding: 0.5rem 0.9rem;
+    border: 1.5px solid var(--bs-blue);
+    background: #fff;
+    color: var(--bs-blue);
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.15s;
+  }
+  .grid-toggle:hover { background: var(--bs-blue); color: #fff; }
+  .grid-toggle.active { background: var(--bs-blue); color: #fff; }
+
+  /* Bootstrap-like container */
+  .container {
+    width: 100%;
+    max-width: var(--max-xxl);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+
+  /* CSS Grid 12-column row */
+  .row {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    column-gap: var(--gutter);
+    row-gap: var(--gutter);
+  }
+
+  /* Responsive column spans — mobile first */
+  [class*="col-"] { grid-column: span 12; min-width: 0; }
+
+  /* sm ≥576 */
+  @media (min-width: 576px) {
+    .col-sm-6 { grid-column: span 6; }
+  }
+  /* md ≥768 */
+  @media (min-width: 768px) {
+    .col-md-4 { grid-column: span 4; }
+    .col-md-6 { grid-column: span 6; }
+    .col-md-8 { grid-column: span 8; }
+    .col-md-12 { grid-column: span 12; }
+  }
+  /* lg ≥992 */
+  @media (min-width: 992px) {
+    .col-lg-3 { grid-column: span 3; }
+    .col-lg-4 { grid-column: span 4; }
+    .col-lg-7 { grid-column: span 7; }
+    .col-lg-8 { grid-column: span 8; }
+  }
+
+  header.masthead { padding: 6rem 0 3rem; }
+  .eyebrow {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--bs-blue);
+    margin-bottom: 1rem;
+  }
+  h1 {
+    font-size: clamp(2.5rem, 6vw, 4.5rem);
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    margin-bottom: 1rem;
+  }
+  .subtitle { font-size: 1.15rem; color: #555; font-weight: 300; max-width: 42ch; }
+
+  section { padding: 2rem 0; }
+  .lead { font-size: 1.05rem; }
+  p + p { margin-top: 1rem; }
+
+  .stat {
+    border-top: 3px solid var(--bs-blue);
+    padding-top: 0.75rem;
+  }
+  .stat .num { font-family: 'Space Mono', monospace; font-size: 2rem; font-weight: 700; color: var(--bs-blue); }
+  .stat .lbl { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #888; }
+
+  blockquote {
+    border-left: 4px solid var(--bs-blue);
+    padding-left: 1.5rem;
+    font-size: 1.6rem;
+    font-weight: 300;
+    line-height: 1.3;
+    font-style: italic;
+    margin: 2rem 0;
+  }
+  blockquote cite { display: block; font-size: 0.85rem; font-style: normal; color: #888; margin-top: 0.75rem; font-family: 'Space Mono', monospace; }
+
+  .imgbox {
+    aspect-ratio: 4 / 3;
+    background: repeating-linear-gradient(45deg, #ececec, #ececec 10px, #e3e3e3 10px, #e3e3e3 20px);
+    display: flex; align-items: flex-end;
+    padding: 0.75rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: #666;
+  }
+
+  footer { padding: 4rem 0 3rem; border-top: 1px solid #eee; margin-top: 3rem; }
+  footer .mono { font-size: 0.8rem; color: #888; }
+
+  /* Grid overlay */
+  .overlay {
+    position: fixed; inset: 0; z-index: 40;
+    pointer-events: none; display: none;
+  }
+  .overlay.show { display: block; }
+  .overlay .container { height: 100%; }
+  .overlay .row { height: 100%; }
+  .overlay .col {
+    grid-column: span 1;
+    background: rgba(13, 110, 253, 0.08);
+    border-left: 1px solid rgba(13, 110, 253, 0.25);
+    border-right: 1px solid rgba(13, 110, 253, 0.25);
+  }
+  .bp-indicator {
+    position: fixed; bottom: 1rem; left: 1.5rem; z-index: 50;
+    font-family: 'Space Mono', monospace; font-size: 0.7rem;
+    background: var(--bs-blue); color: #fff; padding: 0.4rem 0.8rem;
+    display: none;
+  }
+  .overlay.show ~ .bp-indicator { display: block; }
+  .bp-indicator::after { content: 'XS <576'; }
+  @media (min-width:576px){ .bp-indicator::after{content:'SM ≥576'} }
+  @media (min-width:768px){ .bp-indicator::after{content:'MD ≥768'} }
+  @media (min-width:992px){ .bp-indicator::after{content:'LG ≥992'} }
+  @media (min-width:1200px){ .bp-indicator::after{content:'XL ≥1200'} }
+  @media (min-width:1400px){ .bp-indicator::after{content:'XXL ≥1400'} }
+</style>
+</head>
+<body>
+  <div class="sys-label">Bootstrap 5<span>12-col · 6 breakpoints</span></div>
+  <button class="grid-toggle" id="toggle">Show Grid</button>
+
+  <div class="overlay" id="overlay">
+    <div class="container">
+      <div class="row">
+        <!-- 12 columns -->
+        <div class="col"></div><div class="col"></div><div class="col"></div>
+        <div class="col"></div><div class="col"></div><div class="col"></div>
+        <div class="col"></div><div class="col"></div><div class="col"></div>
+        <div class="col"></div><div class="col"></div><div class="col"></div>
+      </div>
+    </div>
+  </div>
+  <div class="bp-indicator"></div>
+
+  <header class="masthead">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-8 col-lg-8">
+          <div class="eyebrow">Grid System 05 / Responsive</div>
+          <h1>The Grid as an Ethic</h1>
+        </div>
+        <div class="col-md-4 col-lg-4" style="display:flex;align-items:flex-end;">
+          <p class="subtitle">How nine grid systems shape the same content — a visual comparison</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section>
+    <div class="container">
+      <div class="row">
+        <div class="col-md-6 col-lg-7">
+          <p class="lead">The modular grid divides the type area into fields separated by gutters, creating a rational armature for text and image. Each system — from Müller-Brockmann's Swiss precision to the medieval scribe's golden canon — encodes a different philosophy of order.</p>
+          <p>Today, CSS Grid and subgrid make every historical grid natively possible on the web. The question is no longer 'can we?' but 'which system fits the content?'</p>
+        </div>
+        <div class="col-md-6 col-lg-3" style="grid-column-start: auto;">
+          <blockquote>The grid system is an aid, not a guarantee.<cite>— Josef Müller-Brockmann</cite></blockquote>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-6 col-lg-3"><div class="stat"><div class="num">12</div><div class="lbl">Columns</div></div></div>
+        <div class="col-sm-6 col-lg-3"><div class="stat"><div class="num">8px</div><div class="lbl">Baseline</div></div></div>
+        <div class="col-sm-6 col-lg-3"><div class="stat"><div class="num">24px</div><div class="lbl">Leading</div></div></div>
+        <div class="col-sm-6 col-lg-3"><div class="stat"><div class="num">9</div><div class="lbl">Systems</div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <div class="row">
+        <div class="col-md-4"><div class="imgbox">Zurich Tonhalle, 1955</div></div>
+        <div class="col-md-4"><div class="imgbox">NYC Subway Map, 1972</div></div>
+        <div class="col-md-4"><div class="imgbox">Grid Systems book, 1981</div></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <div class="row">
+        <div class="col-md-12">
+          <p class="mono">A visual comparison of grid systems. Press <strong>G</strong> to toggle grid overlay.</p>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+<script>
+  const toggle = document.getElementById('toggle');
+  const overlay = document.getElementById('overlay');
+  function setGrid(on) {
+    overlay.classList.toggle('show', on);
+    toggle.classList.toggle('active', on);
+    toggle.textContent = on ? 'Hide Grid' : 'Show Grid';
+  }
+  toggle.addEventListener('click', () => setGrid(!overlay.classList.contains('show')));
+  document.addEventListener('keydown', e => {
+    if (e.key === 'g' || e.key === 'G') setGrid(!overlay.classList.contains('show'));
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Golden Ratio Grid — The Grid as an Ethic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --phi: 1.618;
+    --gold: #B8860B;
+    --ink: #1a1a1a;
+    /* φ-based type scale: 16 → 25.89 → 41.89 → 67.77 */
+    --t-0: 16px;
+    --t-1: 25.89px;
+    --t-2: 41.89px;
+    --t-3: 67.77px;
+    --gutter: 41.89px; /* φ² × 16 */
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    color: var(--ink);
+    background: #fff;
+    line-height: 1.618;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: 'Space Mono', monospace; }
+
+  .sys-label {
+    position: fixed; top: 26px; left: 26px; z-index: 50;
+    font-weight: 700; font-size: 12px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--gold);
+  }
+  .sys-label span { display: block; font-size: 10px; color: #999; letter-spacing: 0.05em; font-weight: 400; }
+
+  .grid-toggle {
+    position: fixed; top: 26px; right: 26px; z-index: 50;
+    font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.1em; padding: 10px 17px;
+    border: 1.5px solid var(--gold); background: #fff; color: var(--gold);
+    cursor: pointer; text-transform: uppercase; transition: all 0.15s;
+  }
+  .grid-toggle:hover, .grid-toggle.active { background: var(--gold); color: #fff; }
+
+  .container { max-width: 1180px; margin-inline: auto; padding: 0 42px; }
+
+  /* φ split: main : side = 1.618 : 1 */
+  .phi-grid {
+    display: grid;
+    grid-template-columns: 1.618fr 1fr;
+    gap: var(--gutter);
+  }
+  @media (max-width: 760px) { .phi-grid { grid-template-columns: 1fr; } }
+
+  header { padding-top: 109px; padding-bottom: 68px; }
+  .eyebrow {
+    font-family: 'Space Mono', monospace; font-size: 12px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--gold); margin-bottom: 26px;
+  }
+  h1 {
+    font-size: var(--t-3); font-weight: 700;
+    line-height: 1.05; letter-spacing: -0.02em; margin-bottom: 26px;
+  }
+  .subtitle { font-size: var(--t-1); color: #555; font-weight: 300; line-height: 1.4; }
+
+  section { padding: 42px 0; }
+  .lead { font-size: var(--t-1); font-weight: 300; line-height: 1.5; }
+  .body p { font-size: var(--t-0); }
+  .body p + p { margin-top: 26px; }
+
+  aside {
+    border-left: 2px solid var(--gold);
+    padding-left: 26px;
+  }
+  blockquote {
+    font-size: var(--t-1); font-weight: 300; line-height: 1.35;
+    font-style: italic; color: var(--ink);
+  }
+  blockquote cite { display: block; font-size: 14px; font-style: normal; color: #999; margin-top: 26px; font-family: 'Space Mono', monospace; }
+
+  .stat-strip { display: flex; flex-wrap: wrap; gap: 42px; margin-top: 42px; }
+  .stat { border-top: 2px solid var(--gold); padding-top: 16px; }
+  .stat .num { font-family: 'Space Mono', monospace; font-size: var(--t-2); font-weight: 700; color: var(--gold); line-height: 1; }
+  .stat .lbl { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: #999; margin-top: 10px; }
+
+  .imgbox {
+    aspect-ratio: 1.618 / 1;
+    background: linear-gradient(135deg, #f5efe0, #ede0c0);
+    display: flex; align-items: flex-end; padding: 16px;
+    font-family: 'Space Mono', monospace; font-size: 12px; color: #8a6d0a;
+    margin-bottom: 26px;
+  }
+  .imgbox.tall { aspect-ratio: 1 / 1.618; }
+
+  footer { padding: 100px 0 68px; border-top: 1px solid #eee; margin-top: 42px; }
+  footer .mono { font-size: 14px; color: #999; }
+
+  /* φ overlay: vertical golden split lines + type scale ruler */
+  .overlay { position: fixed; inset: 0; z-index: 40; pointer-events: none; display: none; }
+  .overlay.show { display: block; }
+  .overlay .container { height: 100%; }
+  .overlay .phi-grid { height: 100%; }
+  .overlay .main-field { background: rgba(184,134,11,0.06); border-right: 2px solid rgba(184,134,11,0.4); }
+  .overlay .side-field { background: rgba(184,134,11,0.12); }
+  .phi-readout {
+    position: fixed; bottom: 26px; left: 26px; z-index: 50;
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    background: var(--gold); color: #fff; padding: 8px 14px; display: none;
+    line-height: 1.6;
+  }
+  .overlay.show ~ .phi-readout { display: block; }
+  .type-scale {
+    position: fixed; bottom: 26px; right: 26px; z-index: 50;
+    font-family: 'Space Mono', monospace; font-size: 10px;
+    background: #fff; color: var(--ink); padding: 12px 16px;
+    border: 1.5px solid var(--gold); display: none; line-height: 1.8;
+  }
+  .overlay.show ~ .type-scale { display: block; }
+</style>
+</head>
+<body>
+  <div class="sys-label">Golden Ratio<span>φ = 1.618 · proportional</span></div>
+  <button class="grid-toggle" id="toggle">Show Grid</button>
+
+  <div class="overlay" id="overlay">
+    <div class="container">
+      <div class="phi-grid">
+        <div class="main-field"></div>
+        <div class="side-field"></div>
+      </div>
+    </div>
+  </div>
+  <div class="phi-readout">φ = 1.618 : 1<br>main : side column</div>
+  <div class="type-scale">
+    TYPE SCALE (×φ)<br>
+    16.0 px · body<br>
+    25.89 px · lead<br>
+    41.89 px · stat<br>
+    67.77 px · h1
+  </div>
+
+  <header>
+    <div class="container">
+      <div class="phi-grid">
+        <div>
+          <div class="eyebrow">Grid System 08 / Proportional</div>
+          <h1>The Grid as an Ethic</h1>
+        </div>
+        <div style="display:flex;align-items:flex-end;">
+          <p class="subtitle">How nine grid systems shape the same content — a visual comparison</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section>
+    <div class="container">
+      <div class="phi-grid">
+        <div class="body">
+          <p class="lead">The modular grid divides the type area into fields separated by gutters, creating a rational armature for text and image. Each system — from Müller-Brockmann's Swiss precision to the medieval scribe's golden canon — encodes a different philosophy of order.</p>
+          <p>Today, CSS Grid and subgrid make every historical grid natively possible on the web. The question is no longer 'can we?' but 'which system fits the content?'</p>
+        </div>
+        <aside>
+          <blockquote>The grid system is an aid, not a guarantee.<cite>— Josef Müller-Brockmann</cite></blockquote>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <div class="stat-strip">
+        <div class="stat"><div class="num">12</div><div class="lbl">Columns</div></div>
+        <div class="stat"><div class="num">8px</div><div class="lbl">Baseline</div></div>
+        <div class="stat"><div class="num">24px</div><div class="lbl">Leading</div></div>
+        <div class="stat"><div class="num">9</div><div class="lbl">Systems</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <div class="phi-grid">
+        <div class="imgbox">Zurich Tonhalle, 1955</div>
+        <div>
+          <div class="imgbox tall">NYC Subway Map, 1972</div>
+        </div>
+      </div>
+      <div class="imgbox" style="aspect-ratio: 2.618 / 1;">Grid Systems book, 1981</div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <p class="mono">A visual comparison of grid systems. Press <strong>G</strong> to toggle grid overlay.</p>
+    </div>
+  </footer>
+
+<script>
+  const toggle = document.getElementById('toggle');
+  const overlay = document.getElementById('overlay');
+  function setGrid(on) {
+    overlay.classList.toggle('show', on);
+    toggle.classList.toggle('active', on);
+    toggle.textContent = on ? 'Hide Grid' : 'Show Grid';
+  }
+  toggle.addEventListener('click', () => setGrid(!overlay.classList.contains('show')));
+  document.addEventListener('keydown', e => {
+    if (e.key === 'g' || e.key === 'G') setGrid(!overlay.classList.contains('show'));
+  });
+</script>
+</body>
+</html>

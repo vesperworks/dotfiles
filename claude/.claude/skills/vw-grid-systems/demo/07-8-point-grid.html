@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>8-Point Grid — The Grid as an Ethic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* 8-point spacing tokens — every value a multiple of 8 */
+    --sp-1: 8px;   --sp-2: 16px;  --sp-3: 24px;  --sp-4: 32px;
+    --sp-5: 40px;  --sp-6: 48px;  --sp-7: 56px;  --sp-8: 64px;
+    --sp-9: 72px;  --sp-10: 80px; --sp-11: 88px; --sp-12: 96px;
+    --ink: #111;
+    --line: #e5e5e5;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    color: var(--ink);
+    background: #fff;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    padding: var(--sp-3);
+  }
+  .mono { font-family: 'Space Mono', monospace; }
+
+  .sys-label {
+    position: fixed; top: var(--sp-2); left: var(--sp-3); z-index: 50;
+    font-weight: 700; font-size: 12px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--ink);
+  }
+  .sys-label span { display: block; font-size: 10px; color: #888; letter-spacing: 0.05em; font-weight: 400; }
+
+  .grid-toggle {
+    position: fixed; top: var(--sp-2); right: var(--sp-3); z-index: 50;
+    font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.1em; padding: var(--sp-1) var(--sp-2);
+    border: 2px solid var(--ink); background: #fff; color: var(--ink);
+    cursor: pointer; text-transform: uppercase; transition: all 0.15s;
+  }
+  .grid-toggle:hover, .grid-toggle.active { background: var(--ink); color: #fff; }
+
+  .wrap { max-width: 1120px; margin-inline: auto; }
+
+  /* flexbox card layout, spacing driven entirely by 8px tokens */
+  header {
+    padding: var(--sp-12) 0 var(--sp-6);
+    border-bottom: 2px solid var(--ink);
+    margin-bottom: var(--sp-6);
+  }
+  .eyebrow {
+    font-family: 'Space Mono', monospace; font-size: 12px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: #888; margin-bottom: var(--sp-2);
+  }
+  h1 {
+    font-size: clamp(40px, 7vw, 72px); font-weight: 700;
+    line-height: 1.05; letter-spacing: -0.02em; margin-bottom: var(--sp-3);
+  }
+  .subtitle { font-size: 18px; color: #555; font-weight: 300; max-width: 48ch; }
+
+  .row { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-bottom: var(--sp-3); }
+  .card {
+    flex: 1 1 320px;
+    border: 1px solid var(--line);
+    padding: var(--sp-3);
+  }
+  .card.body-card { flex: 2 1 480px; }
+  .card.quote-card { flex: 1 1 280px; background: var(--ink); color: #fff; }
+  .card p { font-size: 16px; }
+  .card p + p { margin-top: var(--sp-2); }
+
+  blockquote { font-size: 22px; font-weight: 300; line-height: 1.35; }
+  blockquote cite { display: block; font-size: 13px; font-style: normal; color: #aaa; margin-top: var(--sp-2); font-family: 'Space Mono', monospace; }
+
+  .stats { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+  .stat {
+    flex: 1 1 160px; border: 1px solid var(--line);
+    padding: var(--sp-2); border-top: 4px solid var(--ink);
+  }
+  .stat .num { font-family: 'Space Mono', monospace; font-size: 32px; font-weight: 700; line-height: 1; }
+  .stat .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #888; margin-top: var(--sp-1); }
+
+  .imgrow { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-bottom: var(--sp-3); }
+  .imgbox {
+    flex: 1 1 280px; aspect-ratio: 4 / 3;
+    background: repeating-linear-gradient(45deg, #f0f0f0, #f0f0f0 8px, #e8e8e8 8px, #e8e8e8 16px);
+    display: flex; align-items: flex-end; padding: var(--sp-2);
+    font-family: 'Space Mono', monospace; font-size: 12px; color: #666;
+  }
+
+  footer {
+    padding: var(--sp-8) 0 var(--sp-6); margin-top: var(--sp-6);
+    border-top: 2px solid var(--ink);
+  }
+  footer .mono { font-size: 13px; color: #888; }
+
+  /* 8px square grid overlay */
+  .overlay {
+    position: fixed; inset: 0; z-index: 40; pointer-events: none; display: none;
+    background-image:
+      repeating-linear-gradient(to right, rgba(0,0,0,0.06) 0, rgba(0,0,0,0.06) 1px, transparent 1px, transparent 8px),
+      repeating-linear-gradient(to bottom, rgba(0,0,0,0.06) 0, rgba(0,0,0,0.06) 1px, transparent 1px, transparent 8px);
+  }
+  .overlay.show { display: block; }
+  .overlay::after {
+    content: '8px × 8px grid'; position: fixed; bottom: var(--sp-2); left: var(--sp-3);
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    background: var(--ink); color: #fff; padding: 6px 12px;
+  }
+  /* emphasize every 5th line (40px) */
+  .overlay-major {
+    position: fixed; inset: 0; z-index: 41; pointer-events: none; display: none;
+    background-image:
+      repeating-linear-gradient(to right, rgba(0,0,0,0.14) 0, rgba(0,0,0,0.14) 1px, transparent 1px, transparent 40px),
+      repeating-linear-gradient(to bottom, rgba(0,0,0,0.14) 0, rgba(0,0,0,0.14) 1px, transparent 1px, transparent 40px);
+  }
+  .overlay-major.show { display: block; }
+</style>
+</head>
+<body>
+  <div class="sys-label">8-Point Grid<span>spacing discipline · no columns</span></div>
+  <button class="grid-toggle" id="toggle">Show Grid</button>
+
+  <div class="overlay" id="overlay"></div>
+  <div class="overlay-major" id="overlayMajor"></div>
+
+  <div class="wrap">
+    <header>
+      <div class="eyebrow">Grid System 07 / Spacing</div>
+      <h1>The Grid as an Ethic</h1>
+      <p class="subtitle">How nine grid systems shape the same content — a visual comparison</p>
+    </header>
+
+    <div class="row">
+      <div class="card body-card">
+        <p>The modular grid divides the type area into fields separated by gutters, creating a rational armature for text and image. Each system — from Müller-Brockmann's Swiss precision to the medieval scribe's golden canon — encodes a different philosophy of order.</p>
+        <p>Today, CSS Grid and subgrid make every historical grid natively possible on the web. The question is no longer 'can we?' but 'which system fits the content?'</p>
+      </div>
+      <div class="card quote-card">
+        <blockquote>The grid system is an aid, not a guarantee.<cite>— Josef Müller-Brockmann</cite></blockquote>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="num">12</div><div class="lbl">Columns</div></div>
+      <div class="stat"><div class="num">8px</div><div class="lbl">Baseline</div></div>
+      <div class="stat"><div class="num">24px</div><div class="lbl">Leading</div></div>
+      <div class="stat"><div class="num">9</div><div class="lbl">Systems</div></div>
+    </div>
+
+    <div class="imgrow">
+      <div class="imgbox">Zurich Tonhalle, 1955</div>
+      <div class="imgbox">NYC Subway Map, 1972</div>
+      <div class="imgbox">Grid Systems book, 1981</div>
+    </div>
+
+    <footer>
+      <p class="mono">A visual comparison of grid systems. Press <strong>G</strong> to toggle grid overlay.</p>
+    </footer>
+  </div>
+
+<script>
+  const toggle = document.getElementById('toggle');
+  const overlay = document.getElementById('overlay');
+  const overlayMajor = document.getElementById('overlayMajor');
+  function setGrid(on) {
+    overlay.classList.toggle('show', on);
+    overlayMajor.classList.toggle('show', on);
+    toggle.classList.toggle('active', on);
+    toggle.textContent = on ? 'Hide Grid' : 'Show Grid';
+  }
+  toggle.addEventListener('click', () => setGrid(!overlay.classList.contains('show')));
+  document.addEventListener('keydown', e => {
+    if (e.key === 'g' || e.key === 'G') setGrid(!overlay.classList.contains('show'));
+  });
+</script>
+</body>
+</html>
