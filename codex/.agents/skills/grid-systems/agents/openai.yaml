@@ -1,0 +1,3 @@
+display_name: Grid Systems
+short_description: 9 種のグリッドシステムから選んでエディトリアル/UI/書籍レイアウトを構築
+default_prompt: 用途に合ったグリッドシステムを選び、CSS scaffold を生成してください。
