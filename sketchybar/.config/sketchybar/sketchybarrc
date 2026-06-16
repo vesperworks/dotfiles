@@ -271,17 +271,17 @@ sketchybar --add item codex_usage right \
 
 add_popup_rows codex_usage 5
 
-# Pomodoro Timer (nvim task timer integration) - hidden until started
-sketchybar --add item pomodoro right \
-  --set pomodoro update_freq=1 \
+# Focus Timer (nvim task timer sync + Raycast Focus; replaces pomodoro)
+sketchybar --add item focus right \
+  --set focus update_freq=1 \
   padding_left=6 \
   padding_right=6 \
-  icon.color="$GREEN" \
+  icon="󱎫" \
+  icon.color="$SURFACE2" \
   icon.padding_right=4 \
-  label.color="$WHITE" \
-  drawing=off \
-  script="$PLUGIN_DIR/pomodoro.sh" \
-  --subscribe pomodoro mouse.clicked
+  label.drawing=off \
+  script="$PLUGIN_DIR/focus.sh" \
+  --subscribe focus mouse.clicked
 
 # Top CPU Process
 sketchybar --add item top_cpu right \

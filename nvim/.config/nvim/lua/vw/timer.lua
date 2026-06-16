@@ -42,6 +42,10 @@ function M.start_timer(task_id, file_path, task_content)
   -- 🔒 安全な単一タイマー保存（マージ機能付き）
   storage.save_timer_safe(task_id, active_timers[task_id])
 
+  -- SketchyBar focus: アクティブタスク名を通知
+  local f = io.open("/tmp/sketchybar_focus_active", "w")
+  if f then f:write(os.time() .. "|" .. task_content); f:close() end
+
   -- 表示を更新
   local bufnr = vim.fn.bufnr(file_path)
   if bufnr ~= -1 and vim.api.nvim_buf_is_valid(bufnr) then
@@ -62,6 +66,18 @@ function M.stop_timer(task_id)
 
     -- 🔒 安全な単一タイマー削除（マージ機能付き）
     storage.remove_timer_safe(task_id)
+
+    -- SketchyBar focus: 残タスクがあれば通知、なければファイル削除
+    local latest_id, latest_t
+    for id, d in pairs(active_timers) do
+      if not latest_t or d.start_time > latest_t then latest_id, latest_t = id, d.start_time end
+    end
+    if latest_id then
+      local sf = io.open("/tmp/sketchybar_focus_active", "w")
+      if sf then sf:write(latest_t .. "|" .. active_timers[latest_id].task_content); sf:close() end
+    else
+      os.remove("/tmp/sketchybar_focus_active")
+    end
 
     -- virtual textをクリア（バッファ全体を更新）
     local bufnr = vim.fn.bufnr(timer_data.file_path)
