@@ -143,6 +143,7 @@
       "Bash(git commit:*)",
       "Bash(git branch:*)",
       "Bash(gh pr merge:*)",
+      "Bash(gh pr create:*)",
       "Bash(jj git push:*)",
       "Bash(cp:*)",
       "Bash(mv:*)",
@@ -156,7 +157,7 @@
     ],
     "defaultMode": "auto"
   },
-  "model": "claude-fable-5[1m]",
+  "model": "claude-opus-4-6[1m]",
   "fallbackModel": ["default"],
   "hooks": {
     "Stop": [
