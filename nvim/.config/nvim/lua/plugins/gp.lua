@@ -227,6 +227,47 @@ return {
           with_gp_marker(gp, params, template, "🌳📋")
         end,
 
+        -- IMEもどき: ローマ字→日本語推定変換（選択範囲を直接置換）
+        RomajiToJapanese = function(gp, params)
+          local template = [[あなたは日本語IMEの代替エンジンです。
+ユーザーがIMEをオンにし忘れて、ローマ字のまま入力してしまったテキストが与えられます。
+このローマ字から、ユーザーが本来入力したかった自然な日本語を推定してください。
+
+ルール:
+1. ローマ字をかな変換し、文脈に合った漢字変換を行う
+2. 打ち間違い・タイポは文脈から最も自然な候補を推定して補正する
+3. 英単語・固有名詞（API, GitHub, OpenAI, React 等）はそのまま保持する
+4. 日本語の中に自然に混ざる英単語の境界を文脈から推定する
+   例: openaiyorianthropicdesuka → OpenAIよりAnthropicですか
+5. 句読点・改行・記号はそのまま保持する
+6. 出力は変換後のテキストのみ（説明・前置き一切不要）
+
+{{selection}}]]
+
+          local buf = vim.api.nvim_get_current_buf()
+          local end_line = vim.fn.line("'>")
+          local marker_id = "gp-marker-" .. os.time() .. "-" .. math.random(1000, 9999)
+          local marker_text = "⌨️🇯🇵 <!-- " .. marker_id .. " -->"
+          vim.api.nvim_buf_set_lines(buf, end_line, end_line, false, { "", marker_text })
+
+          vim.api.nvim_create_autocmd("User", {
+            pattern = "GpDone",
+            callback = function()
+              local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+              for i, line in ipairs(lines) do
+                if line:find(marker_id, 1, true) then
+                  vim.api.nvim_buf_set_lines(buf, i - 1, i, false, {})
+                  break
+                end
+              end
+            end,
+            once = true,
+          })
+
+          local agent = gp.get_command_agent()
+          gp.Prompt(params, gp.Target.rewrite, agent, template)
+        end,
+
         -- シンプル化: 要約と用語精査（追加）
         SimplifyText = function(gp, params)
           local template = [[<role>
@@ -307,6 +348,7 @@ return {
     -- GPTプロンプトメニュー関数
     local function show_gpt_prompt_menu()
       local prompt_options = {
+        { "RomajiToJapanese", "🇯🇵 ローマ字→日本語 (IME)", "j" },
         { "CompactNote", "📝 ノート整理 (追加)", "a" },
         { "SimplifyText", "🔍 シンプル化 (追加)", "s" },
         { "BreakdownTask", "✅ タスク分解 (追加)", "d" },
@@ -363,11 +405,11 @@ return {
       
       -- クローズ処理
       local function close_and_execute(command)
+        vim.cmd('stopinsert')
         if vim.api.nvim_win_is_valid(win) then
           vim.api.nvim_win_close(win, true)
         end
         if command then
-          -- Visual modeの範囲を保持して実行
           vim.cmd("'<,'>Gp" .. command)
         end
       end
@@ -408,11 +450,13 @@ return {
           end
         })
         
-        -- ESCキーの処理
-        vim.keymap.set('i', '<Esc>', function()
-          vim.api.nvim_del_augroup_by_id(group)
-          close_and_execute(nil)
-        end, { buffer = buf, silent = true })
+        -- ESCキーの処理（insert/normal 両方）
+        for _, mode in ipairs({ 'i', 'n' }) do
+          vim.keymap.set(mode, '<Esc>', function()
+            vim.api.nvim_del_augroup_by_id(group)
+            close_and_execute(nil)
+          end, { buffer = buf, silent = true })
+        end
         
         -- ウィンドウが閉じられた時のクリーンアップ
         vim.api.nvim_create_autocmd('WinClosed', {
@@ -442,6 +486,7 @@ return {
     vim.keymap.set("v", "<leader>l", show_gpt_prompt_menu, keymapOptions("LLM Menu"))
     
     -- 個別コマンドも使える（メニュー経由でも直接でも）
+    vim.keymap.set("v", "<leader>lj", ":<C-u>'<,'>GpRomajiToJapanese<cr>", keymapOptions("Romaji to Japanese"))
     vim.keymap.set("v", "<leader>la", ":<C-u>'<,'>GpCompactNote<cr>", keymapOptions("Compact Note"))
     vim.keymap.set("v", "<leader>ls", ":<C-u>'<,'>GpSimplifyText<cr>", keymapOptions("Simplify Text"))
     vim.keymap.set("v", "<leader>ld", ":<C-u>'<,'>GpBreakdownTask<cr>", keymapOptions("Breakdown Task"))
