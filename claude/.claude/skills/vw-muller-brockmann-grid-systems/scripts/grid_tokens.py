@@ -50,6 +50,24 @@ def build(cfg):
   --ink:#111315;
   --ink-soft:#5b6066;
   --accent:{c.accent};
+  --surface:#e8e8e8;
+  --font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"Space Mono",monospace;
+
+  --gc-hero:1/10;
+  --gc-sub:1/8;
+  --gc-half-l:1/7;
+  --gc-meta-r:10/13;
+  --gc-col-l:1/6;
+  --gc-col-r:7/13;
+  --gc-q1:1/4;
+  --gc-q2:4/7;
+  --gc-q3:7/10;
+  --gc-q4:10/13;
+  --gc-quote:1/9;
+  --gc-gal-l:1/6;
+  --gc-gal-gap:6/8;
+  --gc-gal-r:8/13;
 
   --g-col:rgba(228,0,43,.075);     /* column field fill   (re-tint to taste) */
   --g-edge:rgba(228,0,43,.40);     /* column edge / margin line */
@@ -58,7 +76,7 @@ def build(cfg):
 }}
 *{{box-sizing:border-box;}}
 body{{margin:0;background:var(--paper);color:var(--ink);
-  font-family:"Inter",system-ui,sans-serif;font-size:16px;line-height:var(--lh);
+  font-family:var(--font-body);font-size:16px;line-height:var(--lh);
   -webkit-font-smoothing:antialiased;}}
 img{{display:block;width:100%;height:100%;object-fit:cover;}}
 
@@ -84,8 +102,8 @@ body.grid-on .guides{{opacity:1;}}
   display:grid;grid-template-columns:repeat(var(--cols),1fr);column-gap:var(--gutter);}}
 .guides .col{{background:var(--g-col);
   box-shadow:inset 1px 0 0 var(--g-edge),inset -1px 0 0 var(--g-edge);position:relative;}}
-.guides .col span{{position:absolute;top:{c.baseline*4}px;left:0;right:0;text-align:center;
-  font-family:"Space Mono",monospace;font-size:10px;line-height:1;color:var(--accent);}}
+.guides .col span{{position:absolute;top:calc(var(--bl) * 4);left:0;right:0;text-align:center;
+  font-family:var(--font-mono);font-size:10px;line-height:1;color:var(--accent);}}
 .guides .rows{{position:absolute;left:var(--margin);right:var(--margin);top:var(--pad);bottom:0;
   background-image:
     repeating-linear-gradient(to bottom,var(--g-base) 0 1px,transparent 1px var(--lh)),
