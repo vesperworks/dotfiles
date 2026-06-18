@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="ja"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Grid as an Ethic — Müller-Brockmann Grid System</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Inter:wght@300;400;500;600;700;800;900&family=M+PLUS+1p:wght@300;400;500;700;800;900&family=M+PLUS+Rounded+1c:wght@300;400;500;700;800;900&family=Noto+Sans+JP:wght@300;400;500;700;900&family=Noto+Serif+JP:wght@200;300;400;500;600;700;900&family=Sawarabi+Gothic&family=Sawarabi+Mincho&family=Shippori+Mincho:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&family=Zen+Maru+Gothic:wght@300;400;500;700;900&family=Zen+Old+Mincho:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cols:12;
+  --bl:8px;
+  --lh:24px;
+  --gutter:24px;
+  --margin:72px;
+  --pad:96px;
+  --maxw:1296px;
+  --paper:#ffffff;
+  --ink:#111315;
+  --ink-soft:#5b6066;
+  --accent:#e4002b;
+  --surface:#e8e8e8;
+  --font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"Space Mono",monospace;
+  --g-col:rgba(228,0,43,.075);
+  --g-edge:rgba(228,0,43,.40);
+  --g-base:rgba(0,150,140,.34);
+  --g-base-min:rgba(0,150,140,.12);
+  --gc-hero:1/10;
+  --gc-sub:1/8;
+  --gc-half-l:1/7;
+  --gc-meta-r:10/13;
+  --gc-col-l:1/6;
+  --gc-col-r:7/13;
+  --gc-q1:1/4;
+  --gc-q2:4/7;
+  --gc-q3:7/10;
+  --gc-q4:10/13;
+  --gc-quote:1/9;
+  --gc-gal-l:1/6;
+  --gc-gal-gap:6/8;
+  --gc-gal-r:8/13;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--font-body);font-size:16px;line-height:var(--lh);
+  -webkit-font-smoothing:antialiased;transition:background-color .25s,color .25s;}
+img{display:block;width:100%;height:100%;object-fit:cover;}
+.spread{position:relative;width:100%;}
+.wrap{position:relative;max-width:var(--maxw);margin:0 auto;padding:var(--pad) var(--margin);}
+.grid{display:grid;grid-template-columns:repeat(var(--cols),1fr);
+  column-gap:var(--gutter);row-gap:var(--lh);}
+.band{grid-column:1 / -1;display:grid;grid-template-columns:subgrid;
+  column-gap:var(--gutter);align-items:start;}
+@supports not (grid-template-columns:subgrid){
+  .band{grid-template-columns:repeat(var(--cols),1fr);}
+}
+.folio{font-family:var(--font-mono);font-size:11px;line-height:24px;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);transition:color .25s;}
+.masthead{font-size:96px;font-weight:900;line-height:96px;
+  letter-spacing:-.02em;margin:0;padding:0;}
+.subtitle{font-size:20px;font-weight:300;line-height:var(--lh);color:var(--ink-soft);margin:0;transition:color .25s;}
+.body-text{font-size:16px;line-height:var(--lh);margin:0;}
+.body-text + .body-text{margin-top:var(--lh);}
+.caption{font-family:var(--font-mono);font-size:11px;line-height:var(--lh);
+  color:var(--ink-soft);letter-spacing:.04em;transition:color .25s;}
+.shead h2{font-size:48px;font-weight:800;line-height:48px;
+  margin:0;letter-spacing:-.01em;}
+.numeral{font-size:72px;font-weight:700;line-height:72px;
+  color:var(--accent);margin:0;transition:color .25s;}
+.stat-label{font-family:var(--font-mono);font-size:11px;line-height:var(--lh);
+  text-transform:uppercase;letter-spacing:.1em;color:var(--ink-soft);margin:0;transition:color .25s;}
+.rule{border:none;border-top:1px solid var(--ink);margin:0;height:0;transition:border-color .25s;}
+.rule-accent{border-top-color:var(--accent);}
+blockquote{font-size:28px;font-weight:300;line-height:40px;
+  margin:0;color:var(--ink);border-left:4px solid var(--accent);
+  padding-left:var(--gutter);transition:color .25s,border-color .25s;}
+.img-placeholder{background:var(--surface);display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-mono);font-size:11px;color:var(--ink-soft);letter-spacing:.06em;
+  transition:background-color .25s,color .25s;}
+.mt1{margin-top:var(--lh);}
+.mt2{margin-top:48px;}
+.mt3{margin-top:72px;}
+.mb1{margin-bottom:var(--lh);}
+.mb2{margin-bottom:48px;}
+.pt1{padding-top:var(--lh);}
+.pb1{padding-bottom:var(--lh);}
+.footer-rule{border-top:1px solid var(--ink);margin:0;height:0;transition:border-color .25s;}
+/* ==REMOVABLE-START== */
+.guides{position:absolute;inset:0;pointer-events:none;z-index:60;opacity:0;
+  transition:opacity .26s ease;}
+body.grid-on .guides{opacity:1;}
+.guides .cols{position:absolute;top:0;bottom:0;left:var(--margin);right:var(--margin);
+  display:grid;grid-template-columns:repeat(var(--cols),1fr);column-gap:var(--gutter);}
+.guides .col{background:var(--g-col);
+  box-shadow:inset 1px 0 0 var(--g-edge),inset -1px 0 0 var(--g-edge);position:relative;}
+.guides .col span{position:absolute;top:calc(var(--bl) * 4);left:0;right:0;text-align:center;
+  font-family:var(--font-mono);font-size:10px;line-height:1;color:var(--accent);}
+.guides .rows{position:absolute;left:var(--margin);right:var(--margin);top:var(--pad);bottom:0;
+  background-image:
+    repeating-linear-gradient(to bottom,var(--g-base) 0 1px,transparent 1px var(--lh)),
+    repeating-linear-gradient(to bottom,var(--g-base-min) 0 1px,transparent 1px var(--bl));}
+.guides .mline{position:absolute;top:0;bottom:0;width:1px;background:var(--g-edge);}
+.guides .mline.l{left:var(--margin);} .guides .mline.r{right:var(--margin);}
+body{padding-bottom:40px;}
+.toggle{position:fixed;top:18px;right:18px;z-index:200;display:flex;align-items:center;gap:10px;
+  background:var(--ink);color:#fff;border:none;cursor:pointer;font-family:var(--font-mono);
+  font-size:12px;letter-spacing:.14em;text-transform:uppercase;padding:11px 14px;
+  transition:background-color .25s;}
+.toggle .dot{width:9px;height:9px;border-radius:50%;background:#555;transition:background-color .25s;}
+body.grid-on .toggle{background:var(--accent);} body.grid-on .toggle .dot{background:#fff;}
+.hud{position:fixed;bottom:0;left:0;right:0;z-index:200;
+  background:rgba(17,19,21,.92);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  color:#ccc;font-family:"Space Mono",monospace;font-size:11px;line-height:1;
+  letter-spacing:.06em;padding:10px 18px;display:flex;align-items:center;gap:6px;
+  text-transform:uppercase;}
+.hud .hl{color:#fff;}
+.hud .sep{color:#444;margin:0 8px;}
+.hud .keys{margin-left:auto;color:#666;display:flex;gap:12px;}
+.hud kbd{display:inline-block;background:#333;color:#aaa;padding:2px 5px;
+  border-radius:3px;font-family:inherit;font-size:10px;margin:0 1px;
+  border:1px solid #444;}
+.picker{position:fixed;bottom:44px;right:18px;z-index:201;
+  background:rgba(17,19,21,.95);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  padding:16px;border-radius:4px;display:none;}
+.picker.open{display:block;}
+.picker canvas{cursor:crosshair;display:block;}
+.picker-info{display:flex;align-items:center;gap:8px;margin-top:8px;}
+.picker-swatch{width:24px;height:24px;border-radius:2px;border:1px solid #444;}
+.picker-hex{font-family:"Space Mono",monospace;font-size:12px;color:#ccc;letter-spacing:.06em;}
+/* ==REMOVABLE-END== */
+</style>
+</head>
+<body>
+<button class="toggle" id="gridToggle" aria-pressed="false"><span class="dot"></span><span class="lbl">Show grid</span></button>
+
+<div class="hud" id="hud">
+  <span>LAYOUT</span> <span class="hl hud-layout">Müller-Brockmann</span>
+  <span class="sep">&middot;</span>
+  <span>COLOR</span> <span class="hl hud-color">Swiss</span>
+  <span class="sep">&middot;</span>
+  <span>FONT</span> <span class="hl hud-font">Inter (Grotesque)</span>
+  <span class="keys">
+    <span><kbd>G</kbd> grid</span>
+    <span><kbd>H</kbd><kbd>L</kbd> layout</span>
+    <span><kbd>J</kbd><kbd>K</kbd> color</span>
+    <span><kbd>N</kbd><kbd>P</kbd> font</span>
+    <span><kbd>E</kbd> export</span>
+  </span>
+</div>
+
+<div class="picker" id="picker">
+  <canvas id="pickerCanvas" width="200" height="200"></canvas>
+  <div class="picker-info">
+    <div class="picker-swatch" id="pickerSwatch" style="background:#e4002b;"></div>
+    <span class="picker-hex" id="pickerHex">#E4002B</span>
+  </div>
+</div>
+
+<!-- SPREAD 1 — HERO -->
+<section class="spread">
+  <div class="wrap">
+    <div class="grid">
+      <div class="band mb1">
+        <p class="folio" style="grid-column:var(--gc-half-l);">Design Research Report — 2026</p>
+        <p class="folio" style="grid-column:var(--gc-meta-r);text-align:right;">001</p>
+      </div>
+      <div class="band">
+        <hr class="rule rule-accent" style="grid-column:1/-1;">
+      </div>
+      <div class="band mt2">
+        <h1 class="masthead" style="grid-column:var(--gc-hero);">The Grid as<br>an Ethic</h1>
+      </div>
+      <div class="band mt1">
+        <p class="subtitle" style="grid-column:var(--gc-sub);">Josef Müller-Brockmann and the discipline of modular layout — how a Zurich typographer's 1981 manual became the backbone of modern editorial design.</p>
+      </div>
+      <div class="band mt2">
+        <div class="img-placeholder" style="grid-column:1/-1;height:480px;">
+          960 × 480 — Hero photograph
+        </div>
+      </div>
+    </div>
+    <div class="guides" aria-hidden="true">
+      <div class="cols"></div><div class="rows"></div>
+      <div class="mline l"></div><div class="mline r"></div>
+    </div>
+  </div>
+</section>
+
+<!-- SPREAD 2 — TWO-COLUMN BODY TEXT -->
+<section class="spread">
+  <div class="wrap">
+    <div class="grid">
+      <div class="band">
+        <p class="folio" style="grid-column:var(--gc-half-l);">The Discipline</p>
+        <p class="folio" style="grid-column:var(--gc-meta-r);text-align:right;">002</p>
+      </div>
+      <div class="band">
+        <hr class="rule" style="grid-column:1/-1;">
+      </div>
+      <div class="band mt2">
+        <div class="shead" style="grid-column:var(--gc-half-l);"><h2>Modular Grid<br>+ Baseline</h2></div>
+      </div>
+      <div class="band mt1">
+        <div style="grid-column:var(--gc-col-l);">
+          <p class="body-text">The modular grid divides the type area into fields separated by gutters, creating a rational armature for text and image. Müller-Brockmann insisted the grid was "an aid, not a guarantee" — it permits many solutions, but demands practice.</p>
+          <p class="body-text">His system starts with the baseline: a fixed vertical rhythm (typically 8px on the web) to which every element snaps. Columns subdivide the horizontal axis; modules are the intersection of column and row.</p>
+        </div>
+        <div style="grid-column:var(--gc-col-r);">
+          <p class="body-text">The International Typographic Style — born in Basel and Zurich in the 1950s — stripped decoration to reveal structure. Grotesque sans-serifs (Helvetica, Univers, Akzidenz-Grotesk), flush-left ragged-right setting, and generous white space became its signatures.</p>
+          <p class="body-text">Today, CSS Grid and subgrid make the modular grid natively possible on the web for the first time. The question is no longer "can we?" but "will we do it rigorously?"</p>
+        </div>
+      </div>
+    </div>
+    <div class="guides" aria-hidden="true">
+      <div class="cols"></div><div class="rows"></div>
+      <div class="mline l"></div><div class="mline r"></div>
+    </div>
+  </div>
+</section>
+
+<!-- SPREAD 3 — STATS -->
+<section class="spread">
+  <div class="wrap">
+    <div class="grid">
+      <div class="band">
+        <p class="folio" style="grid-column:var(--gc-half-l);">By the Numbers</p>
+        <p class="folio" style="grid-column:var(--gc-meta-r);text-align:right;">003</p>
+      </div>
+      <div class="band">
+        <hr class="rule" style="grid-column:1/-1;">
+      </div>
+      <div class="band mt2">
+        <div style="grid-column:var(--gc-q1);">
+          <p class="numeral">12</p>
+          <p class="stat-label mt1">Column Grid</p>
+        </div>
+        <div style="grid-column:var(--gc-q2);">
+          <p class="numeral">8px</p>
+          <p class="stat-label mt1">Baseline Unit</p>
+        </div>
+        <div style="grid-column:var(--gc-q3);">
+          <p class="numeral">24px</p>
+          <p class="stat-label mt1">Leading (3×BL)</p>
+        </div>
+        <div style="grid-column:var(--gc-q4);">
+          <p class="numeral">0px</p>
+          <p class="stat-label mt1">Verified Adherence</p>
+        </div>
+      </div>
+      <div class="band mt3">
+        <blockquote style="grid-column:var(--gc-quote);">"The grid system is an aid, not a guarantee. It permits a number of possible uses and each designer can look for a solution appropriate to his personal style."</blockquote>
+        <p class="caption" style="grid-column:var(--gc-meta-r);align-self:end;">— Josef Müller-Brockmann<br><em>Grid Systems in Graphic Design</em>, 1981</p>
+      </div>
+    </div>
+    <div class="guides" aria-hidden="true">
+      <div class="cols"></div><div class="rows"></div>
+      <div class="mline l"></div><div class="mline r"></div>
+    </div>
+  </div>
+</section>
+
+<!-- SPREAD 4 — GALLERY -->
+<section class="spread">
+  <div class="wrap">
+    <div class="grid">
+      <div class="band">
+        <p class="folio" style="grid-column:var(--gc-half-l);">Visual Archive</p>
+        <p class="folio" style="grid-column:var(--gc-meta-r);text-align:right;">004</p>
+      </div>
+      <div class="band">
+        <hr class="rule" style="grid-column:1/-1;">
+      </div>
+      <div class="band mt2">
+        <div style="grid-column:var(--gc-gal-l);">
+          <div class="img-placeholder" style="height:360px;">Zurich Tonhalle poster, 1955</div>
+          <p class="caption mt1">Fig. 1 — Tonhalle concert poster. Geometric forms, single accent color.</p>
+        </div>
+        <div style="grid-column:var(--gc-gal-gap);"></div>
+        <div style="grid-column:var(--gc-gal-r);">
+          <div class="img-placeholder" style="height:360px;">Musica Viva concert series</div>
+          <p class="caption mt1">Fig. 2 — Musica Viva. Constructive abstraction as visual rhythm.</p>
+        </div>
+      </div>
+      <div class="band mt2">
+        <div style="grid-column:1/-1;">
+          <div class="img-placeholder" style="height:240px;">Grid Systems in Graphic Design — book cover, 1981</div>
+          <p class="caption mt1">Fig. 3 — The book that codified the system. Niggli Verlag, 1981.</p>
+        </div>
+      </div>
+    </div>
+    <div class="guides" aria-hidden="true">
+      <div class="cols"></div><div class="rows"></div>
+      <div class="mline l"></div><div class="mline r"></div>
+    </div>
+  </div>
+</section>
+
+<!-- SPREAD 5 — ENGINEERING NOTES -->
+<section class="spread">
+  <div class="wrap">
+    <div class="grid">
+      <div class="band">
+        <p class="folio" style="grid-column:var(--gc-half-l);">Engineering the Grid</p>
+        <p class="folio" style="grid-column:var(--gc-meta-r);text-align:right;">005</p>
+      </div>
+      <div class="band">
+        <hr class="rule" style="grid-column:1/-1;">
+      </div>
+      <div class="band mt2">
+        <div style="grid-column:var(--gc-col-l);">
+          <div class="shead"><h2>The Overlay<br>Problem</h2></div>
+          <p class="body-text mt1">Most web "grid systems" draw guide lines as a full-viewport overlay disconnected from the content container. When the content sits in a centered max-width wrapper, the overlay columns drift at wider viewports.</p>
+          <p class="body-text">The fix: put the overlay inside the same container, reading the same CSS variables. Then the overlay columns <strong>are</strong> the content columns at every width.</p>
+        </div>
+        <div style="grid-column:var(--gc-col-r);">
+          <div class="shead"><h2>Optical<br>Alignment</h2></div>
+          <p class="body-text mt1">A 180px headline whose layout box sits exactly on column line 1 still looks misaligned — because the letterform's ink is inset by its left side-bearing.</p>
+          <p class="body-text">Runtime canvas measurement of <code style="font-family:var(--font-mono);font-size:14px;">actualBoundingBoxLeft</code> corrects this, nudging the element so the ink, not the box, lands on the grid.</p>
+        </div>
+      </div>
+    </div>
+    <div class="guides" aria-hidden="true">
+      <div class="cols"></div><div class="rows"></div>
+      <div class="mline l"></div><div class="mline r"></div>
+    </div>
+  </div>
+</section>
+
+<!-- SPREAD 6 — FOOTER -->
+<section class="spread">
+  <div class="wrap">
+    <div class="grid">
+      <div class="band">
+        <hr class="footer-rule" style="grid-column:1/-1;">
+      </div>
+      <div class="band mt1">
+        <p class="caption" style="grid-column:var(--gc-half-l);">A design research document. Content derived from Josef Müller-Brockmann, <em>Grid Systems in Graphic Design</em> (Niggli, 1981).</p>
+        <p class="caption" style="grid-column:var(--gc-meta-r);text-align:right;">Press <strong>G</strong> to toggle the grid overlay.</p>
+      </div>
+    </div>
+    <div class="guides" aria-hidden="true">
+      <div class="cols"></div><div class="rows"></div>
+      <div class="mline l"></div><div class="mline r"></div>
+    </div>
+  </div>
+</section>
+
+<script>
+/* ===== CORE: toggle + overlay + optical alignment ===== */
+var btn=document.getElementById('gridToggle');
+function setGrid(on){document.body.classList.toggle('grid-on',on);
+  if(btn){btn.setAttribute('aria-pressed',on?'true':'false');
+    var l=btn.querySelector('.lbl'); if(l) l.textContent=on?'Hide grid':'Show grid';}}
+if(btn) btn.addEventListener('click',function(){setGrid(!document.body.classList.contains('grid-on'));});
+
+document.querySelectorAll('.guides .cols').forEach(function(h){
+  var n=getComputedStyle(document.documentElement).getPropertyValue('--cols').trim()||'12';
+  for(var i=1;i<=parseInt(n,10);i++){var c=document.createElement('div');c.className='col';
+    var s=document.createElement('span');s.textContent=i;c.appendChild(s);h.appendChild(c);}});
+
+var opticalAlign;
+(function(){
+  var cvs=document.createElement('canvas'),ctx=cvs.getContext('2d');
+  var sel='.masthead, .numeral, .shead h2, .h2b';
+  opticalAlign=function(){
+    document.querySelectorAll(sel).forEach(function(el){
+      el.style.marginLeft='0px';
+      var cs=getComputedStyle(el),ch=(el.textContent||'').trim().charAt(0); if(!ch) return;
+      if(cs.textTransform==='uppercase') ch=ch.toUpperCase();
+      ctx.font=cs.fontStyle+' '+cs.fontWeight+' '+cs.fontSize+' '+cs.fontFamily;
+      ctx.textAlign='left';
+      var abl=ctx.measureText(ch).actualBoundingBoxLeft;
+      if(isFinite(abl)) el.style.marginLeft=abl.toFixed(2)+'px';
+    });
+  };
+  if(document.fonts&&document.fonts.ready){document.fonts.ready.then(opticalAlign);}
+  opticalAlign();
+  var t;window.addEventListener('resize',function(){clearTimeout(t);t=setTimeout(opticalAlign,120);});
+})();
+
+/* ===== INTERACTIVE: presets + cycling + HUD + export ===== */
+var PRESETS={
+  layout:[
+    {name:'Müller-Brockmann',vars:{'--gutter':'24px','--margin':'72px','--maxw':'1296px','--pad':'96px'}},
+    {name:'Vignelli Canon',vars:{'--gutter':'24px','--margin':'48px','--maxw':'1200px','--pad':'64px'}},
+    {name:'Bootstrap',vars:{'--gutter':'24px','--margin':'48px','--maxw':'1320px','--pad':'48px'}},
+    {name:'Material Design',vars:{'--gutter':'16px','--margin':'24px','--maxw':'1040px','--pad':'32px'}},
+    {name:'Tight',vars:{'--gutter':'16px','--margin':'48px','--maxw':'1080px','--pad':'72px'}},
+    {name:'Spacious',vars:{'--gutter':'32px','--margin':'96px','--maxw':'1440px','--pad':'120px'}},
+    {name:'Tschichold',vars:{'--cols':'10','--gutter':'32px','--margin':'64px','--maxw':'1080px','--pad':'64px',
+      '--gc-hero':'1/8','--gc-sub':'1/6','--gc-half-l':'1/4','--gc-meta-r':'8/11',
+      '--gc-col-l':'1/4','--gc-col-r':'4/11',
+      '--gc-q1':'1/4','--gc-q2':'4/6','--gc-q3':'6/9','--gc-q4':'9/11',
+      '--gc-quote':'1/8','--gc-gal-l':'1/5','--gc-gal-gap':'5/6','--gc-gal-r':'6/11'}},
+    {name:'Classical Canons',vars:{'--cols':'6','--gutter':'24px','--margin':'80px','--maxw':'720px','--pad':'120px',
+      '--gc-hero':'1/5','--gc-sub':'1/5','--gc-half-l':'1/4','--gc-meta-r':'5/7',
+      '--gc-col-l':'1/4','--gc-col-r':'4/7',
+      '--gc-q1':'1/4','--gc-q2':'4/7','--gc-q3':'1/4','--gc-q4':'4/7',
+      '--gc-quote':'1/5','--gc-gal-l':'1/4','--gc-gal-gap':'4/5','--gc-gal-r':'5/7'}},
+    {name:'Golden Ratio',vars:{'--cols':'5','--gutter':'40px','--margin':'64px','--maxw':'1040px','--pad':'96px',
+      '--gc-hero':'1/4','--gc-sub':'1/4','--gc-half-l':'1/3','--gc-meta-r':'4/6',
+      '--gc-col-l':'1/3','--gc-col-r':'3/6',
+      '--gc-q1':'1/3','--gc-q2':'3/6','--gc-q3':'1/3','--gc-q4':'3/6',
+      '--gc-quote':'1/4','--gc-gal-l':'1/3','--gc-gal-gap':'3/4','--gc-gal-r':'4/6'}},
+    {name:'Gerstner',vars:{'--cols':'60','--gutter':'8px','--margin':'48px','--maxw':'1200px','--pad':'80px',
+      '--gc-hero':'1/46','--gc-sub':'1/38','--gc-half-l':'1/31','--gc-meta-r':'46/61',
+      '--gc-col-l':'1/28','--gc-col-r':'31/61',
+      '--gc-q1':'1/16','--gc-q2':'16/31','--gc-q3':'31/46','--gc-q4':'46/61',
+      '--gc-quote':'1/41','--gc-gal-l':'1/26','--gc-gal-gap':'26/36','--gc-gal-r':'36/61'}}
+  ],
+  color:[
+    {name:'Swiss',vars:{'--paper':'#ffffff','--ink':'#111315','--ink-soft':'#5b6066','--accent':'#e4002b','--surface':'#e8e8e8',
+      '--g-col':'rgba(228,0,43,.075)','--g-edge':'rgba(228,0,43,.40)',
+      '--g-base':'rgba(0,150,140,.34)','--g-base-min':'rgba(0,150,140,.12)'}},
+    {name:'Dark',vars:{'--paper':'#111315','--ink':'#e8e8e8','--ink-soft':'#999','--accent':'#ff3355','--surface':'#2a2c30',
+      '--g-col':'rgba(255,51,85,.12)','--g-edge':'rgba(255,51,85,.50)',
+      '--g-base':'rgba(0,200,180,.40)','--g-base-min':'rgba(0,200,180,.15)'}},
+    {name:'Warm',vars:{'--paper':'#faf8f5','--ink':'#2a2520','--ink-soft':'#7a7068','--accent':'#c45000','--surface':'#ede8e3',
+      '--g-col':'rgba(196,80,0,.08)','--g-edge':'rgba(196,80,0,.40)',
+      '--g-base':'rgba(0,140,120,.30)','--g-base-min':'rgba(0,140,120,.10)'}},
+    {name:'Cool',vars:{'--paper':'#f0f4f8','--ink':'#1a2030','--ink-soft':'#607088','--accent':'#0055b8','--surface':'#dde4ed',
+      '--g-col':'rgba(0,85,184,.08)','--g-edge':'rgba(0,85,184,.40)',
+      '--g-base':'rgba(0,150,140,.34)','--g-base-min':'rgba(0,150,140,.12)'}},
+    {name:'Mono',vars:{'--paper':'#ffffff','--ink':'#111315','--ink-soft':'#666','--accent':'#555','--surface':'#e8e8e8',
+      '--g-col':'rgba(85,85,85,.08)','--g-edge':'rgba(85,85,85,.35)',
+      '--g-base':'rgba(85,85,85,.25)','--g-base-min':'rgba(85,85,85,.10)'}},
+    {name:'Custom',custom:true,vars:{'--paper':'#ffffff','--ink':'#111315','--ink-soft':'#5b6066','--accent':'#e4002b','--surface':'#e8e8e8',
+      '--g-col':'rgba(228,0,43,.075)','--g-edge':'rgba(228,0,43,.40)',
+      '--g-base':'rgba(0,150,140,.34)','--g-base-min':'rgba(0,150,140,.12)'}}
+  ],
+  font:[
+    {name:'Inter',cat:'Grotesque',family:'"Inter",system-ui,sans-serif',gf:'Inter:wght@300;400;500;600;700;800;900'},
+    {name:'Dela Gothic One',cat:'Display',family:'"Dela Gothic One",system-ui,sans-serif',gf:'Dela+Gothic+One'},
+    {name:'Sawarabi Mincho',cat:'Serif',family:'"Sawarabi Mincho",serif',gf:'Sawarabi+Mincho'},
+    {name:'Shippori Mincho',cat:'Serif',family:'"Shippori Mincho",serif',gf:'Shippori+Mincho:wght@400;500;600;700;800'},
+    {name:'Zen Old Mincho',cat:'Serif',family:'"Zen Old Mincho",serif',gf:'Zen+Old+Mincho:wght@400;500;600;700;900'},
+    {name:'Noto Serif JP',cat:'Serif',family:'"Noto Serif JP",serif',gf:'Noto+Serif+JP:wght@200;300;400;500;600;700;900'},
+    {name:'Zen Maru Gothic',cat:'Rounded',family:'"Zen Maru Gothic",system-ui,sans-serif',gf:'Zen+Maru+Gothic:wght@300;400;500;700;900'},
+    {name:'M PLUS Rounded 1c',cat:'Rounded',family:'"M PLUS Rounded 1c",system-ui,sans-serif',gf:'M+PLUS+Rounded+1c:wght@300;400;500;700;800;900'},
+    {name:'M PLUS 1p',cat:'Sans',family:'"M PLUS 1p",system-ui,sans-serif',gf:'M+PLUS+1p:wght@300;400;500;700;800;900'},
+    {name:'Sawarabi Gothic',cat:'Sans',family:'"Sawarabi Gothic",system-ui,sans-serif',gf:'Sawarabi+Gothic'},
+    {name:'Noto Sans JP',cat:'Sans',family:'"Noto Sans JP",system-ui,sans-serif',gf:'Noto+Sans+JP:wght@300;400;500;700;900'}
+  ]
+};
+
+var state={layout:0,color:0,font:0};
+
+var LAYOUT_BASE={'--cols':'12',
+  '--gc-hero':'1/10','--gc-sub':'1/8','--gc-half-l':'1/7','--gc-meta-r':'10/13',
+  '--gc-col-l':'1/6','--gc-col-r':'7/13',
+  '--gc-q1':'1/4','--gc-q2':'4/7','--gc-q3':'7/10','--gc-q4':'10/13',
+  '--gc-quote':'1/9','--gc-gal-l':'1/6','--gc-gal-gap':'6/8','--gc-gal-r':'8/13'};
+
+function applyPreset(type,idx){
+  state[type]=idx;
+  var p=PRESETS[type][idx];
+  var root=document.documentElement.style;
+  if(type==='font'){
+    root.setProperty('--font-body',p.family);
+    setTimeout(function(){
+      if(document.fonts&&document.fonts.ready) document.fonts.ready.then(opticalAlign);
+      else opticalAlign();
+    },100);
+  } else {
+    if(type==='layout'){for(var k in LAYOUT_BASE) root.setProperty(k,LAYOUT_BASE[k]);}
+    for(var k in p.vars) root.setProperty(k,p.vars[k]);
+    if(type==='layout'){
+      document.querySelectorAll('.guides .cols').forEach(function(h){
+        h.innerHTML='';
+        var n=getComputedStyle(document.documentElement).getPropertyValue('--cols').trim()||'12';
+        for(var i=1;i<=parseInt(n,10);i++){
+          var c=document.createElement('div');c.className='col';
+          var s=document.createElement('span');s.textContent=i;
+          c.appendChild(s);h.appendChild(c);
+        }
+      });
+    }
+  }
+  if(type==='color'){
+    var pk=document.getElementById('picker');
+    if(pk){
+      if(p.custom){pk.classList.add('open');if(window._pickerDraw) window._pickerDraw();}
+      else pk.classList.remove('open');
+    }
+  }
+  updateHUD();
+}
+
+function cycle(type,dir){
+  var arr=PRESETS[type];
+  applyPreset(type,(state[type]+dir+arr.length)%arr.length);
+}
+
+function updateHUD(){
+  var el=document.getElementById('hud');
+  if(!el) return;
+  el.querySelector('.hud-layout').textContent=PRESETS.layout[state.layout].name;
+  var c=PRESETS.color[state.color];
+  el.querySelector('.hud-color').textContent=c.custom?c.name+' '+(c.vars['--accent']||''):c.name;
+  var f=PRESETS.font[state.font];
+  el.querySelector('.hud-font').textContent=f.name+' ('+f.cat+')';
+}
+
+function exportStatic(){
+  var root=getComputedStyle(document.documentElement);
+  var vars=['--cols','--bl','--lh','--gutter','--margin','--pad','--maxw',
+    '--paper','--ink','--ink-soft','--accent','--surface','--font-body','--font-mono',
+    '--gc-hero','--gc-sub','--gc-half-l','--gc-meta-r',
+    '--gc-col-l','--gc-col-r',
+    '--gc-q1','--gc-q2','--gc-q3','--gc-q4',
+    '--gc-quote','--gc-gal-l','--gc-gal-gap','--gc-gal-r'];
+  var rootCSS=':root{\n'+vars.map(function(v){
+    return '  '+v+':'+root.getPropertyValue(v).trim()+';';
+  }).join('\n')+'\n}';
+
+  var style=document.querySelector('style');
+  var css=style.textContent;
+  css=css.replace(/\/\* ==REMOVABLE-START== \*\/[\s\S]*?\/\* ==REMOVABLE-END== \*\//g,'');
+  css=css.replace(/:root\{[\s\S]*?\}/,rootCSS);
+
+  var clone=document.body.cloneNode(true);
+  clone.querySelectorAll('.toggle,.hud,.guides,script').forEach(function(el){el.remove();});
+  clone.classList.remove('grid-on');
+
+  var F=PRESETS.font[state.font];
+  var fontURL='https://fonts.googleapis.com/css2?family='+F.gf+'&family=Space+Mono:wght@400;700&display=swap';
+
+  var html='<!DOCTYPE html>\n<html lang="ja"><head><meta charset="UTF-8">\n'+
+    '<meta name="viewport" content="width=device-width, initial-scale=1.0">\n'+
+    '<title>Editorial — modular grid</title>\n'+
+    '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'+
+    '<link href="'+fontURL+'" rel="stylesheet">\n'+
+    '<style>\n'+css.trim()+'\n</style>\n'+
+    '</head>\n<body>\n'+clone.innerHTML+'\n</body>\n</html>';
+
+  var blob=new Blob([html],{type:'text/html'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='grid-export.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+}
+
+document.addEventListener('keydown',function(e){
+  if(e.metaKey||e.ctrlKey||e.altKey) return;
+  var tag=(e.target.tagName||'').toLowerCase();
+  if(tag==='input'||tag==='textarea'||tag==='select') return;
+  switch(e.key){
+    case 'g':case 'G': setGrid(!document.body.classList.contains('grid-on')); break;
+    case 'h':case 'H': cycle('layout',-1); break;
+    case 'l':case 'L': cycle('layout',1); break;
+    case 'j':case 'J': cycle('color',1); break;
+    case 'k':case 'K': cycle('color',-1); break;
+    case 'n':case 'N': cycle('font',1); break;
+    case 'p':case 'P': cycle('font',-1); break;
+    case 'e':case 'E': exportStatic(); break;
+    case 'Escape': var pk=document.getElementById('picker');if(pk) pk.classList.remove('open'); break;
+  }
+});
+
+/* ===== HSB COLOR PICKER ===== */
+(function(){
+  var picker=document.getElementById('picker');
+  var cvs=document.getElementById('pickerCanvas');
+  if(!picker||!cvs) return;
+  var dpr=window.devicePixelRatio||1;
+  var W=200;
+  cvs.width=W*dpr;cvs.height=W*dpr;
+  cvs.style.width=W+'px';cvs.style.height=W+'px';
+  var ctx=cvs.getContext('2d');
+  ctx.scale(dpr,dpr);
+  var CX=100,CY=100,R1=96,R2=72,SQ=88,SX=CX-SQ/2,SY=CY-SQ/2;
+  var hsv={h:349,s:100,v:89};
+  var dragging=null;
+
+  function hsvToHex(h,s,v){
+    s/=100;v/=100;
+    var c=v*s,x=c*(1-Math.abs((h/60)%2-1)),m=v-c,r,g,b;
+    if(h<60){r=c;g=x;b=0;}else if(h<120){r=x;g=c;b=0;}
+    else if(h<180){r=0;g=c;b=x;}else if(h<240){r=0;g=x;b=c;}
+    else if(h<300){r=x;g=0;b=c;}else{r=c;g=0;b=x;}
+    r=Math.round((r+m)*255);g=Math.round((g+m)*255);b=Math.round((b+m)*255);
+    return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,W,W);
+    for(var a=0;a<360;a++){
+      var rad=a*Math.PI/180;
+      ctx.beginPath();
+      ctx.arc(CX,CY,R1,rad-0.01,rad+Math.PI/180+0.01);
+      ctx.arc(CX,CY,R2,rad+Math.PI/180+0.01,rad-0.01,true);
+      ctx.closePath();
+      ctx.fillStyle='hsl('+a+',100%,50%)';
+      ctx.fill();
+    }
+    var hRad=hsv.h*Math.PI/180,hMid=(R1+R2)/2;
+    ctx.beginPath();
+    ctx.arc(CX+Math.cos(hRad)*hMid,CY+Math.sin(hRad)*hMid,5,0,Math.PI*2);
+    ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+    ctx.strokeStyle='#000';ctx.lineWidth=1;ctx.stroke();
+    var gradH=ctx.createLinearGradient(SX,SY,SX+SQ,SY);
+    gradH.addColorStop(0,'#ffffff');
+    gradH.addColorStop(1,'hsl('+hsv.h+',100%,50%)');
+    ctx.fillStyle=gradH;ctx.fillRect(SX,SY,SQ,SQ);
+    var gradV=ctx.createLinearGradient(SX,SY,SX,SY+SQ);
+    gradV.addColorStop(0,'rgba(0,0,0,0)');
+    gradV.addColorStop(1,'rgba(0,0,0,1)');
+    ctx.fillStyle=gradV;ctx.fillRect(SX,SY,SQ,SQ);
+    var sx=SX+(hsv.s/100)*SQ,sy=SY+(1-hsv.v/100)*SQ;
+    ctx.beginPath();ctx.arc(sx,sy,5,0,Math.PI*2);
+    ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+    ctx.strokeStyle='#000';ctx.lineWidth=1;ctx.stroke();
+  }
+
+  function updateAccent(){
+    var hex=hsvToHex(hsv.h,hsv.s,hsv.v).toUpperCase();
+    var root=document.documentElement.style;
+    root.setProperty('--accent',hex);
+    var r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+    root.setProperty('--g-col','rgba('+r+','+g+','+b+',.075)');
+    root.setProperty('--g-edge','rgba('+r+','+g+','+b+',.40)');
+    var cp=PRESETS.color[PRESETS.color.length-1];
+    cp.vars['--accent']=hex;
+    cp.vars['--g-col']='rgba('+r+','+g+','+b+',.075)';
+    cp.vars['--g-edge']='rgba('+r+','+g+','+b+',.40)';
+    document.getElementById('pickerSwatch').style.background=hex;
+    document.getElementById('pickerHex').textContent=hex;
+    updateHUD();
+  }
+
+  function handleInput(e){
+    var rect=cvs.getBoundingClientRect();
+    var mx=(e.clientX-rect.left)*(W/rect.width);
+    var my=(e.clientY-rect.top)*(W/rect.height);
+    var dx=mx-CX,dy=my-CY,dist=Math.sqrt(dx*dx+dy*dy);
+    if(dragging==='ring'||(dragging===null&&dist>=R2&&dist<=R1)){
+      dragging='ring';
+      hsv.h=((Math.atan2(dy,dx)*180/Math.PI)+360)%360;
+      draw();updateAccent();
+    } else if(dragging==='square'||(dragging===null&&mx>=SX&&mx<=SX+SQ&&my>=SY&&my<=SY+SQ)){
+      dragging='square';
+      hsv.s=Math.max(0,Math.min(100,(mx-SX)/SQ*100));
+      hsv.v=Math.max(0,Math.min(100,(1-(my-SY)/SQ)*100));
+      draw();updateAccent();
+    }
+  }
+
+  cvs.addEventListener('mousedown',function(e){dragging=null;handleInput(e);});
+  cvs.addEventListener('mousemove',function(e){if(dragging) handleInput(e);});
+  document.addEventListener('mouseup',function(){dragging=null;});
+  cvs.addEventListener('touchstart',function(e){e.preventDefault();dragging=null;handleInput(e.touches[0]);},{passive:false});
+  cvs.addEventListener('touchmove',function(e){e.preventDefault();if(dragging) handleInput(e.touches[0]);},{passive:false});
+  cvs.addEventListener('touchend',function(){dragging=null;});
+  window._pickerDraw=draw;
+  draw();
+})();
+
+updateHUD();
+</script>
+</body>
+</html>
