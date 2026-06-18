@@ -10,6 +10,8 @@ SESSION_FILE="/tmp/sketchybar_focus_session"
 RAYCAST_TRACK="/tmp/sketchybar_focus_raycast"
 # 手動モード用
 MANUAL_FILE="/tmp/sketchybar_focus_manual"
+# 一時停止状態
+PAUSE_FILE="/tmp/sketchybar_focus_paused"
 
 MAX_TASK_CHARS=20
 WORK_DURATION=1500
@@ -54,7 +56,7 @@ show_idle() {
 }
 
 cleanup_all() {
-	rm -f "$SESSION_FILE" "$RAYCAST_TRACK" "$MANUAL_FILE"
+	rm -f "$SESSION_FILE" "$RAYCAST_TRACK" "$MANUAL_FILE" "$PAUSE_FILE"
 	open "raycast://focus/complete" 2>/dev/null &
 }
 

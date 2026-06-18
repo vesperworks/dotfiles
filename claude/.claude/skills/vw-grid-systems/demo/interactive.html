@@ -99,9 +99,10 @@ blockquote{font-size:var(--fs-quote);font-weight:300;line-height:var(--lh-quote)
 .footer-rule{border-top:1px solid var(--ink);margin:0;height:0;transition:border-color .25s;}
 /* ==REMOVABLE-START== */
 body.slide-mode{overflow:hidden;}
-body.slide-mode .spread{position:fixed;top:0;left:0;width:100vw;height:100vh;
-  display:none;align-items:center;justify-content:center;}
+body.slide-mode .spread{position:fixed;top:0;left:0;width:100vw;height:calc(100vh - 40px);
+  display:none;overflow-y:auto;}
 body.slide-mode .spread.active{display:flex;}
+body.slide-mode .wrap{margin:auto;flex-shrink:0;width:100%;}
 .guides{position:absolute;inset:0;pointer-events:none;z-index:60;opacity:0;
   transition:opacity .26s ease;}
 body.grid-on .guides{opacity:1;}
@@ -118,12 +119,6 @@ body.grid-on .guides{opacity:1;}
 .guides .mline{position:absolute;top:0;bottom:0;width:1px;background:var(--g-edge);}
 .guides .mline.l{left:var(--margin);} .guides .mline.r{right:var(--margin);}
 body{padding-bottom:40px;}
-.toggle{position:fixed;top:18px;right:18px;z-index:200;display:flex;align-items:center;gap:10px;
-  background:var(--ink);color:#fff;border:none;cursor:pointer;font-family:var(--font-mono);
-  font-size:12px;letter-spacing:.14em;text-transform:uppercase;padding:11px 14px;
-  transition:background-color .25s;}
-.toggle .dot{width:9px;height:9px;border-radius:50%;background:#555;transition:background-color .25s;}
-body.grid-on .toggle{background:var(--accent);} body.grid-on .toggle .dot{background:#fff;}
 .hud{position:fixed;bottom:0;left:0;right:0;z-index:200;
   background:rgba(17,19,21,.92);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
   color:#ccc;font-family:"Space Mono",monospace;font-size:11px;line-height:1;
@@ -150,8 +145,6 @@ body.grid-on .toggle{background:var(--accent);} body.grid-on .toggle .dot{backgr
 </style>
 </head>
 <body>
-<button class="toggle" id="gridToggle" aria-pressed="false"><span class="dot"></span><span class="lbl">Show grid</span></button>
-
 <div class="hud" id="hud">
   <span>LAYOUT</span> <span class="hl hud-layout">Müller-Brockmann</span>
   <span class="sep">&middot;</span>
@@ -375,11 +368,7 @@ body.grid-on .toggle{background:var(--accent);} body.grid-on .toggle .dot{backgr
 
 <script>
 /* ===== CORE: toggle + overlay + optical alignment ===== */
-var btn=document.getElementById('gridToggle');
-function setGrid(on){document.body.classList.toggle('grid-on',on);
-  if(btn){btn.setAttribute('aria-pressed',on?'true':'false');
-    var l=btn.querySelector('.lbl'); if(l) l.textContent=on?'Hide grid':'Show grid';}}
-if(btn) btn.addEventListener('click',function(){setGrid(!document.body.classList.contains('grid-on'));});
+function setGrid(on){document.body.classList.toggle('grid-on',on);}
 
 document.querySelectorAll('.guides .cols').forEach(function(h){
   var n=getComputedStyle(document.documentElement).getPropertyValue('--cols').trim()||'12';
@@ -621,7 +610,7 @@ function exportStatic(){
   css=css.replace(/:root\{[\s\S]*?\}/,rootCSS);
 
   var clone=document.body.cloneNode(true);
-  clone.querySelectorAll('.toggle,.hud,.guides,.picker,#typoOverlay,script').forEach(function(el){el.remove();});
+  clone.querySelectorAll('.hud,.guides,.picker,#typoOverlay,script').forEach(function(el){el.remove();});
   clone.classList.remove('grid-on');
   clone.classList.remove('typo-on');
   clone.querySelectorAll('.spread').forEach(function(s){s.style.cssText='';s.classList.remove('active');});
@@ -686,30 +675,7 @@ function showSlide(n){
   if(document.body.classList.contains('typo-on')) setTimeout(renderTypoOverlay,100);
 }
 
-function fitSlides(){
-  if(!document.body.classList.contains('slide-mode')) return;
-  var root=getComputedStyle(document.documentElement);
-  var designW=parseInt(root.getPropertyValue('--maxw'))||1296;
-  var designH=Math.round(designW*9/16);
-  var vw=window.innerWidth;
-  var vh=window.innerHeight-40;
-  var wraps=document.querySelectorAll('.spread .wrap');
-  var maxH=designH;
-  wraps.forEach(function(w){
-    w.style.transform='none';
-    w.style.width=designW+'px';
-    w.style.height='auto';
-    w.style.maxWidth='none';
-    w.style.margin='0';
-    maxH=Math.max(maxH,w.scrollHeight);
-  });
-  var scale=Math.min(vw/designW,vh/maxH);
-  wraps.forEach(function(w){
-    w.style.height=maxH+'px';
-    w.style.transform='scale('+scale.toFixed(4)+')';
-    w.style.transformOrigin='center center';
-  });
-}
+function fitSlides(){}
 
 function resetSlides(){
   document.querySelectorAll('.spread').forEach(function(s){s.classList.remove('active');});
