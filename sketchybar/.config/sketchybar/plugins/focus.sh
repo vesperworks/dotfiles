@@ -65,6 +65,26 @@ main() {
 		task_content=$(cut -d'|' -f2- <"$NVIM_ACTIVE" 2>/dev/null)
 
 		if [[ -n "$task_content" ]]; then
+			# クリックで pause トグル
+			if [[ "$SENDER" == "mouse.clicked" ]]; then
+				if [[ -f "$PAUSE_FILE" ]]; then
+					rm -f "$PAUSE_FILE"
+				else
+					echo "1" >"$PAUSE_FILE"
+				fi
+			fi
+
+			# pause 中はアイコンのみ（余白を詰める）
+			if [[ -f "$PAUSE_FILE" ]]; then
+				sketchybar --set "$NAME" drawing=on \
+					icon="󰏤" icon.color="$GREY" \
+					icon.padding_left=6 icon.padding_right=6 \
+					padding_left=0 padding_right=0 \
+					label="" label.drawing=off \
+					label.padding_left=0 label.padding_right=0
+				return
+			fi
+
 			local task_name display_name
 			task_name=$(extract_task_name "$task_content")
 			display_name=$(truncate_text "$task_name" "$MAX_TASK_CHARS")
@@ -98,14 +118,20 @@ main() {
 
 				sketchybar --set "$NAME" drawing=on \
 					icon="󱎫" icon.color="$color" \
+					icon.padding_left=8 icon.padding_right=4 \
+					padding_left=6 padding_right=6 \
 					label="$display_name $(format_time "$remaining")" \
-					label.drawing=on label.color="$color"
+					label.drawing=on label.color="$color" \
+					label.padding_left=6 label.padding_right=8
 			else
 				local break_remaining=$((CYCLE_DURATION - cycle_pos))
 				sketchybar --set "$NAME" drawing=on \
 					icon="󰒲" icon.color="$YELLOW" \
+					icon.padding_left=8 icon.padding_right=4 \
+					padding_left=6 padding_right=6 \
 					label="BREAK $(format_time "$break_remaining")" \
-					label.drawing=on label.color="$YELLOW"
+					label.drawing=on label.color="$YELLOW" \
+					label.padding_left=6 label.padding_right=8
 			fi
 			return
 		fi
