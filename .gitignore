@@ -1,5 +1,6 @@
 # Private data (local only)
 .brain/
+.idea/
 
 # Secrets
 zsh/.secrets.zsh

@@ -50,6 +50,24 @@ def build(cfg):
   --ink:#111315;
   --ink-soft:#5b6066;
   --accent:{c.accent};
+  --surface:#e8e8e8;
+  --font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"Space Mono",monospace;
+
+  --gc-hero:1/10;
+  --gc-sub:1/8;
+  --gc-half-l:1/7;
+  --gc-meta-r:10/13;
+  --gc-col-l:1/6;
+  --gc-col-r:7/13;
+  --gc-q1:1/4;
+  --gc-q2:4/7;
+  --gc-q3:7/10;
+  --gc-q4:10/13;
+  --gc-quote:1/9;
+  --gc-gal-l:1/6;
+  --gc-gal-gap:6/8;
+  --gc-gal-r:8/13;
 
   --g-col:rgba(228,0,43,.075);     /* column field fill   (re-tint to taste) */
   --g-edge:rgba(228,0,43,.40);     /* column edge / margin line */
@@ -58,7 +76,7 @@ def build(cfg):
 }}
 *{{box-sizing:border-box;}}
 body{{margin:0;background:var(--paper);color:var(--ink);
-  font-family:"Inter",system-ui,sans-serif;font-size:16px;line-height:var(--lh);
+  font-family:var(--font-body);font-size:16px;line-height:var(--lh);
   -webkit-font-smoothing:antialiased;}}
 img{{display:block;width:100%;height:100%;object-fit:cover;}}
 
@@ -84,8 +102,8 @@ body.grid-on .guides{{opacity:1;}}
   display:grid;grid-template-columns:repeat(var(--cols),1fr);column-gap:var(--gutter);}}
 .guides .col{{background:var(--g-col);
   box-shadow:inset 1px 0 0 var(--g-edge),inset -1px 0 0 var(--g-edge);position:relative;}}
-.guides .col span{{position:absolute;top:{c.baseline*4}px;left:0;right:0;text-align:center;
-  font-family:"Space Mono",monospace;font-size:10px;line-height:1;color:var(--accent);}}
+.guides .col span{{position:absolute;top:calc(var(--bl) * 4);left:0;right:0;text-align:center;
+  font-family:var(--font-mono);font-size:10px;line-height:1;color:var(--accent);}}
 .guides .rows{{position:absolute;left:var(--margin);right:var(--margin);top:var(--pad);bottom:0;
   background-image:
     repeating-linear-gradient(to bottom,var(--g-base) 0 1px,transparent 1px var(--lh)),
@@ -97,18 +115,10 @@ body.grid-on .guides{{opacity:1;}}
    line-heights for display type MUST be px multiples of --bl, never unitless,
    or the box height drifts off the baseline. Media heights = multiples of --lh
    so photo top AND bottom land on lines. */
-.toggle{{position:fixed;top:18px;right:18px;z-index:200;display:flex;align-items:center;gap:10px;
-  background:var(--ink);color:#fff;border:none;cursor:pointer;font-family:"Space Mono",monospace;
-  font-size:12px;letter-spacing:.14em;text-transform:uppercase;padding:11px 14px;}}
-.toggle .dot{{width:9px;height:9px;border-radius:50%;background:#555;}}
-body.grid-on .toggle{{background:var(--accent);}} body.grid-on .toggle .dot{{background:#fff;}}"""
+"""
 
-    js = """/* toggle: button + 'G' key */
-var btn=document.getElementById('gridToggle');
-function setGrid(on){document.body.classList.toggle('grid-on',on);
-  if(btn){btn.setAttribute('aria-pressed',on?'true':'false');
-    var l=btn.querySelector('.lbl'); if(l) l.textContent=on?'Hide grid':'Show grid';}}
-if(btn) btn.addEventListener('click',function(){setGrid(!document.body.classList.contains('grid-on'));});
+    js = """/* toggle: 'G' key */
+function setGrid(on){document.body.classList.toggle('grid-on',on);}
 document.addEventListener('keydown',function(e){
   if((e.key==='g'||e.key==='G')&&!e.metaKey&&!e.ctrlKey&&!e.altKey){
     setGrid(!document.body.classList.contains('grid-on'));}});
@@ -167,8 +177,6 @@ document.querySelectorAll('.guides .cols').forEach(function(h){
 {css}
 </style></head>
 <body>
-<button class="toggle" id="gridToggle" aria-pressed="false"><span class="dot"></span><span class="lbl">Show grid</span></button>
-
 <section class="spread">
   <div class="wrap">
     <div class="grid">

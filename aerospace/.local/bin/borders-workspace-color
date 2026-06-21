@@ -1,0 +1,12 @@
+#!/bin/bash
+# Sync JankyBorders active_color with the current AeroSpace workspace color.
+# Called from aerospace.toml exec-on-workspace-change.
+# Env: AEROSPACE_FOCUSED_WORKSPACE (set by AeroSpace)
+
+source "$HOME/.config/sketchybar/colors.sh"
+
+color_var="WS_COLOR_${AEROSPACE_FOCUSED_WORKSPACE}"
+color="${!color_var}"
+: "${color:=0xffc6a0f6}"
+
+borders active_color="$color"

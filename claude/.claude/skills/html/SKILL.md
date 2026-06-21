@@ -20,7 +20,8 @@ You are an HTML report generator. Take the current thread context (decisions, op
 - **依存ゼロ or CDN のみ**: 単一 HTML ファイルで動作。`open file.html` で完結
 - **生成→自動 open までセット**: 生成後は `open` で必ずブラウザ起動する（許可: `Bash(open *.html|*.png|*.pdf)`）
 - **4 モード**: status / diagram / annotate / image-review のいずれか。引数なし or モード未指定なら**会話文脈から自動判定**（曖昧な時のみ AskUserQuestion で 1 回確認）
-- **Catppuccin Macchiato + Hacker/Swiss**: `vw-flow-viz` と統一した色味・タイポ（[design-system.md](./references/design-system.md)）
+- **LIGHT/DARK テーマ切替**: DARK = Catppuccin Macchiato + Hacker、LIGHT = Swiss International Typographic Style（白紙 + インク + Swiss Red `#e4002b`）。☀/☾ トグルボタン + `localStorage` で永続化 + `prefers-color-scheme` 自動検出
+- **Müller-Brockmann 12カラムグリッド**: `.spread > .wrap > .grid > .band` 構造。8px baseline + 24px leading。`G` キーでグリッドオーバーレイ切替（カラム番号 + baseline ライン可視化）
 - **インタラクティブ**: 確認 UI で Yes/No・複数選択を取って、結果を「クリップボードに JSON コピー」する
 - **画像注釈**: codebase 内の画像を `file://` パスで読み込み、Markerjs2 で丸つけ・矢印・テキスト → PNG クリップボード書き出し（Cmd+V でチャットに貼れる）
 - **画像評価**: 画像を表示しつつ横にスコア・チェックリスト・コメント記入欄（UI/UX レビュー、デザイン採点等）
