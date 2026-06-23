@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Grid as an Ethic — Müller-Brockmann Grid System</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Inter:wght@300;400;500;600;700;800;900&family=M+PLUS+1p:wght@300;400;500;700;800;900&family=M+PLUS+Rounded+1c:wght@300;400;500;700;800;900&family=Noto+Sans+JP:wght@300;400;500;700;900&family=Noto+Serif+JP:wght@200;300;400;500;600;700;900&family=Sawarabi+Gothic&family=Sawarabi+Mincho&family=Shippori+Mincho:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&family=Zen+Maru+Gothic:wght@300;400;500;700;900&family=Zen+Old+Mincho:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Inter:wght@300;400;500;600;700;800;900&family=M+PLUS+1p:wght@300;400;500;700;800;900&family=M+PLUS+Rounded+1c:wght@300;400;500;700;800;900&family=Noto+Sans+JP:wght@300;400;500;700;900&family=Noto+Serif+JP:wght@200;300;400;500;600;700;900&family=Outfit:wght@400;500;600;700;800;900&family=Sawarabi+Gothic&family=Sawarabi+Mincho&family=Shippori+Mincho:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&family=Zen+Maru+Gothic:wght@300;400;500;700;900&family=Zen+Old+Mincho:wght@400;500;600;700;900&display=swap" rel="stylesheet">
 <style>
 :root{
   --cols:12;
@@ -20,6 +20,7 @@
   --surface:#e8e8e8;
   --font-body:"Noto Sans JP",system-ui,sans-serif;
   --font-mono:"Space Mono",monospace;
+  --font-num:"Outfit",system-ui,sans-serif;
   --typo-features:normal;
   --typo-ls:0;
   --g-col:rgba(228,0,43,.075);
@@ -77,7 +78,7 @@ img{display:block;width:100%;height:100%;object-fit:cover;}
   color:var(--ink-soft);letter-spacing:.04em;transition:color .25s;}
 .shead h2{font-size:var(--fs-h2);font-weight:800;line-height:var(--lh-h2);
   margin:0;letter-spacing:-.01em;}
-.numeral{font-size:var(--fs-num);font-weight:700;line-height:var(--lh-num);
+.numeral{font-family:var(--font-num);font-size:var(--fs-num);font-weight:700;line-height:var(--lh-num);
   color:var(--accent);margin:0;transition:color .25s;}
 .stat-label{font-family:var(--font-mono);font-size:var(--fs-small);line-height:var(--lh);
   text-transform:uppercase;letter-spacing:.1em;color:var(--ink-soft);margin:0;transition:color .25s;}
@@ -89,6 +90,26 @@ blockquote{font-size:var(--fs-quote);font-weight:300;line-height:var(--lh-quote)
 .img-placeholder{background:var(--surface);display:flex;align-items:center;justify-content:center;
   font-family:var(--font-mono);font-size:var(--fs-small);color:var(--ink-soft);letter-spacing:.06em;
   transition:background-color .25s,color .25s;}
+.card{background:var(--paper);border:1px solid var(--surface);overflow:hidden;
+  display:flex;flex-direction:column;min-height:0;
+  box-shadow:0 12px 30px rgba(0,0,0,.07);transition:background .25s,border-color .25s,box-shadow .25s;}
+.card-img{flex:1;display:flex;align-items:center;justify-content:center;padding:14px;
+  background:var(--surface);min-height:0;transition:background .25s;}
+.card-img > img{max-width:100%;max-height:100%;object-fit:contain;display:block;}
+.card-foot{display:flex;align-items:baseline;gap:10px;padding:12px 16px;
+  border-top:1px solid var(--surface);font-family:var(--font-mono);font-size:var(--fs-small);
+  transition:border-color .25s;}
+.card-foot .name{font-family:var(--font-body);font-weight:700;font-size:18px;line-height:var(--lh);}
+.card-foot .meta{margin-left:auto;color:var(--ink-soft);letter-spacing:.02em;}
+.card-accent{background:var(--accent);color:var(--paper);border-color:var(--accent);
+  transition:background .25s,color .25s,border-color .25s;}
+.card-accent .card-img{background:color-mix(in srgb,var(--accent) 85%,black);}
+.card-accent .card-foot{border-color:rgba(255,255,255,.2);color:rgba(255,255,255,.7);}
+.card-accent .card-foot .name{color:var(--paper);}
+.chip{display:inline-block;font-family:var(--font-mono);font-size:var(--fs-small);font-weight:700;
+  color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--paper));
+  border-radius:20px;padding:4px 14px;line-height:16px;letter-spacing:.04em;
+  transition:color .25s,background .25s;}
 .mt1{margin-top:var(--lh);}
 .mt2{margin-top:48px;}
 .mt3{margin-top:72px;}
@@ -154,7 +175,7 @@ body{padding-bottom:40px;}
   <span class="sep">&middot;</span>
   <span>TYPO</span> <span class="hl hud-typo">Default</span>
   <span class="sep">&middot;</span>
-  <span class="hl hud-page">1/13</span>
+  <span class="hl hud-page">1/14</span>
   <span class="keys">
     <span><kbd>G</kbd> grid</span>
     <span><kbd>F</kbd> typo</span>
@@ -615,7 +636,72 @@ body{padding-bottom:40px;}
   </div>
 </section>
 
-<!-- SPREAD 13 — FOOTER -->
+<!-- SPREAD 13 — FREE BAND (card grid with custom column ratio) -->
+<section class="spread">
+  <div class="wrap">
+    <div class="grid">
+      <div class="band mb1">
+        <p class="folio" style="grid-column:var(--gc-half-l);">Free Band</p>
+        <p class="folio" style="grid-column:var(--gc-meta-r);text-align:right;">013</p>
+      </div>
+      <div class="band">
+        <hr class="rule rule-accent" style="grid-column:1/-1;">
+      </div>
+      <div class="band mt2" style="grid-template-columns: 5fr 7fr; align-items: stretch;">
+        <div style="display:flex; flex-direction:column; padding-right:var(--gutter);">
+          <h1 class="masthead" style="font-size:56px; line-height:72px;">
+            Band-Level<br>Column Override
+          </h1>
+          <p class="subtitle mt1">Gutter and rhythm are preserved. Only the column ratio is free — per band, via inline <code style="font-family:var(--font-mono);font-size:14px;">grid-template-columns</code>.</p>
+          <div class="mt2">
+            <span class="chip">FREE GRID</span>
+            <span class="chip" style="margin-left:8px;">5fr : 7fr</span>
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; grid-template-rows:1fr 1fr; gap:var(--gutter);">
+          <div class="card">
+            <div class="card-img"><p class="numeral" style="font-size:48px;line-height:48px;">1</p></div>
+            <div class="card-foot"><span class="name">Prototype</span><span class="meta">Jan</span></div>
+          </div>
+          <div class="card">
+            <div class="card-img"><p class="numeral" style="font-size:48px;line-height:48px;">2</p></div>
+            <div class="card-foot"><span class="name">User Test</span><span class="meta">Feb</span></div>
+          </div>
+          <div class="card">
+            <div class="card-img"><p class="numeral" style="font-size:48px;line-height:48px;">3</p></div>
+            <div class="card-foot"><span class="name">Iteration</span><span class="meta">Mar</span></div>
+          </div>
+          <div class="card">
+            <div class="card-img"><p class="numeral" style="font-size:48px;line-height:48px;">4</p></div>
+            <div class="card-foot"><span class="name">Beta</span><span class="meta">Apr</span></div>
+          </div>
+          <div class="card">
+            <div class="card-img"><p class="numeral" style="font-size:48px;line-height:48px;">5</p></div>
+            <div class="card-foot"><span class="name">Staging</span><span class="meta">May</span></div>
+          </div>
+          <div class="card card-accent">
+            <div class="card-img"><p class="numeral" style="font-size:48px;line-height:48px;color:var(--paper);">6</p></div>
+            <div class="card-foot"><span class="name">Launch</span><span class="meta">Jun</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="band mt2">
+        <div style="grid-column:var(--gc-col-l);">
+          <p class="body-text">This spread uses a <strong>free band</strong> — the second row overrides <code style="font-family:var(--font-mono);font-size:14px;">grid-template-columns</code> with <code style="font-family:var(--font-mono);font-size:14px;">5fr 7fr</code>, breaking out of the 12-column subgrid. The gutter (<code style="font-family:var(--font-mono);font-size:14px;">column-gap: var(--gutter)</code>) is preserved.</p>
+        </div>
+        <div style="grid-column:var(--gc-col-r);">
+          <p class="body-text">Below the free band, this row returns to the standard 12-column subgrid. Toggle the grid overlay (<kbd style="background:var(--surface);padding:2px 6px;border-radius:3px;font-family:var(--font-mono);font-size:12px;">G</kbd>) to see: column guides are hidden for this spread because the free band has a custom column ratio.</p>
+        </div>
+      </div>
+    </div>
+    <div class="guides" aria-hidden="true">
+      <div class="cols"></div><div class="rows"></div>
+      <div class="mline l"></div><div class="mline r"></div>
+    </div>
+  </div>
+</section>
+
+<!-- SPREAD 14 — FOOTER -->
 <section class="spread">
   <div class="wrap">
     <div class="grid">
@@ -624,7 +710,7 @@ body{padding-bottom:40px;}
       </div>
       <div class="band mt1">
         <p class="caption" style="grid-column:var(--gc-half-l);">A design research document. Content derived from Josef Müller-Brockmann, <em>Grid Systems in Graphic Design</em> (Niggli, 1981).</p>
-        <p class="caption" style="grid-column:var(--gc-meta-r);text-align:right;">013</p>
+        <p class="caption" style="grid-column:var(--gc-meta-r);text-align:right;">014</p>
       </div>
     </div>
     <div class="guides" aria-hidden="true">
@@ -636,7 +722,14 @@ body{padding-bottom:40px;}
 
 <script>
 /* ===== CORE: toggle + overlay + optical alignment ===== */
-function setGrid(on){document.body.classList.toggle('grid-on',on);}
+function setGrid(on){
+  document.body.classList.toggle('grid-on',on);
+  document.querySelectorAll('.band[style*="grid-template-columns"]').forEach(function(b){
+    var spread=b.closest('.spread');
+    if(spread){var cols=spread.querySelector('.guides .cols');
+      if(cols) cols.style.display=on?'none':'';}
+  });
+}
 
 document.querySelectorAll('.guides .cols').forEach(function(h){
   var n=getComputedStyle(document.documentElement).getPropertyValue('--cols').trim()||'12';
@@ -891,7 +984,7 @@ function updateHUD(){
 function exportStatic(){
   var root=getComputedStyle(document.documentElement);
   var vars=['--cols','--bl','--lh','--gutter','--margin','--pad','--maxw',
-    '--paper','--ink','--ink-soft','--accent','--surface','--font-body','--font-mono',
+    '--paper','--ink','--ink-soft','--accent','--surface','--font-body','--font-mono','--font-num',
     '--gc-hero','--gc-sub','--gc-half-l','--gc-meta-r',
     '--gc-col-l','--gc-col-r',
     '--gc-q1','--gc-q2','--gc-q3','--gc-q4',

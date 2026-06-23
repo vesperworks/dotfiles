@@ -158,6 +158,34 @@ This eliminates re-entry math entirely. Larger leading may look more generous th
 
 **Mixed type on one line** (kicker + heading in flex row): use `align-items: baseline` so text baselines share a line. The row height equals the tallest child's `line-height`. Apply re-entry to the **flex parent**, never individual children.
 
+### 2.9 BAND-LEVEL COLUMN OVERRIDE — free ratio inside the grid
+
+The `.band` class defaults to `subgrid`, inheriting the parent's `--cols` column grid. But content sometimes requires a custom column ratio (e.g. `5fr 7fr` for a sidebar + card grid, or `38fr 20fr 16fr 26fr` for image-aspect-optimized columns). Override per-band via inline `style`:
+
+```html
+<!-- Standard: 12 uniform columns via subgrid -->
+<div class="band">
+  <div style="grid-column:1/7;">...</div>
+  <div style="grid-column:7/13;">...</div>
+</div>
+
+<!-- Free band: custom column ratio -->
+<div class="band" style="grid-template-columns: 5fr 7fr;">
+  <div>Left panel</div>
+  <div>Right panel</div>
+</div>
+```
+
+**No CSS change needed.** Inline `style` has higher specificity than the `.band` class's `subgrid` declaration, so it automatically overrides. The gutter is preserved because `.band` always has `column-gap: var(--gutter)`.
+
+**Rules:**
+- `column-gap: var(--gutter)` is maintained — never override the gutter
+- Baseline rhythm (`--lh` multiples for line-height / margin / padding) is maintained
+- Other bands on the same spread keep the standard subgrid
+- Grid overlay: column guides are hidden on spreads containing free bands (baseline + margin guides remain)
+
+**Core principle: gutter and rhythm are sacred; column ratio is free.**
+
 ---
 
 ## PART 3 — VERIFY (don't trust, measure)  → `scripts/verify_grid.js`
@@ -309,6 +337,55 @@ body.slide-mode .wrap{margin:auto;flex-shrink:0;width:100%;}
 - "Built with CSS Grid and subgrid"
 
 The footer spread should be minimal: a `footer-rule` + folio with the page number, optionally with a content-relevant source attribution. The HUD already shows grid metadata; duplicating it in the page body is noise.
+
+### 5.10 Components
+
+#### `.card` / `.card-img` / `.card-foot`
+
+Card component for grid-based tile layouts. Use inside free bands or nested grids for structured content (portfolio, timeline, dashboard).
+
+```css
+.card{background:var(--paper);border:1px solid var(--surface);overflow:hidden;
+  display:flex;flex-direction:column;min-height:0;
+  box-shadow:0 12px 30px rgba(0,0,0,.07);transition:background .25s,border-color .25s,box-shadow .25s;}
+.card-img{flex:1;display:flex;align-items:center;justify-content:center;padding:14px;
+  background:var(--surface);min-height:0;transition:background .25s;}
+.card-img > img{max-width:100%;max-height:100%;object-fit:contain;display:block;}
+.card-foot{display:flex;align-items:baseline;gap:10px;padding:12px 16px;
+  border-top:1px solid var(--surface);font-family:var(--font-mono);font-size:var(--fs-small);
+  transition:border-color .25s;}
+.card-foot .name{font-family:var(--font-body);font-weight:700;font-size:18px;line-height:var(--lh);}
+.card-foot .meta{margin-left:auto;color:var(--ink-soft);letter-spacing:.02em;}
+```
+
+#### `.card-accent` (color inversion for emphasis)
+
+Apply to a single card to highlight it (e.g. milestone month, current step):
+
+```css
+.card-accent{background:var(--accent);color:var(--paper);border-color:var(--accent);}
+.card-accent .card-img{background:color-mix(in srgb,var(--accent) 85%,black);}
+.card-accent .card-foot{border-color:rgba(255,255,255,.2);color:rgba(255,255,255,.7);}
+.card-accent .card-foot .name{color:var(--paper);}
+```
+
+#### `.chip` (inline badge)
+
+```css
+.chip{display:inline-block;font-family:var(--font-mono);font-size:var(--fs-small);font-weight:700;
+  color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--paper));
+  border-radius:20px;padding:4px 14px;line-height:16px;letter-spacing:.04em;
+  transition:color .25s,background .25s;}
+```
+
+#### `--font-num` (numeric typeface)
+
+Numerals use a dedicated font variable (`--font-num: "Outfit"`) that stays fixed when the body font cycles with N/P. This preserves numeric legibility across all font presets.
+
+```css
+:root { --font-num: "Outfit", system-ui, sans-serif; }
+.numeral { font-family: var(--font-num); }
+```
 
 ---
 
