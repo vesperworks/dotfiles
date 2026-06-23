@@ -154,7 +154,7 @@ body{padding-bottom:40px;}
   <span class="sep">&middot;</span>
   <span>TYPO</span> <span class="hl hud-typo">Default</span>
   <span class="sep">&middot;</span>
-  <span class="hl hud-page">1/6</span>
+  <span class="hl hud-page">1/13</span>
   <span class="keys">
     <span><kbd>G</kbd> grid</span>
     <span><kbd>F</kbd> typo</span>
@@ -347,7 +347,275 @@ body{padding-bottom:40px;}
   </div>
 </section>
 
-<!-- SPREAD 6 — FOOTER -->
+<!-- SPREAD 6 — THREE-COLUMN TABLE -->
+<section class="spread">
+  <div class="wrap">
+    <div class="grid">
+      <div class="band">
+        <p class="folio" style="grid-column:var(--gc-half-l);">Comparison</p>
+        <p class="folio" style="grid-column:var(--gc-meta-r);text-align:right;">006</p>
+      </div>
+      <div class="band">
+        <hr class="rule" style="grid-column:1/-1;">
+      </div>
+      <div class="band mt2">
+        <div class="shead" style="grid-column:var(--gc-hero);"><h2>Three Systems<br>Compared</h2></div>
+      </div>
+      <div class="band mt2">
+        <div style="grid-column:var(--gc-t1);">
+          <p class="numeral">12</p>
+          <p class="stat-label mt1">Müller-Brockmann</p>
+          <p class="body-text mt1">The canonical 12-column modular grid with 8px baseline. Maximum flexibility for editorial layouts.</p>
+        </div>
+        <div style="grid-column:var(--gc-t2);">
+          <p class="numeral">10</p>
+          <p class="stat-label mt1">Tschichold</p>
+          <p class="body-text mt1">Asymmetric 3:7 ratio. Designed for the New Typography — wide text column, narrow margin notes.</p>
+        </div>
+        <div style="grid-column:var(--gc-t3);">
+          <p class="numeral">60</p>
+          <p class="stat-label mt1">Gerstner</p>
+          <p class="body-text mt1">Micro-grid with 60 units. Karl Gerstner's programme approach — any column count via subdivision.</p>
+        </div>
+      </div>
+    </div>
+    <div class="guides" aria-hidden="true">
+      <div class="cols"></div><div class="rows"></div>
+      <div class="mline l"></div><div class="mline r"></div>
+    </div>
+  </div>
+</section>
+
+<!-- SPREAD 7 — ASIDE + MAIN (sidebar) -->
+<section class="spread">
+  <div class="wrap">
+    <div class="grid">
+      <div class="band">
+        <p class="folio" style="grid-column:var(--gc-half-l);">Sidebar Layout</p>
+        <p class="folio" style="grid-column:var(--gc-meta-r);text-align:right;">007</p>
+      </div>
+      <div class="band">
+        <hr class="rule" style="grid-column:1/-1;">
+      </div>
+      <div class="band mt2">
+        <div style="grid-column:var(--gc-aside);">
+          <p class="stat-label">Contents</p>
+          <p class="body-text mt1">1. The Discipline</p>
+          <p class="body-text">2. Engineering</p>
+          <p class="body-text">3. Verification</p>
+          <p class="body-text">4. Craft Defaults</p>
+          <p class="body-text">5. Presets</p>
+          <hr class="rule mt2" style="width:100%;">
+          <p class="caption mt1">Navigation remains fixed while the main column scrolls — the narrow aside provides persistent wayfinding.</p>
+        </div>
+        <div style="grid-column:var(--gc-main);">
+          <div class="shead"><h2>The Main Column<br>Carries the Weight</h2></div>
+          <p class="body-text mt1">In the aside+main pattern, the narrow left column (4 of 12) provides persistent navigation, metadata, or a table of contents. The wide right column (8 of 12) contains the primary content flow.</p>
+          <p class="body-text">This is the F-pattern reading layout: the eye scans left to orient, then reads right for substance. Müller-Brockmann used this structure extensively in corporate annual reports and multi-language publications.</p>
+          <p class="body-text">The sidebar column should use smaller type or metadata styles (mono font, stat-labels) to maintain clear hierarchy against the body text in the main column.</p>
+        </div>
+      </div>
+    </div>
+    <div class="guides" aria-hidden="true">
+      <div class="cols"></div><div class="rows"></div>
+      <div class="mline l"></div><div class="mline r"></div>
+    </div>
+  </div>
+</section>
+
+<!-- SPREAD 8 — LEFT IMAGE + RIGHT TEXT -->
+<section class="spread">
+  <div class="wrap">
+    <div class="grid">
+      <div class="band">
+        <p class="folio" style="grid-column:var(--gc-half-l);">Image + Text</p>
+        <p class="folio" style="grid-column:var(--gc-meta-r);text-align:right;">008</p>
+      </div>
+      <div class="band">
+        <hr class="rule-accent" style="grid-column:1/-1;">
+      </div>
+      <div class="band mt2">
+        <div style="grid-column:var(--gc-col-l);">
+          <div class="img-placeholder" style="height:var(--img-hero);">480 × 480 — Left-dominant photograph</div>
+        </div>
+        <div style="grid-column:var(--gc-col-r);">
+          <div class="shead"><h2>Visual Evidence<br>on the Left</h2></div>
+          <p class="body-text mt1">When the image carries the assertion, it occupies the primary optical area (top-left in the Gutenberg diagram). Text on the right provides analysis and context.</p>
+          <p class="body-text">This pattern follows the Assertion-Evidence model: the visual is the evidence, the heading is the assertion. The eye lands on the image first, then reads the explanation.</p>
+          <p class="caption mt2">Fig. 4 — Left-dominant layout. Image at gc-col-l, text at gc-col-r.</p>
+        </div>
+      </div>
+    </div>
+    <div class="guides" aria-hidden="true">
+      <div class="cols"></div><div class="rows"></div>
+      <div class="mline l"></div><div class="mline r"></div>
+    </div>
+  </div>
+</section>
+
+<!-- SPREAD 9 — RIGHT IMAGE + LEFT TEXT (reversed) -->
+<section class="spread">
+  <div class="wrap">
+    <div class="grid">
+      <div class="band">
+        <p class="folio" style="grid-column:var(--gc-half-l);">Text + Image</p>
+        <p class="folio" style="grid-column:var(--gc-meta-r);text-align:right;">009</p>
+      </div>
+      <div class="band">
+        <hr class="rule" style="grid-column:1/-1;">
+      </div>
+      <div class="band mt2">
+        <div style="grid-column:var(--gc-col-l);">
+          <div class="shead"><h2>Narrative First,<br>Image Second</h2></div>
+          <p class="body-text mt1">When the argument leads, text occupies the left column and the supporting image sits on the right. This is the F-pattern: headlines scanned left, then the eye sweeps right to the visual.</p>
+          <p class="body-text">Use this when the reader needs context before seeing the evidence — complex data visualizations, before/after comparisons, or sequential narratives.</p>
+          <p class="caption mt2">Fig. 5 — Text-dominant layout. Text at gc-col-l, image at gc-col-r.</p>
+        </div>
+        <div style="grid-column:var(--gc-col-r);">
+          <div class="img-placeholder" style="height:var(--img-hero);">480 × 480 — Right-side photograph</div>
+        </div>
+      </div>
+    </div>
+    <div class="guides" aria-hidden="true">
+      <div class="cols"></div><div class="rows"></div>
+      <div class="mline l"></div><div class="mline r"></div>
+    </div>
+  </div>
+</section>
+
+<!-- SPREAD 10 — FULL-BLEED IMAGE + OVERLAY TEXT -->
+<section class="spread">
+  <div class="wrap">
+    <div class="grid">
+      <div class="band">
+        <p class="folio" style="grid-column:var(--gc-half-l);">Full Bleed</p>
+        <p class="folio" style="grid-column:var(--gc-meta-r);text-align:right;">010</p>
+      </div>
+      <div class="band">
+        <hr class="rule" style="grid-column:1/-1;">
+      </div>
+      <div class="band mt2">
+        <div style="grid-column:1/-1;position:relative;">
+          <div class="img-placeholder" style="height:var(--img-hero);">960 × 480 — Full-bleed photograph</div>
+          <div style="position:absolute;bottom:24px;left:24px;right:50%;padding:24px;background:rgba(0,0,0,.7);color:#fff;">
+            <p style="font-size:var(--fs-sub);font-weight:700;line-height:var(--lh);margin:0;">Full-bleed images break the column grid intentionally — spanning 1/-1 to create visual breathing room between structured sections.</p>
+            <p style="font-family:var(--font-mono);font-size:var(--fs-small);letter-spacing:.06em;margin:var(--lh) 0 0;">Overlay caption anchored to bottom-left quadrant</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="guides" aria-hidden="true">
+      <div class="cols"></div><div class="rows"></div>
+      <div class="mline l"></div><div class="mline r"></div>
+    </div>
+  </div>
+</section>
+
+<!-- SPREAD 11 — LAYER-CAKE (alternating full-width bands) -->
+<section class="spread">
+  <div class="wrap">
+    <div class="grid">
+      <div class="band">
+        <p class="folio" style="grid-column:var(--gc-half-l);">Layer Cake</p>
+        <p class="folio" style="grid-column:var(--gc-meta-r);text-align:right;">011</p>
+      </div>
+      <div class="band">
+        <hr class="rule-accent" style="grid-column:1/-1;">
+      </div>
+      <div class="band mt2">
+        <div class="shead" style="grid-column:1/-1;"><h2>Stacked Layers — Dashboard Pattern</h2></div>
+      </div>
+      <div class="band mt1" style="background:var(--surface);padding:var(--lh) 0;">
+        <div style="grid-column:var(--gc-q1);">
+          <p class="numeral">47%</p>
+          <p class="stat-label mt1">Adoption Rate</p>
+        </div>
+        <div style="grid-column:var(--gc-q2);">
+          <p class="numeral">2.3s</p>
+          <p class="stat-label mt1">Avg Load Time</p>
+        </div>
+        <div style="grid-column:var(--gc-q3);">
+          <p class="numeral">98.1</p>
+          <p class="stat-label mt1">Lighthouse Score</p>
+        </div>
+        <div style="grid-column:var(--gc-q4);">
+          <p class="numeral">0px</p>
+          <p class="stat-label mt1">Grid Deviation</p>
+        </div>
+      </div>
+      <div class="band mt2">
+        <div style="grid-column:1/-1;">
+          <div class="img-placeholder" style="height:var(--img-wide);">960 × 240 — Full-width data visualization / chart</div>
+        </div>
+      </div>
+      <div class="band mt1" style="background:var(--surface);padding:var(--lh) 0;">
+        <div style="grid-column:var(--gc-col-l);">
+          <p class="body-text">Layer-cake layouts alternate full-width heading bands with content bands. Each layer is independently scannable — the eye moves top-to-bottom, reading each horizontal strip.</p>
+        </div>
+        <div style="grid-column:var(--gc-col-r);">
+          <p class="body-text">Best for dashboards, data summaries, and progress reports where density matters more than narrative flow. Surface-color bands create visual separation without extra whitespace.</p>
+        </div>
+      </div>
+    </div>
+    <div class="guides" aria-hidden="true">
+      <div class="cols"></div><div class="rows"></div>
+      <div class="mline l"></div><div class="mline r"></div>
+    </div>
+  </div>
+</section>
+
+<!-- SPREAD 12 — Z-PATTERN (Hero → Stats → CTA) -->
+<section class="spread">
+  <div class="wrap">
+    <div class="grid">
+      <div class="band">
+        <p class="folio" style="grid-column:var(--gc-half-l);">Z-Pattern</p>
+        <p class="folio" style="grid-column:var(--gc-meta-r);text-align:right;">012</p>
+      </div>
+      <div class="band">
+        <hr class="rule" style="grid-column:1/-1;">
+      </div>
+      <div class="band mt2">
+        <h1 class="masthead" style="grid-column:var(--gc-hero);">One Clear<br>Assertion</h1>
+        <p class="subtitle" style="grid-column:var(--gc-meta-r);align-self:end;">The Z-pattern routes the eye: top-left headline → top-right context → diagonal scan → bottom-left data → bottom-right action.</p>
+      </div>
+      <div class="band mt2">
+        <div style="grid-column:1/-1;">
+          <div class="img-placeholder" style="height:var(--img-wide);">960 × 240 — Hero banner / key visual</div>
+        </div>
+      </div>
+      <div class="band mt2">
+        <div style="grid-column:var(--gc-q1);">
+          <p class="numeral">140%</p>
+          <p class="stat-label mt1">Growth</p>
+        </div>
+        <div style="grid-column:var(--gc-q2);">
+          <p class="numeral">3.2M</p>
+          <p class="stat-label mt1">Users</p>
+        </div>
+        <div style="grid-column:var(--gc-q3);">
+          <p class="numeral">24ms</p>
+          <p class="stat-label mt1">Latency P99</p>
+        </div>
+        <div style="grid-column:var(--gc-q4);">
+          <p class="numeral">99.9%</p>
+          <p class="stat-label mt1">Uptime</p>
+        </div>
+      </div>
+      <div class="band mt3">
+        <div style="grid-column:1/-1;background:var(--accent);padding:var(--lh) var(--gutter);text-align:center;">
+          <p style="font-size:var(--fs-sub);font-weight:700;line-height:var(--lh);margin:0;color:var(--paper);">Terminal area — call to action at the bottom of the Z</p>
+        </div>
+      </div>
+    </div>
+    <div class="guides" aria-hidden="true">
+      <div class="cols"></div><div class="rows"></div>
+      <div class="mline l"></div><div class="mline r"></div>
+    </div>
+  </div>
+</section>
+
+<!-- SPREAD 13 — FOOTER -->
 <section class="spread">
   <div class="wrap">
     <div class="grid">
@@ -356,7 +624,7 @@ body{padding-bottom:40px;}
       </div>
       <div class="band mt1">
         <p class="caption" style="grid-column:var(--gc-half-l);">A design research document. Content derived from Josef Müller-Brockmann, <em>Grid Systems in Graphic Design</em> (Niggli, 1981).</p>
-        <p class="caption" style="grid-column:var(--gc-meta-r);text-align:right;">006</p>
+        <p class="caption" style="grid-column:var(--gc-meta-r);text-align:right;">013</p>
       </div>
     </div>
     <div class="guides" aria-hidden="true">
@@ -478,6 +746,39 @@ var PRESETS={
     {name:'Mono',vars:{'--paper':'#ffffff','--ink':'#111315','--ink-soft':'#666','--accent':'#555','--surface':'#e8e8e8',
       '--g-col':'rgba(85,85,85,.08)','--g-edge':'rgba(85,85,85,.35)',
       '--g-base':'rgba(85,85,85,.25)','--g-base-min':'rgba(85,85,85,.10)'}},
+    {name:'Tokyo Night',vars:{'--paper':'#1a1b26','--ink':'#c0caf5','--ink-soft':'#565f89','--accent':'#7aa2f7','--surface':'#1f2335',
+      '--g-col':'rgba(122,162,247,.08)','--g-edge':'rgba(122,162,247,.40)',
+      '--g-base':'rgba(125,207,255,.34)','--g-base-min':'rgba(125,207,255,.12)'}},
+    {name:'Tokyo Storm',vars:{'--paper':'#24283b','--ink':'#c0caf5','--ink-soft':'#565f89','--accent':'#7aa2f7','--surface':'#292e42',
+      '--g-col':'rgba(122,162,247,.08)','--g-edge':'rgba(122,162,247,.40)',
+      '--g-base':'rgba(125,207,255,.34)','--g-base-min':'rgba(125,207,255,.12)'}},
+    {name:'Tokyo Day',vars:{'--paper':'#e1e2e7','--ink':'#3760bf','--ink-soft':'#848cb5','--accent':'#2e7de9','--surface':'#d5d6db',
+      '--g-col':'rgba(46,125,233,.08)','--g-edge':'rgba(46,125,233,.40)',
+      '--g-base':'rgba(0,113,151,.30)','--g-base-min':'rgba(0,113,151,.12)'}},
+    {name:'Ayu Dark',vars:{'--paper':'#0d1017','--ink':'#bfbdb6','--ink-soft':'#565b66','--accent':'#e6b450','--surface':'#131721',
+      '--g-col':'rgba(230,180,80,.08)','--g-edge':'rgba(230,180,80,.40)',
+      '--g-base':'rgba(89,194,255,.34)','--g-base-min':'rgba(89,194,255,.12)'}},
+    {name:'Ayu Mirage',vars:{'--paper':'#1f2430','--ink':'#cccac2','--ink-soft':'#707a8c','--accent':'#ffcc66','--surface':'#232834',
+      '--g-col':'rgba(255,204,102,.08)','--g-edge':'rgba(255,204,102,.40)',
+      '--g-base':'rgba(92,207,230,.34)','--g-base-min':'rgba(92,207,230,.12)'}},
+    {name:'Ayu Light',vars:{'--paper':'#fcfcfc','--ink':'#5c6166','--ink-soft':'#8a8f99','--accent':'#fa8d3e','--surface':'#f1f2f4',
+      '--g-col':'rgba(250,141,62,.08)','--g-edge':'rgba(250,141,62,.40)',
+      '--g-base':'rgba(57,158,230,.30)','--g-base-min':'rgba(57,158,230,.12)'}},
+    {name:'Catppuccin Mocha',vars:{'--paper':'#1e1e2e','--ink':'#cdd6f4','--ink-soft':'#a6adc8','--accent':'#cba6f7','--surface':'#313244',
+      '--g-col':'rgba(203,166,247,.08)','--g-edge':'rgba(203,166,247,.40)',
+      '--g-base':'rgba(137,220,235,.34)','--g-base-min':'rgba(137,220,235,.12)'}},
+    {name:'Catppuccin Macchiato',vars:{'--paper':'#24273a','--ink':'#cad3f5','--ink-soft':'#a5adcb','--accent':'#c6a0f6','--surface':'#363a4f',
+      '--g-col':'rgba(198,160,246,.08)','--g-edge':'rgba(198,160,246,.40)',
+      '--g-base':'rgba(145,215,227,.34)','--g-base-min':'rgba(145,215,227,.12)'}},
+    {name:'Catppuccin Latte',vars:{'--paper':'#eff1f5','--ink':'#4c4f69','--ink-soft':'#6c6f85','--accent':'#8839ef','--surface':'#e6e9ef',
+      '--g-col':'rgba(136,57,239,.08)','--g-edge':'rgba(136,57,239,.40)',
+      '--g-base':'rgba(4,165,229,.30)','--g-base-min':'rgba(4,165,229,.12)'}},
+    {name:'Dracula',vars:{'--paper':'#282a36','--ink':'#f8f8f2','--ink-soft':'#6272a4','--accent':'#bd93f9','--surface':'#44475a',
+      '--g-col':'rgba(189,147,249,.08)','--g-edge':'rgba(189,147,249,.40)',
+      '--g-base':'rgba(139,233,253,.34)','--g-base-min':'rgba(139,233,253,.12)'}},
+    {name:'Nepp',vars:{'--paper':'#f7f5ef','--ink':'#2d3b3d','--ink-soft':'#6b8285','--accent':'#1f8e9b','--surface':'#eae6dc',
+      '--g-col':'rgba(31,142,155,.08)','--g-edge':'rgba(31,142,155,.40)',
+      '--g-base':'rgba(31,142,155,.30)','--g-base-min':'rgba(31,142,155,.12)'}},
     {name:'Custom',custom:true,vars:{'--paper':'#ffffff','--ink':'#111315','--ink-soft':'#5b6066','--accent':'#e4002b','--surface':'#e8e8e8',
       '--g-col':'rgba(228,0,43,.075)','--g-edge':'rgba(228,0,43,.40)',
       '--g-base':'rgba(0,150,140,.34)','--g-base-min':'rgba(0,150,140,.12)'}}

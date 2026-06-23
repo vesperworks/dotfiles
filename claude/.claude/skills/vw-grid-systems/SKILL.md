@@ -243,7 +243,7 @@ When switching layout, `LAYOUT_BASE` resets all --gc-* to 12-column defaults, th
 
 ### 5.3 Color presets
 
-Swiss (default), Dark, Warm, Cool, Mono, **Custom** (HSB picker).
+Swiss (default), Dark, Warm, Cool, Mono, Tokyo Night, Tokyo Storm, Tokyo Day, Ayu Dark, Ayu Mirage, Ayu Light, Catppuccin Mocha, Catppuccin Macchiato, Catppuccin Latte, Dracula, Nepp, **Custom** (HSB picker).
 
 Custom opens a canvas-based HSB color circle (hue ring + SV square) positioned above the HUD. Accent color updates `--accent`, `--g-col`, `--g-edge` in real-time.
 
