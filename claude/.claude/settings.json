@@ -157,8 +157,10 @@
     ],
     "defaultMode": "auto"
   },
-  "model": "claude-opus-4-6[1m]",
-  "fallbackModel": ["default"],
+  "model": "claude-opus-4-6",
+  "fallbackModel": [
+    "default"
+  ],
   "hooks": {
     "Stop": [
       {
