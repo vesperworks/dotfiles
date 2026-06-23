@@ -26,6 +26,19 @@ foreground = "0xcdd6f4"
 [selection]
 save_to_clipboard = true        # 選択したテキストをクリップボードに保存
 
+# ======================
+# Hints（ファイルパスを yazi で開く）
+# ======================
+
+[[hints.enabled]]
+regex = "(~?/[^\\s'\"\\)\\]>]+)"
+hyperlinks = true
+post_processing = true
+persist = false
+binding = { key = "O", mods = "Control|Shift" }
+command = { program = "/bin/sh", args = ["-c", "$HOME/.local/bin/open-in-yazi \"$@\"", "--"] }
+mouse = { mods = "Command", enabled = true }
+
 # Cmdキー（Super）のバインディング設定
 
 [[keyboard.bindings]]

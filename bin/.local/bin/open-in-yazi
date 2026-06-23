@@ -1,0 +1,16 @@
+#!/bin/bash
+set -euo pipefail
+
+path="${1:-.}"
+
+if [ -f "$path" ]; then
+  dir="$(dirname "$path")"
+else
+  dir="$path"
+fi
+
+if tmux list-sessions &>/dev/null; then
+  tmux split-window -h "yazi '$dir'"
+else
+  open "$dir"
+fi
