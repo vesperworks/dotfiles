@@ -1,0 +1,21 @@
+{"title":"Keychron K7 fn2 to alt","rules":[{"description":"fn2 to alt","manipulators":[{
+
+                              "from": {
+                                "key_code": "fn"
+                              },
+                              "to": [
+                                {
+                                  "key_code": "right_alt"
+                                }
+                              ],
+                              "parameters": { "basic.to_if_held_down_threshold_milliseconds": 1000 },
+                              "to_if_held_down": [
+                                {
+                                  "key_code": "fn",
+                                  "modifiers": ["any"]
+                                }
+                              ],
+                              "type": "basic"
+                            }
+                        ]
+                    }]}
