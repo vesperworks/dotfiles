@@ -17,6 +17,17 @@ edit = [
 quicklook = [
   { run = 'qlmanage -p %s', desc = "Quick Look", for = "macos", orphan = true },
 ]
+arc = [
+  { run = 'open -a Arc %s', desc = "Arc", for = "macos", orphan = true },
+]
+reveal = [
+  { run = 'open -R %s', desc = "Reveal in Finder", for = "macos", orphan = true },
+]
+# HTML → Arc（デフォルト）。O で edit / reveal / quicklook も選べる
+[[open.prepend_rules]]
+mime = "text/html"
+use = ["arc", "edit", "reveal", "quicklook"]
+
 # テキスト系 → エディタ
 [[open.prepend_rules]]
 mime = "text/*"
