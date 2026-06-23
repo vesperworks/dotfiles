@@ -1,72 +1,66 @@
 # Design System for `/html` SKILL
 
-3 つのテンプレ（status / diagram / annotate / image-review）が共通して使う色・タイポ・グリッド・コンポーネント定義。
+4 つのテンプレ（status / diagram / annotate / image-review）が共通して使う色・タイポ・グリッド・コンポーネント・プリセットシステム定義。
 `vw-flow-viz` の `html-template.md` と統一されたトークンを採用する（後方互換性のため）。
 
-## 1. テーマ設計
+> **§5（Common CSS）と §6（Common JS）が正規ソース。**
+> 各テンプレートファイルにインライン展開された旧コードよりも、本ファイルの §5/§6 を優先すること。
 
-| テーマ | コンセプト | デフォルト条件 |
-|--------|-----------|---------------|
-| **DARK** | Catppuccin Macchiato + Hacker | `prefers-color-scheme: dark` or 初回訪問時 |
-| **LIGHT** | Swiss International Typographic Style | `prefers-color-scheme: light` |
+## 1. プリセットシステム
 
-- `<html data-theme="dark|light">` で切替
-- ヘッダー右上にトグルボタン（☀ / ☾）
-- `localStorage('html-skill-theme')` で永続化
-- `G` キーでグリッドオーバーレイ切替（Müller-Brockmann 12カラム + baseline 可視化）
+vw-grid-systems と同じ操作体系を採用したインタラクティブプリセット切り替え。
 
-## 2. Color Tokens
+### キーボードショートカット
 
-### DARK テーマ (Hacker + Catppuccin Macchiato)
+| Key | 機能 |
+|-----|------|
+| `J` / `K` | カラープリセット prev / next |
+| `N` / `P` | フォントプリセット prev / next |
+| `G` | グリッドオーバーレイ切替 |
+| `E` | 静的HTMLエクスポート（JS/HUD除去、スタイル焼き込み） |
 
-| Variable | Hex | 用途 |
-|----------|-----|------|
-| `--bg` | `#0a0a0a` | ページ背景 |
-| `--surface` | `#111111` | パネル背景 |
-| `--surface-hover` | `#1a1a1a` | hover 時 |
-| `--border` | `#222222` | 通常 border |
-| `--border-accent` | `#333333` | 強調 border |
-| `--text` | `#e0e0e0` | 通常テキスト |
-| `--text-muted` | `#666666` | 補助テキスト |
-| `--text-dim` | `#444444` | 非アクティブ |
-| `--accent` | `#00ff88` | 主要アクション・成功 |
-| `--accent-dim` | `rgba(0,255,136,0.15)` | accent の薄色背景 |
-| `--cyan` | `#00d4ff` | 情報・選択中 |
-| `--cyan-dim` | `rgba(0,212,255,0.15)` | cyan の薄色背景 |
-| `--warn` | `#ffaa00` | 注意・進行中 |
-| `--danger` | `#ff5555` | エラー・ブロッカー |
-| `--purple` | `#cc44ff` | ツール・補助情報 |
+- input / textarea / select / contenteditable にフォーカス中はショートカット無効
+- Cmd / Ctrl / Alt との組み合わせは無視（ブラウザ標準動作を阻害しない）
 
-### LIGHT テーマ (Swiss International Typographic Style)
+### HUD（Heads-Up Display）
 
-| Variable | Hex | 用途 |
-|----------|-----|------|
-| `--bg` | `#ffffff` | ページ背景（白紙） |
-| `--surface` | `#f4f4f4` | パネル背景 |
-| `--surface-hover` | `#eaeaea` | hover 時 |
-| `--border` | `#d4d4d4` | 通常 border |
-| `--border-accent` | `#bbbbbb` | 強調 border |
-| `--text` | `#111315` | 通常テキスト（インク） |
-| `--text-muted` | `#5b6066` | 補助テキスト |
-| `--text-dim` | `#999999` | 非アクティブ |
-| `--accent` | `#e4002b` | Swiss Red（Müller-Brockmann 正統色） |
-| `--accent-dim` | `rgba(228,0,43,0.08)` | accent の薄色背景 |
-| `--cyan` | `#0055aa` | 情報・選択中 |
-| `--cyan-dim` | `rgba(0,85,170,0.08)` | cyan の薄色背景 |
-| `--warn` | `#b86e00` | 注意・進行中 |
-| `--danger` | `#cc0000` | エラー・ブロッカー |
-| `--purple` | `#6622aa` | ツール・補助情報 |
+画面下部に固定表示。常にダーク背景（カラープリセットに非依存）。
 
-### Grid Overlay Colors（テーマ別）
+```
+COLOR: Hacker  │  FONT: Inter (Geometric Sans)  │  J K color  N P font  G grid  E export
+```
 
-| Variable | DARK | LIGHT | 用途 |
-|----------|------|-------|------|
-| `--g-col` | `rgba(0,255,136,0.05)` | `rgba(228,0,43,0.06)` | カラム塗り |
-| `--g-edge` | `rgba(0,255,136,0.25)` | `rgba(228,0,43,0.35)` | カラム端線 |
-| `--g-base` | `rgba(0,212,255,0.18)` | `rgba(0,150,140,0.25)` | メジャー baseline |
-| `--g-base-min` | `rgba(0,212,255,0.06)` | `rgba(0,150,140,0.10)` | マイナー baseline |
+- JS で動的生成（`data-removable` 属性付き）→ テンプレート HTML の変更不要
+- エクスポート時に自動除去
 
-### Type-specific（Sankey/関係図と統一、テーマ共通）
+### 永続化
+
+| Key | Storage |
+|-----|---------|
+| `html-preset-color` | カラープリセット index (0–4) |
+| `html-preset-font` | フォントプリセット index (0–7) |
+
+### 既存テンプレートとの互換性
+
+- `<button id="themeToggle">` が存在する場合、クリック動作を「次のカラープリセット」に再割当
+- `[data-theme]` 属性は引き続き設定（Swiss = `light`、他 = `dark`）→ テンプレートの `data-theme` 参照コードが壊れない
+- Google Fonts `<link>` を JS で全フォント一括 URL に動的更新 → テンプレートの `<head>` 変更不要
+
+## 2. Color Presets
+
+5 プリセット。各プリセットは CSS 変数を `root.style.setProperty()` で一括上書き。
+
+| idx | Name | Concept | `--bg` | `--accent` | `--text` | theme |
+|-----|------|---------|--------|------------|----------|-------|
+| 0 | **Hacker** | Catppuccin Macchiato + 端末グリーン | `#0a0a0a` | `#00ff88` | `#e0e0e0` | dark |
+| 1 | **Swiss** | Swiss International Typographic Style | `#ffffff` | `#e4002b` | `#111315` | light |
+| 2 | **Warm** | 暖色ダーク（アンバー） | `#1a120b` | `#ff9f43` | `#e8ddd0` | dark |
+| 3 | **Cool** | 寒色ダーク（スカイブルー） | `#0a1628` | `#48dbfb` | `#d0dce8` | dark |
+| 4 | **Mono** | モノクローム | `#111111` | `#ffffff` | `#e0e0e0` | dark |
+
+全変数（surface / border / text-muted / cyan / warn / danger / purple / grid overlay）は §6 Common JS の `COLOR_PRESETS` オブジェクトに定義。
+
+### Type-specific Colors（Sankey/関係図と統一、テーマ共通）
 
 | Type | Color |
 |------|-------|
@@ -91,19 +85,33 @@ Müller-Brockmann 12カラムモジュラーグリッド + 8px baseline。
 | `--maxw` | `1200px` | コンテンツ最大幅 |
 | `--pad` | `48px` | spread 上下パディング |
 
-## 4. Typography
+## 4. Font Presets
 
-| Variable | Font | 用途 |
-|----------|------|------|
-| `--font-sans` | `'Inter', -apple-system, sans-serif` | 見出し・本文 |
-| `--font-mono` | `'JetBrains Mono', 'SF Mono', monospace` | データ・ラベル・バッジ |
+8 プリセット。`--font-sans` を切り替え。`--font-mono`（JetBrains Mono）は全プリセット共通。
 
-CDN: Google Fonts `Inter:wght@300;400;600;700` + `JetBrains+Mono:wght@400;500;700`
+| idx | Name | Category | CSS `font-family` |
+|-----|------|----------|--------------------|
+| 0 | **Inter** | Geometric Sans | `'Inter', -apple-system, sans-serif` |
+| 1 | **Noto Sans JP** | 汎用ゴシック | `'Noto Sans JP', sans-serif` |
+| 2 | **BIZ UDPGothic** | UD ゴシック | `'BIZ UDPGothic', sans-serif` |
+| 3 | **IBM Plex Sans JP** | テック | `'IBM Plex Sans JP', sans-serif` |
+| 4 | **Zen Kaku Gothic New** | 丸ゴシック | `'Zen Kaku Gothic New', sans-serif` |
+| 5 | **M PLUS 1** | モダン | `'M PLUS 1', sans-serif` |
+| 6 | **Sawarabi Mincho** | 明朝 | `'Sawarabi Mincho', serif` |
+| 7 | **Dela Gothic One** | デコラティブ | `'Dela Gothic One', sans-serif` |
 
 行高は必ず `--bl` (8px) の倍数に固定:
 - 本文: `line-height: var(--lh)` (24px = 3×8)
 - 小テキスト（バッジ・ラベル）: `line-height: 16px` (2×8)
 - 大見出し: `line-height: 48px` (6×8) or `32px` (4×8)
+
+### Google Fonts 一括ロード URL
+
+JS が既存の `<link>` を以下 URL に動的更新する:
+
+```
+https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+JP:wght@300;400;500;700&family=BIZ+UDPGothic:wght@400;700&family=IBM+Plex+Sans+JP:wght@300;400;500;700&family=Zen+Kaku+Gothic+New:wght@300;400;500;700&family=M+PLUS+1:wght@300;400;500;700&family=Sawarabi+Mincho&family=Dela+Gothic+One&display=swap
+```
 
 ## 5. Common CSS Snippet (paste into every template)
 
@@ -123,7 +131,7 @@ CDN: Google Fonts `Inter:wght@300;400;600;700` + `JetBrains+Mono:wght@400;500;70
   --font-sans: 'Inter', -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
 
-  /* DARK palette */
+  /* DARK palette (Hacker default) */
   --bg: #0a0a0a;
   --surface: #111111;
   --surface-hover: #1a1a1a;
@@ -277,7 +285,7 @@ body.grid-on .guides { opacity: 1; }
   letter-spacing: 0.03em;
 }
 
-/* ===== Toolbar (theme + grid toggles) ===== */
+/* ===== Toolbar (legacy — repurposed by preset system) ===== */
 .toolbar {
   position: fixed; top: 16px; right: 16px; z-index: 200;
   display: flex; align-items: center; gap: 8px;
@@ -391,7 +399,7 @@ body.grid-on .guides { opacity: 1; }
 /* ===== Toast ===== */
 .toast {
   position: fixed;
-  bottom: 24px; right: 24px;
+  bottom: 56px; right: 24px;
   background: var(--surface);
   border: 1px solid var(--accent);
   color: var(--accent);
@@ -407,6 +415,39 @@ body.grid-on .guides { opacity: 1; }
   line-height: var(--lh);
 }
 .toast.show { opacity: 1; transform: translateY(0); }
+
+/* ===== HUD (preset indicator — always dark) ===== */
+.hud {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 300;
+  background: rgba(10,10,10,0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-top: 1px solid #333;
+  padding: 6px 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-family: 'JetBrains Mono', 'SF Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  color: #888;
+  user-select: none;
+}
+.hud .sep { color: #333; }
+.hud .val { color: #00ff88; }
+.hud .cat { color: #666; }
+.hud .key {
+  display: inline-block;
+  padding: 1px 5px;
+  border: 1px solid #444;
+  border-radius: 2px;
+  font-size: 0.6rem;
+  color: #666;
+  margin: 0 1px;
+}
+.hud .hint { margin-left: auto; display: flex; gap: 10px; }
 ```
 
 ## 6. Common JS Utilities (paste into every template)
@@ -450,54 +491,218 @@ async function copyCanvasPng(canvas, label = 'PNG をクリップボードにコ
   });
 }
 
-/* ===== Theme toggle (LIGHT / DARK) ===== */
-(function initTheme() {
-  const stored = localStorage.getItem('html-skill-theme');
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const theme = stored || (prefersDark ? 'dark' : 'light');
-  document.documentElement.setAttribute('data-theme', theme);
+/* ===== Preset System (color + font + grid + export) ===== */
+(function initPresets() {
+  var COLOR_PRESETS = [
+    { name: 'Hacker', theme: 'dark', vars: {
+      '--bg':'#0a0a0a', '--surface':'#111111', '--surface-hover':'#1a1a1a',
+      '--border':'#222222', '--border-accent':'#333333',
+      '--text':'#e0e0e0', '--text-muted':'#666666', '--text-dim':'#444444',
+      '--accent':'#00ff88', '--accent-dim':'rgba(0,255,136,0.15)',
+      '--cyan':'#00d4ff', '--cyan-dim':'rgba(0,212,255,0.15)',
+      '--warn':'#ffaa00', '--danger':'#ff5555', '--purple':'#cc44ff',
+      '--g-col':'rgba(0,255,136,0.05)', '--g-edge':'rgba(0,255,136,0.25)',
+      '--g-base':'rgba(0,212,255,0.18)', '--g-base-min':'rgba(0,212,255,0.06)'
+    }},
+    { name: 'Swiss', theme: 'light', vars: {
+      '--bg':'#ffffff', '--surface':'#f4f4f4', '--surface-hover':'#eaeaea',
+      '--border':'#d4d4d4', '--border-accent':'#bbbbbb',
+      '--text':'#111315', '--text-muted':'#5b6066', '--text-dim':'#999999',
+      '--accent':'#e4002b', '--accent-dim':'rgba(228,0,43,0.08)',
+      '--cyan':'#0055aa', '--cyan-dim':'rgba(0,85,170,0.08)',
+      '--warn':'#b86e00', '--danger':'#cc0000', '--purple':'#6622aa',
+      '--g-col':'rgba(228,0,43,0.06)', '--g-edge':'rgba(228,0,43,0.35)',
+      '--g-base':'rgba(0,150,140,0.25)', '--g-base-min':'rgba(0,150,140,0.10)'
+    }},
+    { name: 'Warm', theme: 'dark', vars: {
+      '--bg':'#1a120b', '--surface':'#231a11', '--surface-hover':'#2c2118',
+      '--border':'#3a2d1f', '--border-accent':'#4d3d2a',
+      '--text':'#e8ddd0', '--text-muted':'#8a7a6a', '--text-dim':'#5a4a3a',
+      '--accent':'#ff9f43', '--accent-dim':'rgba(255,159,67,0.15)',
+      '--cyan':'#feca57', '--cyan-dim':'rgba(254,202,87,0.15)',
+      '--warn':'#ff6b6b', '--danger':'#ee5a24', '--purple':'#e056a0',
+      '--g-col':'rgba(255,159,67,0.05)', '--g-edge':'rgba(255,159,67,0.25)',
+      '--g-base':'rgba(254,202,87,0.18)', '--g-base-min':'rgba(254,202,87,0.06)'
+    }},
+    { name: 'Cool', theme: 'dark', vars: {
+      '--bg':'#0a1628', '--surface':'#0f1d33', '--surface-hover':'#152540',
+      '--border':'#1e3050', '--border-accent':'#2a4066',
+      '--text':'#d0dce8', '--text-muted':'#5a7a9a', '--text-dim':'#354a60',
+      '--accent':'#48dbfb', '--accent-dim':'rgba(72,219,251,0.15)',
+      '--cyan':'#0abde3', '--cyan-dim':'rgba(10,189,227,0.15)',
+      '--warn':'#feca57', '--danger':'#ff6b6b', '--purple':'#a29bfe',
+      '--g-col':'rgba(72,219,251,0.05)', '--g-edge':'rgba(72,219,251,0.25)',
+      '--g-base':'rgba(10,189,227,0.18)', '--g-base-min':'rgba(10,189,227,0.06)'
+    }},
+    { name: 'Mono', theme: 'dark', vars: {
+      '--bg':'#111111', '--surface':'#1a1a1a', '--surface-hover':'#222222',
+      '--border':'#333333', '--border-accent':'#444444',
+      '--text':'#e0e0e0', '--text-muted':'#777777', '--text-dim':'#444444',
+      '--accent':'#ffffff', '--accent-dim':'rgba(255,255,255,0.1)',
+      '--cyan':'#aaaaaa', '--cyan-dim':'rgba(170,170,170,0.1)',
+      '--warn':'#cccccc', '--danger':'#999999', '--purple':'#bbbbbb',
+      '--g-col':'rgba(255,255,255,0.04)', '--g-edge':'rgba(255,255,255,0.2)',
+      '--g-base':'rgba(170,170,170,0.15)', '--g-base-min':'rgba(170,170,170,0.05)'
+    }}
+  ];
 
-  document.addEventListener('DOMContentLoaded', () => {
-    const btn = document.getElementById('themeToggle');
+  var FONT_PRESETS = [
+    { name:'Inter', cat:'Geometric Sans', family:"'Inter',-apple-system,sans-serif",
+      gf:'Inter:wght@300;400;600;700' },
+    { name:'Noto Sans JP', cat:'汎用ゴシック', family:"'Noto Sans JP',sans-serif",
+      gf:'Noto+Sans+JP:wght@300;400;500;700' },
+    { name:'BIZ UDPGothic', cat:'UD ゴシック', family:"'BIZ UDPGothic',sans-serif",
+      gf:'BIZ+UDPGothic:wght@400;700' },
+    { name:'IBM Plex Sans JP', cat:'テック', family:"'IBM Plex Sans JP',sans-serif",
+      gf:'IBM+Plex+Sans+JP:wght@300;400;500;700' },
+    { name:'Zen Kaku Gothic New', cat:'丸ゴシック', family:"'Zen Kaku Gothic New',sans-serif",
+      gf:'Zen+Kaku+Gothic+New:wght@300;400;500;700' },
+    { name:'M PLUS 1', cat:'モダン', family:"'M PLUS 1',sans-serif",
+      gf:'M+PLUS+1:wght@300;400;500;700' },
+    { name:'Sawarabi Mincho', cat:'明朝', family:"'Sawarabi Mincho',serif",
+      gf:'Sawarabi+Mincho' },
+    { name:'Dela Gothic One', cat:'デコラティブ', family:"'Dela Gothic One',sans-serif",
+      gf:'Dela+Gothic+One' }
+  ];
+
+  var ALL_FONTS_URL = 'https://fonts.googleapis.com/css2?'
+    + FONT_PRESETS.map(function(f){ return 'family=' + f.gf; }).join('&')
+    + '&family=JetBrains+Mono:wght@400;500;700&display=swap';
+
+  var state = {
+    color: parseInt(localStorage.getItem('html-preset-color') || '0', 10) % COLOR_PRESETS.length,
+    font: parseInt(localStorage.getItem('html-preset-font') || '0', 10) % FONT_PRESETS.length
+  };
+
+  var root = document.documentElement;
+
+  function applyColor(idx) {
+    var p = COLOR_PRESETS[idx];
+    root.setAttribute('data-theme', p.theme);
+    for (var k in p.vars) root.style.setProperty(k, p.vars[k]);
+    state.color = idx;
+    localStorage.setItem('html-preset-color', String(idx));
+    updateHUD();
+    updateThemeToggle();
+  }
+
+  function applyFont(idx) {
+    var p = FONT_PRESETS[idx];
+    root.style.setProperty('--font-sans', p.family);
+    state.font = idx;
+    localStorage.setItem('html-preset-font', String(idx));
+    updateHUD();
+  }
+
+  function cycle(type, dir) {
+    var presets = type === 'color' ? COLOR_PRESETS : FONT_PRESETS;
+    var cur = state[type];
+    var next = (cur + dir + presets.length) % presets.length;
+    if (type === 'color') applyColor(next);
+    else applyFont(next);
+    toast((type === 'color' ? 'COLOR' : 'FONT') + ': ' + presets[next].name);
+  }
+
+  function updateHUD() {
+    var hud = document.getElementById('hud');
+    if (!hud) return;
+    var cp = COLOR_PRESETS[state.color];
+    var fp = FONT_PRESETS[state.font];
+    hud.innerHTML =
+      'COLOR: <span class="val">' + cp.name + '</span>' +
+      ' <span class="sep">│</span> ' +
+      'FONT: <span class="val">' + fp.name + '</span> ' +
+      '<span class="cat">(' + fp.cat + ')</span>' +
+      '<span class="hint">' +
+        '<span><span class="key">J</span><span class="key">K</span> color</span>' +
+        '<span><span class="key">N</span><span class="key">P</span> font</span>' +
+        '<span><span class="key">G</span> grid</span>' +
+        '<span><span class="key">E</span> export</span>' +
+      '</span>';
+  }
+
+  function updateThemeToggle() {
+    var btn = document.getElementById('themeToggle');
     if (!btn) return;
-    function updateLabel() {
-      const cur = document.documentElement.getAttribute('data-theme');
-      btn.textContent = cur === 'dark' ? '☀' : '☾';
-      btn.setAttribute('aria-label', cur === 'dark' ? 'Switch to light' : 'Switch to dark');
-    }
-    updateLabel();
-    btn.addEventListener('click', () => {
-      const cur = document.documentElement.getAttribute('data-theme');
-      const next = cur === 'dark' ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', next);
-      localStorage.setItem('html-skill-theme', next);
-      updateLabel();
-    });
-  });
-})();
+    btn.textContent = COLOR_PRESETS[state.color].name;
+    btn.setAttribute('aria-label', 'Cycle color preset (current: ' + COLOR_PRESETS[state.color].name + ')');
+  }
 
-/* ===== Grid overlay toggle (G key only, no button) ===== */
-(function initGridToggle() {
-  document.addEventListener('DOMContentLoaded', () => {
-    function setGrid(on) {
-      document.body.classList.toggle('grid-on', on);
+  function exportStatic() {
+    var clone = document.documentElement.cloneNode(true);
+    clone.querySelectorAll('[data-removable], script').forEach(function(el) { el.remove(); });
+    var fp = FONT_PRESETS[state.font];
+    var fontLink = clone.querySelector('link[href*="fonts.googleapis.com"]');
+    if (fontLink) {
+      fontLink.href = 'https://fonts.googleapis.com/css2?family='
+        + fp.gf + '&family=JetBrains+Mono:wght@400;500;700&display=swap';
     }
-    document.addEventListener('keydown', (e) => {
-      if ((e.key === 'g' || e.key === 'G') && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        setGrid(!document.body.classList.contains('grid-on'));
-      }
-    });
+    var html = '<!DOCTYPE html>\n' + clone.outerHTML;
+    var blob = new Blob([html], { type: 'text/html' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = (document.title || 'report').replace(/[^a-zA-Z0-9_　-鿿-]/g, '_') + '_export.html';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast('Static HTML exported');
+  }
 
-    // populate overlay columns (numbered)
-    document.querySelectorAll('.guides .cols').forEach((h) => {
-      const n = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cols').trim() || '12', 10);
-      for (let i = 1; i <= n; i++) {
-        const c = document.createElement('div');
+  // Upgrade Google Fonts link to include all presets
+  var fontLink = document.querySelector('link[href*="fonts.googleapis.com"]');
+  if (fontLink) { fontLink.href = ALL_FONTS_URL; }
+  else {
+    var l = document.createElement('link');
+    l.rel = 'stylesheet'; l.href = ALL_FONTS_URL;
+    document.head.appendChild(l);
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    // Create HUD
+    var hud = document.createElement('div');
+    hud.id = 'hud'; hud.className = 'hud';
+    hud.setAttribute('data-removable', '');
+    document.body.appendChild(hud);
+
+    // Apply stored presets
+    applyColor(state.color);
+    applyFont(state.font);
+
+    // Populate grid overlay columns
+    document.querySelectorAll('.guides .cols').forEach(function(h) {
+      var n = parseInt(getComputedStyle(root).getPropertyValue('--cols').trim() || '12', 10);
+      for (var i = 1; i <= n; i++) {
+        var c = document.createElement('div');
         c.className = 'col';
-        const s = document.createElement('span');
+        var s = document.createElement('span');
         s.textContent = i;
         c.appendChild(s);
         h.appendChild(c);
+      }
+    });
+
+    // Repurpose themeToggle button (remove old listener, attach preset cycle)
+    var oldBtn = document.getElementById('themeToggle');
+    if (oldBtn) {
+      var newBtn = oldBtn.cloneNode(true);
+      oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+      newBtn.addEventListener('click', function() { cycle('color', 1); });
+      updateThemeToggle();
+    }
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+      if (e.target.matches('input,textarea,select,[contenteditable]')) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      switch (e.key) {
+        case 'j': case 'J': cycle('color', -1); break;
+        case 'k': case 'K': cycle('color', 1); break;
+        case 'n': case 'N': cycle('font', -1); break;
+        case 'p': case 'P': cycle('font', 1); break;
+        case 'g': case 'G':
+          document.body.classList.toggle('grid-on');
+          toast(document.body.classList.contains('grid-on') ? 'Grid ON' : 'Grid OFF');
+          break;
+        case 'e': case 'E': exportStatic(); break;
       }
     });
   });
@@ -518,6 +723,7 @@ async function copyCanvasPng(canvas, label = 'PNG をクリップボードにコ
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<!-- ↑ Preset system upgrades this link at runtime to include all font presets -->
 <!-- mode-specific CDN here -->
 <style>
 /* Common CSS Snippet (§5) */
@@ -527,8 +733,10 @@ async function copyCanvasPng(canvas, label = 'PNG をクリップボードにコ
 <body>
 
 <div class="toolbar">
-  <button id="themeToggle" aria-label="Toggle theme">☀</button>
+  <button id="themeToggle" aria-label="Cycle color preset">Hacker</button>
 </div>
+<!-- ↑ Preset system repurposes this button to cycle color presets -->
+<!-- HUD is dynamically injected by preset system (§6) — no manual HTML needed -->
 
 <section class="spread">
   <div class="wrap">
@@ -542,7 +750,7 @@ async function copyCanvasPng(canvas, label = 'PNG をクリップボードにコ
       <!-- mode-specific content (as .band / grid-column elements) -->
 
       <div class="footer">
-        <span class="left">HTML SKILL v1.0.0 / {{MODE}} MODE</span>
+        <span class="left">HTML SKILL v2.0.0 / {{MODE}} MODE</span>
         <span class="right">GENERATED BY CLAUDE CODE</span>
       </div>
 
@@ -569,8 +777,10 @@ async function copyCanvasPng(canvas, label = 'PNG をクリップボードにコ
 
 - すべてのインタラクティブ要素は `tabindex` で キーボード操作可能に
 - `aria-label` をボタンに付与（とくにアイコンのみのボタン）
-- DARK: `--text` (#e0e0e0) / `--bg` (#0a0a0a) で AAA 達成
-- LIGHT: `--text` (#111315) / `--bg` (#ffffff) で AAA 達成
+- DARK 系テーマ: `--text` / `--bg` コントラスト比 AAA 達成
+- LIGHT（Swiss）: `--text` (#111315) / `--bg` (#ffffff) で AAA 達成
 - フォントサイズは最小 0.6rem まで（バッジ・ラベル限定）。本文は 0.85rem 以上
-- `G` キーでグリッドオーバーレイ切替（開発・検証用）
-- テーマ切替は `localStorage` で永続化、`prefers-color-scheme` を初期デフォルトに
+- テーマ切替は `localStorage` で永続化、初回は Hacker（dark）
+- **キーボードショートカット**: `J/K` カラー切替、`N/P` フォント切替、`G` グリッド、`E` エクスポート
+- HUD は `data-removable` 属性付き → エクスポート時に自動除去
+- `themeToggle` ボタンはカラープリセット送りとして動作（旧テーマトグルの上位互換）
