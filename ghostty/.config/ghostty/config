@@ -35,6 +35,11 @@ macos-option-as-alt = true
 copy-on-select = clipboard
 
 # ======================
+# Shell: tmux auto-attach
+# ======================
+command = /bin/zsh -l -c "/opt/homebrew/bin/tmux new-session -A -s zsh"
+
+# ======================
 # Key bindings
 # ======================
 # Cmd+Shift+Return: New window
