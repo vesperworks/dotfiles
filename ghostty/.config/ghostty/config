@@ -47,3 +47,9 @@ keybind = super+shift+enter=new_window
 
 # Ctrl+Shift+T: Send CSI u format (for tmux)
 keybind = ctrl+shift+t=text:\x1b[84;5u
+
+# Ctrl+Tab: tmux switch-client -l (User0)
+keybind = ctrl+tab=text:\x1b[1;5I
+
+# Ctrl+Shift+Tab: tmux previous-window (User1)
+keybind = ctrl+shift+tab=text:\x1b[1;6I
