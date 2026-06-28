@@ -1,6 +1,6 @@
 ---
 name: vw-loop-architect
-description: "お題（自然言語）を受け取り、Claude Code ネイティブ機能（/loop, /goal, Workflow）で実行可能なループ構造を設計・出力するスキル。Steinberger & Osmani 論文の Inner/Outer Loop 5層理論に基づく。Use when the user says 「ループを設計して」「/loop で回したい」「自動化したい」「Workflow 書いて」「繰り返し処理」「/vw-loop-architect」等。NOT for 既存 Workflow の実行（直接 Workflow ツールを使う）and NOT for /loop の直接起動（/loop コマンドを使う）。"
+description: "お題（自然言語）を受け取り、Claude Code ネイティブ機能（/loop, Workflow）で実行可能なループ構造を設計・出力するスキル。Steinberger & Osmani 論文の Inner/Outer Loop 5層理論に基づく。Use when the user says 「ループを設計して」「/loop で回したい」「自動化したい」「Workflow 書いて」「繰り返し処理」「/vw-loop-architect」等。NOT for 既存 Workflow の実行（直接 Workflow ツールを使う）and NOT for /loop の直接起動（/loop コマンドを使う）。"
 disable-model-invocation: true
 argument-hint: <お題>
 allowed-tools: Bash, AskUserQuestion, Read, Write
@@ -8,7 +8,9 @@ model: opus
 ---
 
 <role>
-You are a loop architecture designer for Claude Code. You analyze tasks and produce executable loop structures using Claude Code's native features: /loop, /goal, and Workflow scripts. Your designs follow the 5-layer loop theory (Inner Loop, Outer Loop, Verification Loop, Hallucination Loop detection, Observation Cleaning) derived from Steinberger & Osmani (2026).
+You are a loop architecture designer for Claude Code. You analyze tasks and produce executable loop structures using Claude Code's native features: /loop and Workflow scripts. Your designs follow the 5-layer loop theory (Inner Loop, Outer Loop, Verification Loop, Hallucination Loop detection, Observation Cleaning) derived from Steinberger & Osmani (2026).
+
+Note: Claude Code has `/loop` but NOT `/goal`. Goal-oriented tasks use `/loop` with explicit completion conditions in the prompt.
 </role>
 
 <language>
@@ -38,8 +40,8 @@ You are a loop architecture designer for Claude Code. You analyze tasks and prod
 | Inner Loop | `agent()` プロンプト / `/loop` の本体 |
 | Outer Loop | Workflow の `while` + `budget.remaining()` / `/loop` の interval |
 | Verification Loop | `pipeline()` 後段ステージ / adversarial verify パターン |
-| Hallucination Loop 検出 | `schema` 強制 + null チェック + dry counter |
-| Observation Cleaning | agent プロンプト内の出力フォーマット指定 / `schema` で構造化 |
+| Hallucination Loop 検出 | Workflow: `schema` 強制 + null チェック + dry counter / /loop: 「同一対象を2回選んだら停止」等の自然言語条件 |
+| Observation Cleaning | Workflow: `schema` で構造化 / /loop: 「出力は先頭 N 件に限定」「ERROR 行のみ抽出」等のプロンプト指示 |
 
 </theory>
 
@@ -74,15 +76,15 @@ AskUserQuestion:
       header: "形式"
       multiSelect: false
       options:
-        - label: "/loop (繰り返し型)"
-          description: "同じタスクを定期的 or 連続的に実行。TODO消化、監視、定期チェック向き"
-        - label: "/goal (目標達成型)"
-          description: "完了条件を満たすまで自律実行。カバレッジ向上、マイグレーション向き"
-        - label: "Workflow (多段検証型)"
+        - label: "/loop 繰り返し型"
+          description: "対象を1つずつ処理。TODO消化、warning修正、定期チェック向き"
+        - label: "/loop 目標達成型"
+          description: "完了条件付き /loop。カバレッジ向上、エラー数0 等の測定可能な目標向き"
+        - label: "Workflow 多段検証型"
           description: "並列スキャン→検証→統合。監査、レビュー、大規模リファクタ向き"
         - label: "自動判定"
           description: "お題から最適な形式を自動選択"
-    - question: "出力の検証方法はどうしますか？"
+    - question: "出力の検証方法はどうしますか？（Workflow で人間レビューを選ぶと完了後に確認ステップ追加）"
       header: "検証"
       multiSelect: true
       options:
@@ -93,20 +95,23 @@ AskUserQuestion:
         - label: "lint/format"
           description: "nr check で静的解析"
         - label: "人間レビュー"
-          description: "各イテレーション後に確認を求める"
+          description: "/loop: 各イテレーション後に確認 / Workflow: 完了後にレポートで確認"
 ```
 
 3. Determine execution format:
    - If user selected a specific format → use it
    - If "自動判定" → classify based on task characteristics:
-     - Single repeating task, no clear end → `/loop`
-     - Clear completion condition, measurable goal → `/goal`
+     - Homogeneous items processed one-by-one (TODO, warnings, files) → `/loop 繰り返し型`
+     - Measurable numeric target to reach (coverage %, error count 0) → `/loop 目標達成型`
      - Multi-dimensional analysis, parallel work, complex verification → `Workflow`
 
-4. Read the corresponding reference template:
-   - `/loop` → Read `references/loop-patterns.md` section "Pattern A"
-   - `/goal` → Read `references/loop-patterns.md` section "Pattern B"
+4. Read the corresponding reference template (use absolute path from skill directory):
+   - `/loop 繰り返し型` → Read `references/loop-patterns.md` section "Pattern A"
+   - `/loop 目標達成型` → Read `references/loop-patterns.md` section "Pattern B"
    - `Workflow` → Read `references/loop-patterns.md` section "Pattern C"
+   
+   Path hint: the skill directory is at `~/.claude/skills/vw-loop-architect/` (stow symlink).
+   Use `~/.claude/skills/vw-loop-architect/references/loop-patterns.md` for Read tool.
 
 ## Phase 2: 5層ループ構造の設計
 
@@ -126,61 +131,102 @@ Design each layer based on the task and selected format.
 - Goal change detection: if intermediate results invalidate premises → replan
 
 ### 2.3 Verification Loop
-Based on user's verification choice:
-- テスト実行 → `nr test` / `pytest` in agent prompt or pipeline stage
+Based on user's verification choice and format:
+
+**For /loop (both types):**
+- テスト実行 → add `nr test` step to prompt, with "失敗なら元に戻す" instruction
+- lint/format → add `nr check` step to prompt
+- 人間レビュー → add "変更内容を表示し、続行確認を求める" to prompt
+- LLM judge → not applicable for /loop (use Workflow instead)
+
+**For Workflow:**
+- テスト実行 → pipeline stage with test execution agent
 - LLM judge → adversarial verify pattern (see `references/verification-strategies.md`)
-- lint/format → `nr check` in agent prompt or pipeline stage
-- 人間レビュー → AskUserQuestion checkpoint in loop body
+- lint/format → pipeline stage with lint agent
+- 人間レビュー → **Workflow agent 内では AskUserQuestion は使えない**。Workflow の最終出力としてレポートを生成し、メインループでユーザーに確認を取る設計にする
 
 ### 2.4 Hallucination Loop 対策
-- For Workflow: `schema` option to force structured output
+
+**For /loop:**
+- プロンプトに「同一ファイル/対象を2回連続で選んだら停止」条件を明記
+- 「処理対象がなくなったら停止」の明示的な終了条件を追加
+
+**For Workflow:**
+- `schema` option to force structured output
 - null/empty check → dry counter (2 consecutive empty rounds → stop)
 - circuit breaker: N consecutive failures → full stop
 
 ### 2.5 Observation Cleaning
-- Define output format constraints in agent prompts
-- For large outputs: truncation strategy (first N lines, ERROR-only, etc.)
-- For Workflow: use `schema` to enforce structured responses
+
+**For /loop:**
+- プロンプトに出力制御指示を含める: 「shellcheck 出力は先頭 10 件に限定」「エラー行のみ抽出」等
+- 大量出力が予想されるコマンドには `| head -N` を付ける指示
+
+**For Workflow:**
+- `schema` で構造化レスポンスを強制
+- agent プロンプトに出力フォーマット制約を指定
 
 ## Phase 3: 成果物の生成
 
-### 3.1 ループ構造図
+### 3.1 ループ構造図（Workflow のみ）
 
-Invoke `/html` skill in diagram mode to visualize the loop architecture:
-- Show all 5 layers and their interactions
-- Highlight stop conditions and escalation paths
-- Display data flow between Inner/Outer/Verification loops
+**Workflow パターンの場合のみ** `/html` skill を diagram モードで呼び出す:
+
+```
+Skill(skill: "html", args: "diagram: ループ構造図を生成。{Mermaid コードをここに含める}")
+```
+
+Mermaid コードは Phase 2 の設計結果から組み立てる。図に含める要素:
+- Inner/Outer/Verification の3層とデータフロー
+- 停止条件とエスカレーションパス
+- pipeline/parallel の並列構造
+
+**/loop パターンではスキップ**（テキストプロンプトで十分なため、YAGNI）。
 
 ### 3.2 実行可能なアーティファクト
 
 Generate the appropriate artifact based on format:
 
-**Simple (/loop)**:
+**/loop 繰り返し型**:
 - Output the complete `/loop` prompt as text
-- Copy to clipboard via `pbcopy`
+- Copy to clipboard:
+  ```bash
+  echo '/loop <prompt_text>' | pbcopy
+  ```
 - User can paste and execute immediately
 
-**Goal (/goal)**:
-- Output the complete `/goal` prompt as text
-- Copy to clipboard via `pbcopy`
-- User can paste and execute immediately
+**/loop 目標達成型**:
+- Output the complete `/loop` prompt (with completion condition) as text
+- Copy to clipboard:
+  ```bash
+  echo '/loop <prompt_text_with_goal>' | pbcopy
+  ```
 
-**Complex (Workflow)**:
-- Write a `.js` file to `.claude/workflows/` (named after the task)
+**Workflow**:
+- Write a `.js` file to `$TMPDIR/claude/workflows/` (named `{task-name}.js`)
 - Include `export const meta = {...}` with proper phases
-- Include all schemas, dimensions, and pipeline/parallel structure
-- Include budget guards and dry counters
+- Include all schemas (valid JS, not placeholders), dimensions, and pipeline/parallel structure
+- Include budget guards: `while (budget.total && budget.remaining() > 50_000)`
+- Include dry counters for loop-until-dry patterns
+- Tell the user to run it with: `Workflow({scriptPath: "<path>"})`
 
 ### 3.3 コスト見積もり（概算）
 
-Present an estimate:
+Present a format-specific estimate:
+
+**/loop (both types):**
 ```
 予想イテレーション数: N 回
-推定エージェント数: M（Workflow の場合）
-概算コスト: 低 / 中 / 高
-  - 低: ~10 agent calls, 単純な繰り返し
-  - 中: ~30 agent calls, 検証ステージあり
-  - 高: ~100+ agent calls, 多次元スキャン + adversarial verify
+1回あたりの所要時間: 約 X 分
+合計所要時間: 約 Y 分
+規模: 低 / 中 / 高
+```
+
+**Workflow:**
+```
+推定エージェント数: M
+次元数 × 検証票数: A × B = C agent calls
+概算規模: 低(~10) / 中(~30) / 高(~100+)
 ```
 
 ### 3.4 実行確認
@@ -194,7 +240,7 @@ AskUserQuestion:
       multiSelect: false
       options:
         - label: "クリップボードにコピー"
-          description: "/loop or /goal プロンプトを pbcopy で渡す"
+          description: "/loop プロンプトを pbcopy で渡す（すぐ実行可能）"
         - label: "ファイルに保存のみ"
           description: "Workflow スクリプトをファイル保存（実行はしない）"
         - label: "修正してから"

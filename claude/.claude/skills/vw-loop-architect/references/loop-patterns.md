@@ -7,15 +7,19 @@
 ### テンプレート
 
 ```
-/loop {interval} {task_description}
+/loop [interval] <task_description>
 各イテレーションで:
-1. {step_1: 現状を確認}
-2. {step_2: 1つの単位を処理}
-3. {step_3: 結果を検証}
-4. {step_4: 成功なら次へ、失敗なら元に戻して別の対象へ}
+1. <現状を確認するコマンド>
+2. <1つの単位を処理>
+3. <結果を検証>
+4. 成功なら次へ、失敗なら元に戻して別の対象へ
 
-停止条件: {condition} になるか、{N}回連続で失敗したら停止
+停止条件: <condition> になるか、N回連続で失敗したら停止
+出力制限: <大量出力コマンド> は先頭 N 件に限定
+同一対象の再選択禁止: 直前に処理した対象を連続で選ばない
 ```
+
+**interval の省略**: self-paced（連続処理）の場合は interval を書かない。`/loop <prompt>` のみ。
 
 ### 具体例: TODO コメント消化
 
@@ -46,53 +50,58 @@
 
 ---
 
-## Pattern B: /goal (目標達成型)
+## Pattern B: /loop 目標達成型
 
 測定可能なゴールに向かって自律的に進む。完了条件が明確なケース。
+Claude Code に `/goal` コマンドは存在しないため、`/loop` に完了条件を組み込む。
 
 ### テンプレート
 
 ```
-/goal {measurable_goal}
+/loop <measurable_goal> を達成するまで繰り返す。
 
-Inner Loop:
-- {step_1: 現状を測定}
-- {step_2: 最も効果的な対象を特定}
-- {step_3: 改善を実装}
-- {step_4: テスト実行で成功確認}
+各イテレーションで:
+1. <測定コマンド> で現状を測定
+2. 最も効果的な対象を特定
+3. 改善を実装
+4. テスト実行で成功確認
 
-Outer Loop:
-- {success_condition} 達成で完了
-- 同一対象で{N}回失敗 → スキップして次へ
-- 合計{M}分経過で中間報告
-
-検証: {verification_command} の結果が単調改善していること
+完了条件: <success_condition> を達成したら「完了」と宣言して停止
+スキップ条件: 同一対象でN回失敗 → スキップして次へ
+中間報告: M イテレーションごとに進捗を報告
+最大イテレーション: 20回で停止（無限ループ防止）
+出力制限: <大量出力コマンド> は先頭 N 件に限定
 ```
 
 ### 具体例: テストカバレッジ向上
 
 ```
-/goal このリポジトリのテストカバレッジを80%以上にする
+/loop このリポジトリのテストカバレッジを80%以上にするまで繰り返す。
 
-Inner Loop:
-- カバレッジレポートを生成
-- カバレッジが最も低いファイルを特定
-- テストを追加
-- テスト実行で成功確認
+各イテレーションで:
+1. nr test --coverage でカバレッジレポートを生成
+2. カバレッジが最も低いファイルを特定
+3. テストを追加
+4. nr test で成功確認
 
-Outer Loop:
-- カバレッジ 80% 達成で完了
-- 同一ファイルで3回テスト失敗 → スキップして次のファイルへ
-- 合計30分経過で中間報告
-
-検証: nr test --coverage の数値が単調増加していること
+完了条件: カバレッジ 80% 達成で停止
+スキップ条件: 同一ファイルで3回テスト失敗 → スキップして次のファイルへ
+中間報告: 5イテレーションごとにカバレッジ推移を表示
+最大イテレーション: 20回で停止
 ```
 
 ### 使い分けの判断基準
 
 - 目標が数値化できる（カバレッジ %, エラー数, スコア等）
-- 各イテレーションが目標に向かって単調に進む
+- 各イテレーションが目標に向かって進む（必ずしも単調でなくてよい）
 - 完了条件を自動的に検証できる
+
+### 進捗が非単調な場合の対処
+
+エラー修正で別のエラーが顕在化するケース（shellcheck 等）への対策:
+- 「単調改善」ではなく「最終的に目標達成」を完了条件にする
+- 一時的な悪化（エラー数増加）を許容する旨をプロンプトに明記
+- 進捗停滞の判断は「N回連続で同じエラー数」にする（「改善なし」ではなく）
 
 ### Outer Loop 設計のポイント
 
@@ -100,8 +109,8 @@ Outer Loop:
 |------|--------|------|
 | 最大イテレーション | 20 | 無限ループ防止 |
 | 同一対象の最大試行 | 3 | 詰まりからの脱出 |
-| 中間報告間隔 | 30分 or 10イテレーション | 人間の認知を維持 |
-| 進捗停滞検知 | 3回連続で改善なし | 戦略変更のトリガー |
+| 中間報告間隔 | 5-10 イテレーション | 人間の認知を維持 |
+| 進捗停滞検知 | 3回連続で同じ測定値 | 戦略変更のトリガー |
 
 ---
 
@@ -111,27 +120,39 @@ Outer Loop:
 
 ### テンプレート
 
+テンプレート内の `TASK_NAME`, `PHASE_*`, `DIM_*` 等はお題に合わせて置換する。
+生成する JS は有効な構文であること（placeholder ではなく実際の変数名を使う）。
+
 ```javascript
 export const meta = {
-  name: '{task-name}',
-  description: '{one-line description}',
+  name: 'TASK_NAME',
+  description: 'ONE_LINE_DESCRIPTION',
   phases: [
-    { title: '{phase_1_name}', detail: '{what_happens}' },
-    { title: '{phase_2_name}', detail: '{what_happens}' },
-    { title: '{phase_3_name}', detail: '{what_happens}' },
+    { title: 'PHASE_1_NAME', detail: 'WHAT_HAPPENS' },
+    { title: 'PHASE_2_NAME', detail: 'WHAT_HAPPENS' },
+    { title: 'Report', detail: 'Synthesize confirmed findings' },
   ],
 }
 
 // --- Observation Cleaning: schemas ---
-const {RESULT_SCHEMA} = {
+const RESULT_SCHEMA = {
   type: 'object',
   properties: {
-    // define structured output for Inner Loop
+    findings: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          // define per-finding fields here
+        },
+        required: [],
+      },
+    },
   },
-  required: [...],
+  required: ['findings'],
 }
 
-const {VERDICT_SCHEMA} = {
+const VERDICT_SCHEMA = {
   type: 'object',
   properties: {
     isReal: { type: 'boolean' },
@@ -143,30 +164,28 @@ const {VERDICT_SCHEMA} = {
 
 // --- Inner Loop: dimensions ---
 const DIMENSIONS = [
-  { key: '{dim_1}', prompt: '{specific_task_1}' },
-  { key: '{dim_2}', prompt: '{specific_task_2}' },
-  { key: '{dim_3}', prompt: '{specific_task_3}' },
+  { key: 'dim1', prompt: 'SPECIFIC_TASK_1' },
+  { key: 'dim2', prompt: 'SPECIFIC_TASK_2' },
+  { key: 'dim3', prompt: 'SPECIFIC_TASK_3' },
 ]
 
 // --- Outer Loop: budget-gated execution ---
-phase('{phase_1_name}')
+phase('PHASE_1_NAME')
 const results = await pipeline(
   DIMENSIONS,
-  // Inner Loop: each dimension processed independently
   d => agent(d.prompt, {
-    label: `{phase_1}:${d.key}`,
-    phase: '{phase_1_name}',
-    schema: {RESULT_SCHEMA},
+    label: `scan:${d.key}`,
+    phase: 'PHASE_1_NAME',
+    schema: RESULT_SCHEMA,
   }),
-  // Verification Loop: adversarial verify each finding
   (review, dim) => parallel(
-    (review?.{items} || []).map(f => () =>
+    (review?.findings || []).map(f => () =>
       agent(
         `Adversarially verify: ${f.description}. Try to REFUTE it.`,
         {
           label: `verify:${f.file}`,
-          phase: '{phase_2_name}',
-          schema: {VERDICT_SCHEMA},
+          phase: 'PHASE_2_NAME',
+          schema: VERDICT_SCHEMA,
         }
       ).then(v => ({ ...f, verdict: v }))
     )
@@ -180,14 +199,34 @@ const confirmed = results
   .filter(f => f.verdict?.isReal && f.verdict?.confidence > 0.7)
 
 // --- Report ---
-phase('{phase_3_name}')
+phase('Report')
 const report = await agent(
   `Synthesize ${confirmed.length} confirmed findings into a prioritized report.
   Findings: ${JSON.stringify(confirmed)}`,
-  { label: 'report', phase: '{phase_3_name}' }
+  { label: 'report', phase: 'Report' }
 )
 
 return { confirmed, report }
+```
+
+### budget-gated loop テンプレート（動的スケール）
+
+発見数が未知の場合や、トークン予算に応じてスケールしたい場合:
+
+```javascript
+const all = []
+let dry = 0
+while (budget.total && budget.remaining() > 50_000 && dry < 2) {
+  const result = await agent('Find issues not yet in the list...', {
+    schema: RESULT_SCHEMA,
+  })
+  const fresh = (result?.findings || []).filter(f => !seen.has(key(f)))
+  if (!fresh.length) { dry++; continue }
+  dry = 0
+  fresh.forEach(f => seen.add(key(f)))
+  all.push(...fresh)
+  log(`${all.length} found, ${Math.round(budget.remaining() / 1000)}k remaining`)
+}
 ```
 
 ### 具体例: セキュリティ監査
@@ -291,4 +330,4 @@ return { confirmed, report }
 | pipeline | 各アイテムが独立して全ステージを通過 | `pipeline(items, stage1, stage2)` |
 | parallel + barrier | 全結果を集めてから次へ（dedup 等） | `parallel([...]).then(all => ...)` |
 | loop-until-dry | 発見数が未知、網羅性重視 | `while (dry < 2) { ... }` |
-| loop-until-budget | トークン上限に応じた動的スケール | `while (budget.remaining() > 50_000)` |
+| loop-until-budget | トークン上限に応じた動的スケール | `while (budget.total && budget.remaining() > 50_000)` |
