@@ -82,7 +82,7 @@ Combine all results and deduplicate by `document_id`. Track how many queries eac
 
 ### Step 3.1: Fetch metadata
 
-For deduplicated documents (up to 10), fetch metadata in parallel:
+Sort deduplicated documents by `match_count` descending, then take the top 10. Fetch metadata for these in parallel:
 
 ```bash
 readwise reader-list-documents --id "<document_id>" --response-fields title,author,summary,saved_at,category,tags,word_count --json
@@ -122,8 +122,9 @@ AskUserQuestion:
       header: "Readwise"
       multiSelect: true
       options:
-        - label: "{title} — {author}"
+        - label: "{title} — {author_display}"
           description: "{summary_first_50_chars} | {category} | {saved_at_date} | score:{score}"
+        # author_display: if author starts with "http", extract domain or use site_name instead
         # ... up to 4 options
 ```
 
