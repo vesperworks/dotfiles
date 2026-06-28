@@ -126,7 +126,7 @@ Design each layer based on the task and selected format.
 - Set stop conditions:
   - Time limit (for /loop: interval; for Workflow: budget.remaining())
   - Iteration limit (default: 20 max)
-  - Success condition (for /goal: measurable target)
+  - Success condition (for /loop 目標達成型: measurable target)
 - Define escalation: N consecutive same-errors → strategy change
 - Goal change detection: if intermediate results invalidate premises → replan
 
@@ -172,14 +172,15 @@ Based on user's verification choice and format:
 
 **Workflow パターンの場合のみ** `/html` skill を diagram モードで呼び出す:
 
-```
-Skill(skill: "html", args: "diagram: ループ構造図を生成。{Mermaid コードをここに含める}")
-```
+1. Phase 2 の設計結果から Mermaid flowchart コードを組み立てる:
+   - Inner/Outer/Verification の3層とデータフロー
+   - 停止条件とエスカレーションパス
+   - pipeline/parallel の並列構造
 
-Mermaid コードは Phase 2 の設計結果から組み立てる。図に含める要素:
-- Inner/Outer/Verification の3層とデータフロー
-- 停止条件とエスカレーションパス
-- pipeline/parallel の並列構造
+2. `/html` skill を diagram モードで呼び出す:
+   ```
+   Skill(skill: "html", args: "diagram モードで以下のループ構造図を描画してください:\n\n```mermaid\n<組み立てた Mermaid コード>\n```")
+   ```
 
 **/loop パターンではスキップ**（テキストプロンプトで十分なため、YAGNI）。
 
@@ -255,7 +256,7 @@ AskUserQuestion:
 
 - **circuit breaker**: dry counter 2 でループ終了（loop-until-dry パターン）
 - **budget guard**: `while (budget.total && budget.remaining() > 50_000)` (Workflow)
-- **max iterations**: Simple/Goal でも上限を明示（デフォルト 20）
+- **max iterations**: /loop（両型）でも上限を明示（デフォルト 20）
 - **escalation**: 同一エラー 3 回連続 → 戦略変更を提案、5 回 → 完全停止
 
 </safety>

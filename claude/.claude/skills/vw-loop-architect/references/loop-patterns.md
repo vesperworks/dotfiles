@@ -26,12 +26,14 @@
 ```
 /loop このリポジトリの TODO コメントを1つずつ解消してください。
 各イテレーションで:
-1. grep -r "TODO" で未解決の TODO を1つ選ぶ
+1. grep -r "TODO" --include="*.ts" --include="*.tsx" | head -20 で未解決の TODO を1つ選ぶ
 2. 修正を実装
 3. テスト実行
 4. 成功なら次の TODO へ、失敗なら元に戻して別の TODO へ
 
 停止条件: TODO が0になるか、3回連続で失敗したら停止
+出力制限: grep 結果は先頭 20 件に限定
+同一対象の再選択禁止: 直前に処理した TODO を連続で選ばない
 ```
 
 ### 使い分けの判断基準
@@ -120,8 +122,11 @@ Claude Code に `/goal` コマンドは存在しないため、`/loop` に完了
 
 ### テンプレート
 
-テンプレート内の `TASK_NAME`, `PHASE_*`, `DIM_*` 等はお題に合わせて置換する。
-生成する JS は有効な構文であること（placeholder ではなく実際の変数名を使う）。
+テンプレート内には2種類の ALL CAPS がある:
+- **文字列リテラル置換** (`'TASK_NAME'`, `'PHASE_1_NAME'` 等): クォート内の文字列をお題に合わせて書き換える
+- **JS 変数名** (`RESULT_SCHEMA`, `VERDICT_SCHEMA`, `DIMENSIONS`): そのまま使う（変数定義を書き換える）
+
+生成する JS は有効な構文であること。
 
 ```javascript
 export const meta = {
