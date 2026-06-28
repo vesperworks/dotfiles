@@ -291,15 +291,3 @@ ag() {
     fi
 }
 
-# tmux auto-start
-tmux_auto_start() {
-    [[ -n "$TMUX" ]] && return
-    [[ ! -t 0 ]] && return
-    [[ ! -o interactive ]] && return
-    [[ -n "$INSIDE_EMACS" ]] && return
-    [[ -n "$VSCODE_RESOLVING_ENVIRONMENT" ]] && return
-    [[ -n "$SSH_CONNECTION" && -z "$SSH_TTY" ]] && return
-    command -v tmux &>/dev/null || return
-    tmux new-session -A -s "zsh" && exit
-}
-tmux_auto_start
