@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HTML // {{COMPANY}} {{FISCAL_YEAR}}年度 財務カレンダー</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root, [data-theme="dark"] {
+  --cols: 12; --bl: 8px; --lh: 24px; --gutter: 24px; --margin: 48px; --maxw: 1200px; --pad: 48px;
+  --font-sans: 'Inter', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+  --bg: #0a0a0a; --surface: #111111; --surface-hover: #1a1a1a;
+  --border: #222222; --border-accent: #333333;
+  --text: #e0e0e0; --text-muted: #666666; --text-dim: #444444;
+  --accent: #00ff88; --accent-dim: rgba(0,255,136,0.15);
+  --cyan: #00d4ff; --cyan-dim: rgba(0,212,255,0.15);
+  --warn: #ffaa00; --danger: #ff5555; --purple: #cc44ff;
+  --pl-plus: #00ff88; --pl-minus: #ff5555; --bs-current: #00d4ff; --bs-fixed: #666666;
+  --g-col: rgba(0,255,136,0.05); --g-edge: rgba(0,255,136,0.25);
+  --g-base: rgba(0,212,255,0.18); --g-base-min: rgba(0,212,255,0.06);
+}
+[data-theme="light"] {
+  --bg: #ffffff; --surface: #f4f4f4; --surface-hover: #eaeaea;
+  --border: #d4d4d4; --border-accent: #bbbbbb;
+  --text: #111315; --text-muted: #5b6066; --text-dim: #999999;
+  --accent: #e4002b; --accent-dim: rgba(228,0,43,0.08);
+  --cyan: #0055aa; --cyan-dim: rgba(0,85,170,0.08);
+  --warn: #b86e00; --danger: #cc0000; --purple: #6622aa;
+  --pl-plus: #1a8f4c; --pl-minus: #cc0000; --bs-current: #0055aa; --bs-fixed: #999999;
+  --g-col: rgba(228,0,43,0.06); --g-edge: rgba(228,0,43,0.35);
+  --g-base: rgba(0,150,140,0.25); --g-base-min: rgba(0,150,140,0.10);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: var(--font-sans); background: var(--bg); color: var(--text); font-size: 16px; line-height: var(--lh); -webkit-font-smoothing: antialiased; }
+.spread { position: relative; width: 100%; }
+.wrap { position: relative; max-width: var(--maxw); margin: 0 auto; padding: var(--pad) var(--margin); }
+.grid { display: grid; grid-template-columns: repeat(var(--cols), 1fr); column-gap: var(--gutter); row-gap: var(--lh); }
+.band { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; column-gap: var(--gutter); align-items: start; }
+@supports not (grid-template-columns: subgrid) { .band { grid-template-columns: repeat(var(--cols), 1fr); } }
+.guides { position: absolute; inset: 0; pointer-events: none; z-index: 60; opacity: 0; transition: opacity .26s ease; }
+body.grid-on .guides { opacity: 1; }
+.guides .cols { position: absolute; top: 0; bottom: 0; left: var(--margin); right: var(--margin); display: grid; grid-template-columns: repeat(var(--cols), 1fr); column-gap: var(--gutter); }
+.guides .col { background: var(--g-col); box-shadow: inset 1px 0 0 var(--g-edge), inset -1px 0 0 var(--g-edge); position: relative; }
+.guides .col span { position: absolute; top: 32px; left: 0; right: 0; text-align: center; font-family: var(--font-mono); font-size: 10px; line-height: 1; color: var(--accent); opacity: 0.6; }
+.guides .rows { position: absolute; left: var(--margin); right: var(--margin); top: var(--pad); bottom: 0;
+  background-image: repeating-linear-gradient(to bottom, var(--g-base) 0 1px, transparent 1px var(--lh)), repeating-linear-gradient(to bottom, var(--g-base-min) 0 1px, transparent 1px var(--bl)); }
+.guides .mline { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--g-edge); }
+.guides .mline.l { left: var(--margin); } .guides .mline.r { right: var(--margin); }
+.header { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; column-gap: var(--gutter); align-items: end; padding-bottom: var(--lh); border-bottom: 2px solid var(--accent); margin-bottom: var(--lh); }
+@supports not (grid-template-columns: subgrid) { .header { grid-template-columns: repeat(var(--cols), 1fr); } }
+.header h1 { grid-column: 1 / 9; font-family: var(--font-mono); font-size: 1.5rem; font-weight: 700; line-height: 32px; letter-spacing: -0.02em; color: var(--accent); }
+.header h1 span { color: var(--text-muted); font-weight: 400; }
+.header .meta { grid-column: 9 / 13; font-family: var(--font-mono); color: var(--text-muted); font-size: 0.72rem; text-align: right; line-height: var(--lh); letter-spacing: 0.03em; }
+.toolbar { position: fixed; top: 16px; right: 16px; z-index: 200; display: flex; align-items: center; gap: 8px; }
+.toolbar button { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 8px 12px; border: 1px solid var(--border-accent); background: var(--surface); color: var(--text-muted); cursor: pointer; transition: all 0.15s; line-height: 16px; }
+.toolbar button:hover { border-color: var(--accent); color: var(--accent); }
+.summary { grid-column: 1 / -1; background: var(--surface); border-left: 3px solid var(--cyan); padding: 16px var(--gutter); font-size: 0.92rem; line-height: var(--lh); }
+.footer { grid-column: 1 / -1; padding-top: var(--lh); border-top: 1px solid var(--border); font-family: var(--font-mono); font-size: 0.6rem; color: var(--text-dim); letter-spacing: 0.05em; display: grid; grid-template-columns: subgrid; column-gap: var(--gutter); line-height: var(--lh); }
+@supports not (grid-template-columns: subgrid) { .footer { grid-template-columns: repeat(var(--cols), 1fr); } }
+.footer .left { grid-column: 1 / 7; } .footer .right { grid-column: 7 / 13; text-align: right; }
+.toast { position: fixed; bottom: 56px; right: 24px; background: var(--surface); border: 1px solid var(--accent); color: var(--accent); font-family: var(--font-mono); font-size: 0.8rem; padding: 12px 18px; opacity: 0; transform: translateY(8px); transition: opacity 0.2s, transform 0.2s; pointer-events: none; z-index: 1000; max-width: 360px; line-height: var(--lh); }
+.toast.show { opacity: 1; transform: translateY(0); }
+.hud { position: fixed; bottom: 0; left: 0; right: 0; z-index: 300; background: rgba(10,10,10,0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-top: 1px solid #333; padding: 6px 16px; display: flex; align-items: center; gap: 16px; font-family: 'JetBrains Mono', 'SF Mono', monospace; font-size: 0.65rem; letter-spacing: 0.06em; color: #888; user-select: none; }
+.hud .sep { color: #333; } .hud .val { color: #00ff88; } .hud .cat { color: #666; }
+.hud .key { display: inline-block; padding: 1px 5px; border: 1px solid #444; border-radius: 2px; font-size: 0.6rem; color: #666; margin: 0 1px; }
+.hud .hint { margin-left: auto; display: flex; gap: 10px; }
+
+/* fin-calendar specific */
+.fin-calendar { grid-column: 1 / -1; }
+.fin-year-nav { display: flex; align-items: center; gap: 12px; font-family: var(--font-mono); margin-bottom: var(--lh); }
+.fin-unit { margin-left: auto; color: var(--text-muted); font-size: 0.75rem; }
+.fin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--gutter); max-height: 78vh; overflow-y: auto; padding-right: 8px; scroll-behavior: smooth; }
+@media (max-width: 1100px) { .fin-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 700px) { .fin-grid { grid-template-columns: 1fr; } }
+.fin-card { background: var(--surface); border: 1px solid var(--border); padding: 12px; cursor: pointer; transition: border-color 0.15s, transform 0.15s; }
+.fin-card:hover, .fin-card:focus-visible { border-color: var(--accent); transform: translateY(-2px); outline: none; }
+.fin-card--empty { opacity: 0.35; cursor: default; }
+.fin-card--empty:hover { transform: none; border-color: var(--border); }
+.fin-card__head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.fin-card__month { font-family: var(--font-mono); font-weight: 700; font-size: 0.9rem; }
+.fin-card__badge { font-family: var(--font-mono); font-size: 0.6rem; padding: 1px 6px; letter-spacing: 0.04em; }
+.fin-card__badge.up { color: var(--pl-plus); } .fin-card__badge.down { color: var(--pl-minus); } .fin-card__badge.flat { color: var(--text-muted); }
+/* 図解は「会計の地図」スタイル: 常に白い紙の上に黒枠線で描く（カラープリセット非依存） */
+.fin-paper { background: #ffffff; border: 1px solid var(--border); padding: 8px; }
+.fin-card__mini { display: block; }
+.fin-card__mini svg { width: 100%; height: auto; display: block; }
+.fin-card__mini .fin-mini-cf { margin-top: 6px; }
+.fin-card__label-row { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.55rem; color: var(--text-dim); margin-top: 2px; }
+.fin-modal { position: fixed; inset: 0; z-index: 500; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); opacity: 0; pointer-events: none; transition: opacity 0.15s; }
+.fin-modal[aria-hidden="false"] { opacity: 1; pointer-events: auto; }
+.fin-modal__body { background: var(--bg); border: 1px solid var(--border-accent); max-width: 900px; width: 92vw; max-height: 88vh; overflow-y: auto; padding: var(--pad); position: relative; }
+.fin-modal__close { position: absolute; top: 12px; right: 12px; background: none; border: none; color: var(--text-muted); font-size: 1.4rem; cursor: pointer; line-height: 1; }
+.fin-detail-label { font-family: var(--font-mono); font-size: 7px; fill: #5b6066; }
+.fin-modal-open { overflow: hidden; }
+.fin-modal h2 { font-family: var(--font-mono); color: var(--accent); margin-bottom: var(--lh); }
+.fin-modal h3 { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); margin: 16px 0 4px; text-transform: uppercase; letter-spacing: 0.08em; }
+.fin-modal .fin-paper { padding: 16px; }
+.fin-modal .fin-paper svg { width: 100%; height: auto; display: block; }
+/* ホバーした費目の説明を表示するガイドバー（sticky でスクロールしても見える）。
+   高さ固定 + overflow で、説明の行数が変わってもレイアウトがガタつかない */
+.fin-guide { position: sticky; top: 0; z-index: 20; background: #ffffff; border: 1px solid #d4d4d4; border-left: 4px solid #f0a4a4; padding: 14px 18px; font-size: 1.05rem; color: #333; line-height: 1.7; height: 118px; overflow-y: auto; margin-bottom: 16px; box-sizing: border-box; }
+.fin-guide strong { color: #111315; }
+.fin-guide .fin-guide__hint { color: #999; }
+/* 3表のつながりを示す色凡例 */
+.fin-legend { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 0.78rem; color: var(--text-muted); margin-bottom: var(--lh); align-items: center; }
+.fin-legend .sw { display: inline-block; width: 16px; height: 11px; border: 1.5px solid #111315; margin-right: 6px; vertical-align: -1px; }
+.fin-legend .sw--pink { background: #f6c3c3; }
+.fin-legend .sw--blue { background: #bcd9f0; border-style: dashed; border-width: 1.2px; }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <button id="themeToggle" aria-label="Cycle color preset">Hacker</button>
+</div>
+
+<section class="spread">
+  <div class="wrap">
+    <div class="grid">
+
+      <div class="header">
+        <h1><span>HTML //</span> {{COMPANY}} 財務カレンダー</h1>
+        <div class="meta">GEN {{DATE}}<br>MODE fin-calendar</div>
+      </div>
+
+      <div class="summary">{{SUMMARY}}</div>
+
+      <div class="fin-calendar">
+        <div class="fin-year-nav">
+          <button id="yearPrev" aria-label="前年度">‹</button>
+          <span id="yearLabel">{{FISCAL_YEAR}}年度</span>
+          <button id="yearNext" aria-label="翌年度">›</button>
+          <span class="fin-unit">単位: {{UNIT}}</span>
+        </div>
+        <div class="fin-legend">
+          <span><i class="sw sw--pink"></i>利益 ― PLとBSをつなぐ（純資産に足されていく）</span>
+          <span><i class="sw sw--blue"></i>現金 ― BSとCFをつなぐ（資産の中の現金の増減がCF）</span>
+        </div>
+        <div class="fin-grid" id="finGrid"></div>
+      </div>
+
+      <div class="footer">
+        <span class="left">vw-fin-calendar SKILL v1.0.0 / fin-calendar MODE</span>
+        <span class="right">GENERATED BY CLAUDE CODE</span>
+      </div>
+
+    </div>
+
+    <div class="guides" aria-hidden="true">
+      <div class="cols"></div><div class="rows"></div>
+      <div class="mline l"></div><div class="mline r"></div>
+    </div>
+  </div>
+</section>
+
+<div class="fin-modal" id="finModal" aria-hidden="true">
+  <div class="fin-modal__body">
+    <button class="fin-modal__close" aria-label="閉じる">×</button>
+    <div class="fin-modal__content"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const FIN_DATA = {{DATA_JSON}};
+
+function toast(msg, kind = 'ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.borderColor = kind === 'err' ? 'var(--danger)' : 'var(--accent)';
+  t.style.color = kind === 'err' ? 'var(--danger)' : 'var(--accent)';
+  t.classList.add('show');
+  clearTimeout(window.__toastTimer);
+  window.__toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+(function initPresets() {
+  var COLOR_PRESETS = [
+    { name: 'Hacker', theme: 'dark', vars: { '--bg':'#0a0a0a','--surface':'#111111','--surface-hover':'#1a1a1a','--border':'#222222','--border-accent':'#333333','--text':'#e0e0e0','--text-muted':'#666666','--text-dim':'#444444','--accent':'#00ff88','--accent-dim':'rgba(0,255,136,0.15)','--cyan':'#00d4ff','--cyan-dim':'rgba(0,212,255,0.15)','--warn':'#ffaa00','--danger':'#ff5555','--purple':'#cc44ff','--pl-plus':'#00ff88','--pl-minus':'#ff5555','--bs-current':'#00d4ff','--bs-fixed':'#666666','--g-col':'rgba(0,255,136,0.05)','--g-edge':'rgba(0,255,136,0.25)','--g-base':'rgba(0,212,255,0.18)','--g-base-min':'rgba(0,212,255,0.06)' }},
+    { name: 'Swiss', theme: 'light', vars: { '--bg':'#ffffff','--surface':'#f4f4f4','--surface-hover':'#eaeaea','--border':'#d4d4d4','--border-accent':'#bbbbbb','--text':'#111315','--text-muted':'#5b6066','--text-dim':'#999999','--accent':'#e4002b','--accent-dim':'rgba(228,0,43,0.08)','--cyan':'#0055aa','--cyan-dim':'rgba(0,85,170,0.08)','--warn':'#b86e00','--danger':'#cc0000','--purple':'#6622aa','--pl-plus':'#1a8f4c','--pl-minus':'#cc0000','--bs-current':'#0055aa','--bs-fixed':'#999999','--g-col':'rgba(228,0,43,0.06)','--g-edge':'rgba(228,0,43,0.35)','--g-base':'rgba(0,150,140,0.25)','--g-base-min':'rgba(0,150,140,0.10)' }},
+    { name: 'Warm', theme: 'dark', vars: { '--bg':'#1a120b','--surface':'#231a11','--surface-hover':'#2c2118','--border':'#3a2d1f','--border-accent':'#4d3d2a','--text':'#e8ddd0','--text-muted':'#8a7a6a','--text-dim':'#5a4a3a','--accent':'#ff9f43','--accent-dim':'rgba(255,159,67,0.15)','--cyan':'#feca57','--cyan-dim':'rgba(254,202,87,0.15)','--warn':'#ff6b6b','--danger':'#ee5a24','--purple':'#e056a0','--pl-plus':'#feca57','--pl-minus':'#ee5a24','--bs-current':'#feca57','--bs-fixed':'#8a7a6a','--g-col':'rgba(255,159,67,0.05)','--g-edge':'rgba(255,159,67,0.25)','--g-base':'rgba(254,202,87,0.18)','--g-base-min':'rgba(254,202,87,0.06)' }},
+    { name: 'Cool', theme: 'dark', vars: { '--bg':'#0a1628','--surface':'#0f1d33','--surface-hover':'#152540','--border':'#1e3050','--border-accent':'#2a4066','--text':'#d0dce8','--text-muted':'#5a7a9a','--text-dim':'#354a60','--accent':'#48dbfb','--accent-dim':'rgba(72,219,251,0.15)','--cyan':'#0abde3','--cyan-dim':'rgba(10,189,227,0.15)','--warn':'#feca57','--danger':'#ff6b6b','--purple':'#a29bfe','--pl-plus':'#48dbfb','--pl-minus':'#ff6b6b','--bs-current':'#0abde3','--bs-fixed':'#5a7a9a','--g-col':'rgba(72,219,251,0.05)','--g-edge':'rgba(72,219,251,0.25)','--g-base':'rgba(10,189,227,0.18)','--g-base-min':'rgba(10,189,227,0.06)' }},
+    { name: 'Mono', theme: 'dark', vars: { '--bg':'#111111','--surface':'#1a1a1a','--surface-hover':'#222222','--border':'#333333','--border-accent':'#444444','--text':'#e0e0e0','--text-muted':'#777777','--text-dim':'#444444','--accent':'#ffffff','--accent-dim':'rgba(255,255,255,0.1)','--cyan':'#aaaaaa','--cyan-dim':'rgba(170,170,170,0.1)','--warn':'#cccccc','--danger':'#999999','--purple':'#bbbbbb','--pl-plus':'#ffffff','--pl-minus':'#999999','--bs-current':'#aaaaaa','--bs-fixed':'#777777','--g-col':'rgba(255,255,255,0.04)','--g-edge':'rgba(255,255,255,0.2)','--g-base':'rgba(170,170,170,0.15)','--g-base-min':'rgba(170,170,170,0.05)' }}
+  ];
+  var FONT_PRESETS = [
+    { name:'Inter', cat:'Geometric Sans', family:"'Inter',-apple-system,sans-serif", gf:'Inter:wght@300;400;600;700' },
+    { name:'Noto Sans JP', cat:'汎用ゴシック', family:"'Noto Sans JP',sans-serif", gf:'Noto+Sans+JP:wght@300;400;500;700' },
+    { name:'BIZ UDPGothic', cat:'UD ゴシック', family:"'BIZ UDPGothic',sans-serif", gf:'BIZ+UDPGothic:wght@400;700' },
+    { name:'IBM Plex Sans JP', cat:'テック', family:"'IBM Plex Sans JP',sans-serif", gf:'IBM+Plex+Sans+JP:wght@300;400;500;700' },
+    { name:'Zen Kaku Gothic New', cat:'丸ゴシック', family:"'Zen Kaku Gothic New',sans-serif", gf:'Zen+Kaku+Gothic+New:wght@300;400;500;700' },
+    { name:'M PLUS 1', cat:'モダン', family:"'M PLUS 1',sans-serif", gf:'M+PLUS+1:wght@300;400;500;700' },
+    { name:'Sawarabi Mincho', cat:'明朝', family:"'Sawarabi Mincho',serif", gf:'Sawarabi+Mincho' },
+    { name:'Dela Gothic One', cat:'デコラティブ', family:"'Dela Gothic One',sans-serif", gf:'Dela+Gothic+One' }
+  ];
+  var ALL_FONTS_URL = 'https://fonts.googleapis.com/css2?' + FONT_PRESETS.map(function(f){ return 'family=' + f.gf; }).join('&') + '&family=JetBrains+Mono:wght@400;500;700&display=swap';
+  var state = { color: parseInt(localStorage.getItem('html-preset-color') || '0', 10) % COLOR_PRESETS.length, font: parseInt(localStorage.getItem('html-preset-font') || '0', 10) % FONT_PRESETS.length };
+  var root = document.documentElement;
+  function applyColor(idx) { var p = COLOR_PRESETS[idx]; root.setAttribute('data-theme', p.theme); for (var k in p.vars) root.style.setProperty(k, p.vars[k]); state.color = idx; localStorage.setItem('html-preset-color', String(idx)); updateHUD(); updateThemeToggle(); }
+  function applyFont(idx) { var p = FONT_PRESETS[idx]; root.style.setProperty('--font-sans', p.family); state.font = idx; localStorage.setItem('html-preset-font', String(idx)); updateHUD(); }
+  function cycle(type, dir) { var presets = type === 'color' ? COLOR_PRESETS : FONT_PRESETS; var cur = state[type]; var next = (cur + dir + presets.length) % presets.length; if (type === 'color') applyColor(next); else applyFont(next); toast((type === 'color' ? 'COLOR' : 'FONT') + ': ' + presets[next].name); }
+  function updateHUD() { var hud = document.getElementById('hud'); if (!hud) return; var cp = COLOR_PRESETS[state.color]; var fp = FONT_PRESETS[state.font];
+    hud.innerHTML = 'COLOR: <span class="val">' + cp.name + '</span> <span class="sep">│</span> FONT: <span class="val">' + fp.name + '</span> <span class="cat">(' + fp.cat + ')</span><span class="hint"><span><span class="key">J</span><span class="key">K</span> color</span><span><span class="key">N</span><span class="key">P</span> font</span><span><span class="key">G</span> grid</span><span><span class="key">E</span> export</span></span>'; }
+  function updateThemeToggle() { var btn = document.getElementById('themeToggle'); if (!btn) return; btn.textContent = COLOR_PRESETS[state.color].name; btn.setAttribute('aria-label', 'Cycle color preset (current: ' + COLOR_PRESETS[state.color].name + ')'); }
+  function exportStatic() { var clone = document.documentElement.cloneNode(true); clone.querySelectorAll('[data-removable], script').forEach(function(el) { el.remove(); }); var fp = FONT_PRESETS[state.font]; var fontLink = clone.querySelector('link[href*="fonts.googleapis.com"]'); if (fontLink) { fontLink.href = 'https://fonts.googleapis.com/css2?family=' + fp.gf + '&family=JetBrains+Mono:wght@400;500;700&display=swap'; } var html = '<!DOCTYPE html>\n' + clone.outerHTML; var blob = new Blob([html], { type: 'text/html' }); var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = (document.title || 'report').replace(/[^a-zA-Z0-9_　-鿿-]/g, '_') + '_export.html'; a.click(); URL.revokeObjectURL(a.href); toast('Static HTML exported'); }
+  var fontLink = document.querySelector('link[href*="fonts.googleapis.com"]');
+  if (fontLink) { fontLink.href = ALL_FONTS_URL; } else { var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = ALL_FONTS_URL; document.head.appendChild(l); }
+  document.addEventListener('DOMContentLoaded', function() {
+    var hud = document.createElement('div'); hud.id = 'hud'; hud.className = 'hud'; hud.setAttribute('data-removable', ''); document.body.appendChild(hud);
+    applyColor(state.color); applyFont(state.font);
+    document.querySelectorAll('.guides .cols').forEach(function(h) { var n = parseInt(getComputedStyle(root).getPropertyValue('--cols').trim() || '12', 10); for (var i = 1; i <= n; i++) { var c = document.createElement('div'); c.className = 'col'; var s = document.createElement('span'); s.textContent = i; c.appendChild(s); h.appendChild(c); } });
+    var oldBtn = document.getElementById('themeToggle'); if (oldBtn) { var newBtn = oldBtn.cloneNode(true); oldBtn.parentNode.replaceChild(newBtn, oldBtn); newBtn.addEventListener('click', function() { cycle('color', 1); }); updateThemeToggle(); }
+    document.addEventListener('keydown', function(e) { if (e.target.matches('input,textarea,select,[contenteditable]')) return; if (e.metaKey || e.ctrlKey || e.altKey) return;
+      switch (e.key) { case 'j': case 'J': cycle('color', -1); break; case 'k': case 'K': cycle('color', 1); break; case 'n': case 'N': cycle('font', -1); break; case 'p': case 'P': cycle('font', 1); break;
+        case 'g': case 'G': document.body.classList.toggle('grid-on'); toast(document.body.classList.contains('grid-on') ? 'Grid ON' : 'Grid OFF'); break;
+        case 'e': case 'E': exportStatic(); break; } });
+    renderCalendar(FIN_DATA);
+  });
+})();
+
+const NS = 'http://www.w3.org/2000/svg';
+function svgEl(tag, attrs) { const el = document.createElementNS(NS, tag); for (const k in attrs) el.setAttribute(k, attrs[k]); return el; }
+
+/* ===== 「会計の地図」スタイル定数: 図解は常に白い紙 + 黒枠線、利益のみ淡赤ハイライト ===== */
+/* 3表のつながりを示す色: pink=利益(PL⇔BS) / blue=現金(BS⇔CF)。同じ色 = 同じお金 */
+const MAP = { ink: '#111315', paper: '#ffffff', pink: '#f6c3c3', pinkDeep: '#f0a4a4', blue: '#bcd9f0', red: '#e57373', dim: '#8a8a8a', gray: '#ececec', sw: 1.4 };
+const JP_FONT = "'Noto Sans JP','Inter',sans-serif";
+
+/* ===== 費目説明辞書（マウスオーバーでガイドバーに表示） ===== */
+const DESC = {
+  '資産': '会社が集めたお金の使いみち。現金・商品・建物など、会社が持っているすべての財産。',
+  '現金': '資産のうち、すぐに使えるお金。CF（キャッシュフロー計算書）はこの現金の増減の内訳 ― BSとCFはここでつながっている。',
+  '負債': '返す必要のあるお金の出どころ。借入金や買掛金など、いずれ支払う義務があるもの。',
+  '純資産': '返す必要のないお金の出どころ。株主からの出資と、これまで積み上げてきた利益の蓄積。',
+  '利益': '売上から費用を引いて残ったお金。1年ごとに純資産に足されていく ― BSとPLはここでつながっている。',
+  '損失': '費用が売上を上回った分。純資産から差し引かれ、続くと会社の体力（純資産）を削っていく。',
+  '売上': '商品やサービスを売って得たお金。PL（損益計算書）の出発点。',
+  '費用': '売上を得るために使ったお金。原価・人件費・家賃・広告費など。',
+  '原価': '売った商品そのものにかかったお金。仕入れや製造のコスト。',
+  '粗利': '売上から原価を引いた儲け。商売そのものの基礎体力を示す。',
+  '販管費': '販売費及び一般管理費。人件費・家賃・広告費など、売るため・会社を運営するための費用。',
+  '営業利益': '本業で稼いだ利益。粗利から販管費を引いたもの。',
+  '営業外': '本業以外の損益。受取利息や支払利息など。',
+  '経常利益': '毎期繰り返される活動全体の利益。営業利益に営業外損益を加えたもの。',
+  '特別損益等': '臨時の損益と税金。固定資産の売却損益や法人税など。',
+  '純利益': '最終的に会社に残る利益。これが純資産に足されていく。',
+  '期首': '月のはじめに持っていた現金。',
+  '営業': '本業の活動で増減した現金。「本業でお金が稼げてるか？」— プラスが続くのが健全のサイン。',
+  '投資': '設備や資産への投資で増減した現金。「未来のために投資できてるか？」— 成長中の会社ではマイナスが普通。',
+  '財務': '借入・返済・配当など、資金調達まわりで増減した現金。「お金を新たに借りたりしたか？」',
+  '期末': '月の終わりに残った現金。翌月の期首残高につながる。',
+  '増えた現金': '営業・投資・財務の3つの増減を合計した、この月に増えた（減った）現金。BSの現金に積み上がっていく。'
+};
+const GUIDE_DEFAULT = '<span class="fin-guide__hint">図のブロックにカーソルを乗せると、その費目の説明がここに表示されます</span>';
+
+function setGuide(label) {
+  const g = document.getElementById('finGuide');
+  if (g) g.innerHTML = '<strong>' + label + '</strong> ― ' + (DESC[label] || '');
+}
+function resetGuide() {
+  const g = document.getElementById('finGuide');
+  if (g) g.innerHTML = GUIDE_DEFAULT;
+}
+
+/* 3表をまたいで「同じお金」を指す費目グループ。ホバーで一緒に強調され、つながりが見える */
+const LINK_GROUP = {
+  '現金': ['現金', '期首', '期末', '増えた現金'],
+  '期首': ['現金', '期首', '期末', '増えた現金'],
+  '期末': ['現金', '期首', '期末', '増えた現金'],
+  '増えた現金': ['現金', '期首', '期末', '増えた現金'],
+  '利益': ['利益', '純利益'],
+  '純利益': ['利益', '純利益'],
+  '損失': ['損失', '純利益']
+};
+
+function highlightGroup(label, on) {
+  const group = LINK_GROUP[label] || [label];
+  const root = document.querySelector('.fin-modal__content');
+  if (!root) return;
+  group.forEach(function (l) {
+    root.querySelectorAll('[data-fin-label="' + l + '"]').forEach(function (el) {
+      let base = el.getAttribute('data-sw');
+      if (!base) { base = el.getAttribute('stroke-width') || '1'; el.setAttribute('data-sw', base); }
+      el.setAttribute('stroke-width', on ? String(parseFloat(base) + 1.3) : base);
+    });
+  });
+}
+
+/* ブロックにホバー説明を付ける。detail（モーダル内）ではガイドバー連動+連携先の同時強調、
+   mini ではブラウザ標準ツールチップ（SVG title）のみ */
+function attachDesc(el, label, mini) {
+  if (!DESC[label]) return;
+  el.setAttribute('data-fin-label', label);
+  const title = document.createElementNS(NS, 'title');
+  title.textContent = label + ': ' + DESC[label];
+  el.appendChild(title);
+  if (mini) return;
+  el.style.cursor = 'help';
+  el.addEventListener('mouseenter', function () { highlightGroup(label, true); setGuide(label); });
+  el.addEventListener('mouseleave', function () { highlightGroup(label, false); resetGuide(); });
+}
+
+function mapText(svg, x, y, str, size, opts) {
+  opts = opts || {};
+  const t = svgEl('text', { x: x, y: y, 'text-anchor': opts.anchor || 'middle', 'font-size': size, fill: opts.fill || MAP.ink, 'font-weight': opts.weight || '700', 'font-family': JP_FONT });
+  t.textContent = str;
+  svg.appendChild(t);
+  return t;
+}
+
+/* ===== BS×PL 統合図（「会計の地図」/ note.com/tck の図の再現） =====
+   左列: 資産 / 費用、右列: 負債 / 純資産 / 利益(淡赤) / 売上。
+   利益が BS と PL の境界に位置し「BSとPLは利益を介してつながっている」を表現する。
+   赤字月は費用ブロック下部に「損失」オーバーレイ（売上で賄えず純資産を食った分）。 */
+function drawUnifiedMap(svg, m, opts) {
+  opts = opts || {}; const mini = !!opts.mini;
+  svg.innerHTML = '';
+  svg.setAttribute('viewBox', '0 0 236 170'); /* 右側36は薄いブロックのラベル引き出し用余白 */
+  const bs = m.bs, pl = m.pl;
+  const L = bs.totalLiabilities, E = bs.equity, R = pl.revenue, P = pl.netIncome;
+  const A = bs.totalAssets;
+  const C = R - P; /* 費用合計は恒等式 売上-利益 から導出（赤字時は R+|P|） */
+  const total = Math.max(A + C, 1); /* 左列合計。下の構成により右列合計と常に一致する */
+  const H = 148, Y0 = 10, s = H / total;
+  const LX = 6, MX = 100, RX = 194;
+  const fs = mini ? 10 : 8;
+  const fsv = mini ? 8 : 6.5;
+
+  function block(x1, x2, y, h, fill, label, val, textFill) {
+    const r = svgEl('rect', { x: x1, y: y, width: x2 - x1, height: Math.max(h, 1), fill: fill, stroke: MAP.ink, 'stroke-width': MAP.sw });
+    svg.appendChild(r);
+    if (!label) return;
+    attachDesc(r, label, mini);
+    const cx = (x1 + x2) / 2, cy = y + Math.max(h, 1) / 2;
+    const str = (mini || val == null) ? label : label + ' ' + val.toLocaleString('ja-JP');
+    if (h >= fs * 2.2) {
+      if (!mini && val != null && h >= fs * 3.4) {
+        mapText(svg, cx, cy - 1, label, fs, { fill: textFill });
+        mapText(svg, cx, cy + fsv + 3, val.toLocaleString('ja-JP'), fsv, { weight: '400', fill: textFill || '#444' });
+      } else {
+        mapText(svg, cx, cy + fs * 0.35, str, fs, { fill: textFill });
+      }
+    } else {
+      /* 薄いブロックはラベルを右外に引き出す（重なり防止） */
+      svg.appendChild(svgEl('line', { x1: x2, y1: cy, x2: x2 + 3, y2: cy, stroke: MAP.ink, 'stroke-width': 0.8 }));
+      mapText(svg, x2 + 5, cy + fs * 0.35, str, fs, { anchor: 'start', fill: textFill });
+    }
+  }
+
+  /* 「会計の地図」の視覚文法:
+     - 黒字: 右列 [負債 / 純資産(E-P) / 利益(ピンク) / 売上(表示高さ R-P、利益は売上の内数)]
+       → 費用と売上が同じ高さになり、利益が BS と PL の接点に乗る
+     - 赤字: 右列 [負債 / 純資産(E) / 損失(薄赤・破線=純資産から欠けた分) / 売上(R)]
+     いずれも左列 [資産 / 費用] と合計が一致する */
+  let ry = Y0;
+  block(MX, RX, ry, L * s, MAP.paper, '負債', L); ry += L * s;
+  if (P >= 0) {
+    const retained = Math.max(E - P, 0);
+    block(MX, RX, ry, retained * s, MAP.paper, '純資産', retained); ry += retained * s;
+    block(MX, RX, ry, P * s, MAP.pink, '利益', P); ry += P * s;
+    block(MX, RX, ry, (R - P) * s, MAP.paper, '売上', R);
+  } else {
+    const lossH = (-P) * s;
+    block(MX, RX, ry, E * s, MAP.paper, '純資産', E); ry += E * s;
+    const lossRect = svgEl('rect', { x: MX, y: ry, width: RX - MX, height: Math.max(lossH, 1), fill: '#fadddd', stroke: '#c0392b', 'stroke-width': 1.1, 'stroke-dasharray': '3 2' });
+    svg.appendChild(lossRect);
+    attachDesc(lossRect, '損失', mini);
+    const lcy = ry + Math.max(lossH, 1) / 2;
+    if (lossH >= fs * 2.2) {
+      mapText(svg, (MX + RX) / 2, lcy + fs * 0.35, mini ? '損失' : '損失 ' + (-P).toLocaleString('ja-JP'), fs, { fill: '#c0392b' });
+    } else {
+      svg.appendChild(svgEl('line', { x1: RX, y1: lcy, x2: RX + 3, y2: lcy, stroke: '#c0392b', 'stroke-width': 0.8 }));
+      mapText(svg, RX + 5, lcy + fs * 0.35, mini ? '損失' : '損失 ' + (-P).toLocaleString('ja-JP'), fs, { anchor: 'start', fill: '#c0392b' });
+    }
+    ry += lossH;
+    block(MX, RX, ry, R * s, MAP.paper, '売上', R);
+  }
+
+  /* 左列（上から）: 資産（最上部に現金区分 = 原図どおり資産の一番上。CFの期首・期末と同色でつながる） / 費用 */
+  let ly = Y0;
+  const cash = (m.cf && typeof m.cf.cashEnd === 'number') ? Math.min(Math.max(m.cf.cashEnd, 0), A) : 0;
+  const aRect = svgEl('rect', { x: LX, y: ly, width: MX - LX, height: Math.max(A * s, 1), fill: MAP.paper, stroke: MAP.ink, 'stroke-width': MAP.sw });
+  svg.appendChild(aRect);
+  attachDesc(aRect, '資産', mini);
+  if (cash > 0) {
+    const cRect = svgEl('rect', { x: LX + 1.4, y: ly + 1.4, width: MX - LX - 2.8, height: Math.max(cash * s - 2.8, 1), fill: MAP.blue, stroke: MAP.ink, 'stroke-width': 0.9, 'stroke-dasharray': '2.5 2' });
+    svg.appendChild(cRect);
+    attachDesc(cRect, '現金', mini);
+    if (cash * s >= fs * 2.2) mapText(svg, (LX + MX) / 2, ly + (cash * s) / 2 + fs * 0.35, mini ? '現金' : '現金 ' + cash.toLocaleString('ja-JP'), fs);
+  }
+  { /* 資産ラベルは現金を除いた下部の中央に置く */
+    const topH = (A - cash) * s, cy = ly + cash * s + topH / 2;
+    if (topH >= fs * 2.2) {
+      if (!mini && topH >= fs * 3.4) {
+        mapText(svg, (LX + MX) / 2, cy - 1, '資産', fs);
+        mapText(svg, (LX + MX) / 2, cy + fsv + 3, A.toLocaleString('ja-JP'), fsv, { weight: '400', fill: '#444' });
+      } else {
+        mapText(svg, (LX + MX) / 2, cy + fs * 0.35, mini ? '資産' : '資産 ' + A.toLocaleString('ja-JP'), fs);
+      }
+    }
+  }
+  ly += A * s;
+  block(LX, MX, ly, C * s, MAP.paper, '費用', C);
+
+  /* BS / PL の境界点線と側注。利益ブロックの下端がこの境界に接する＝「利益がBSとPLをつなぐ」 */
+  const sepY = Y0 + A * s;
+  svg.appendChild(svgEl('line', { x1: 0, y1: sepY, x2: 200, y2: sepY, stroke: MAP.dim, 'stroke-width': 0.7, 'stroke-dasharray': '3 2.4' }));
+  mapText(svg, 1, sepY - 3, 'BS', mini ? 8 : 6.5, { anchor: 'start', fill: MAP.dim });
+  mapText(svg, 1, sepY + (mini ? 9 : 8), 'PL', mini ? 8 : 6.5, { anchor: 'start', fill: MAP.dim });
+}
+
+/* ===== PL 段階利益図（「会計の地図」PL回:「当期純利益は株主のもの」の再現） =====
+   売上を100%とした5本の帯。ピンク=その段階で残っている利益、黄=その段階で引かれる費用、
+   点線=前段階の利益レベル。帯が進むごとにピンクが削られていく ===== */
+function drawPLStairs(svg, pl, opts) {
+  opts = opts || {}; const mini = !!opts.mini;
+  svg.innerHTML = '';
+  svg.setAttribute('viewBox', '0 0 300 165');
+  const stages = [
+    { name: '売上', keep: pl.revenue, dLabel: null },
+    { name: '粗利', keep: pl.grossProfit, dLabel: '原価' },
+    { name: '営業利益', keep: pl.operatingIncome, dLabel: '販管費' },
+    { name: '経常利益', keep: pl.ordinaryIncome, dLabel: '営業外' },
+    { name: '純利益', keep: pl.netIncome, dLabel: '特別損益等' },
+  ];
+  const maxV = Math.max.apply(null, stages.map(function (st) { return st.keep; }).concat([pl.revenue, 1]));
+  const H = 118, Y0 = 8, s = H / maxV;
+  const n = stages.length, w = 300 / n, bw = 40;
+  const baseY = Y0 + maxV * s;
+  stages.forEach(function (st, i) {
+    const x = i * w + (w - bw) / 2;
+    /* 売上100%の外枠（すでに引かれた分は白のまま残る） */
+    svg.appendChild(svgEl('rect', { x: x, y: baseY - pl.revenue * s, width: bw, height: Math.max(pl.revenue * s, 1), fill: MAP.paper, stroke: MAP.ink, 'stroke-width': 1.2 }));
+    const keepH = Math.max(st.keep, 0) * s;
+    if (st.keep > 0) {
+      const kr = svgEl('rect', { x: x, y: baseY - keepH, width: bw, height: Math.max(keepH, 1), fill: MAP.pink, stroke: MAP.ink, 'stroke-width': 1.2 });
+      svg.appendChild(kr);
+      attachDesc(kr, st.name, mini);
+    }
+    if (i > 0) {
+      const prev = Math.max(stages[i - 1].keep, 0);
+      const diff = prev - Math.max(st.keep, 0);
+      if (diff > 0) { /* 今回引かれた分（黄） */
+        const dr = svgEl('rect', { x: x, y: baseY - keepH - diff * s, width: bw, height: Math.max(diff * s, 1), fill: '#f5ef9b', stroke: MAP.ink, 'stroke-width': 1 });
+        svg.appendChild(dr);
+        attachDesc(dr, st.dLabel, mini);
+      }
+      /* 前段階の利益レベルを点線で示す */
+      svg.appendChild(svgEl('line', { x1: x, y1: baseY - prev * s, x2: x + bw, y2: baseY - prev * s, stroke: MAP.dim, 'stroke-width': 0.6, 'stroke-dasharray': '2 2' }));
+    }
+    mapText(svg, i * w + w / 2, baseY + 12, st.name, 8);
+    mapText(svg, i * w + w / 2, baseY + 22, st.keep.toLocaleString('ja-JP'), 6.5, { weight: '400', fill: st.keep < 0 ? '#c0392b' : '#444' });
+  });
+}
+
+/* ===== PL 売上分解図（「会計の地図」PL回の再現） =====
+   左帯 = 売上（＋プラスの営業外・特別損益）、右帯 = 原価/販管費/（マイナスの営業外・特別損益等）/純利益(ピンク)。
+   左右の帯は必ず同じ高さ = 「売上は費用と利益にすべて分解される」が視覚的に自明。
+   赤字月は足りない分を左帯に「損失」（赤破線 = 純資産の取り崩し）として積む */
+function drawPLBreakdown(svg, pl, opts) {
+  opts = opts || {}; const mini = !!opts.mini;
+  svg.innerHTML = '';
+  svg.setAttribute('viewBox', '0 0 300 150');
+  const P = pl.netIncome;
+  const leftItems = [['売上', pl.revenue, MAP.paper]];
+  if (pl.nonOperating > 0) leftItems.push(['営業外', pl.nonOperating, MAP.paper]);
+  if (pl.extraordinary > 0) leftItems.push(['特別損益等', pl.extraordinary, MAP.paper]);
+  if (P < 0) leftItems.push(['損失', -P, 'loss']);
+  const rightItems = [['原価', pl.cogs, MAP.gray], ['販管費', pl.sga, MAP.gray]];
+  if (pl.nonOperating < 0) rightItems.push(['営業外', -pl.nonOperating, MAP.gray]);
+  if (pl.extraordinary < 0) rightItems.push(['特別損益等', -pl.extraordinary, MAP.gray]);
+  if (P >= 0) rightItems.push(['純利益', P, MAP.pink]);
+  const total = Math.max(leftItems.reduce(function (a, i) { return a + i[1]; }, 0), 1);
+  const H = 126, Y0 = 8, s = H / total;
+  const fs = 8;
+
+  function band(items, x1, x2, outX, outAnchor) {
+    let y = Y0, lastOutY = -99;
+    items.forEach(function (it) {
+      const label = it[0], val = it[1], c = it[2];
+      const h = Math.max(val * s, 1);
+      const isLoss = c === 'loss';
+      const r = svgEl('rect', isLoss
+        ? { x: x1, y: y, width: x2 - x1, height: h, fill: '#fadddd', stroke: '#c0392b', 'stroke-width': 1.1, 'stroke-dasharray': '3 2' }
+        : { x: x1, y: y, width: x2 - x1, height: h, fill: c, stroke: MAP.ink, 'stroke-width': MAP.sw });
+      svg.appendChild(r);
+      attachDesc(r, label, mini);
+      const str = label + ' ' + val.toLocaleString('ja-JP');
+      const cy = y + h / 2;
+      const tf = isLoss ? '#c0392b' : MAP.ink;
+      if (h >= fs * 2.2) {
+        mapText(svg, (x1 + x2) / 2, cy + fs * 0.35, str, fs, { fill: tf });
+      } else {
+        /* 薄いブロックはラベルを帯の外へ引き出す。連続する場合は縦位置をずらして重なり防止 */
+        let lyy = cy;
+        if (lyy - lastOutY < fs + 1) lyy = lastOutY + fs + 1;
+        lastOutY = lyy;
+        svg.appendChild(svgEl('line', { x1: outAnchor === 'start' ? x2 : x1, y1: cy, x2: outX + (outAnchor === 'start' ? -2 : 2), y2: lyy - 2, stroke: tf, 'stroke-width': 0.8 }));
+        mapText(svg, outX, lyy + fs * 0.35, str, fs, { anchor: outAnchor, fill: tf });
+      }
+      y += h;
+    });
+  }
+
+  band(leftItems, 58, 138, 55, 'end');
+  band(rightItems, 162, 242, 245, 'start');
+  /* 上端・下端の点線 + 「=」で左右の高さが同じことを示す */
+  svg.appendChild(svgEl('line', { x1: 58, y1: Y0, x2: 242, y2: Y0, stroke: MAP.dim, 'stroke-width': 0.6, 'stroke-dasharray': '2 2' }));
+  svg.appendChild(svgEl('line', { x1: 58, y1: Y0 + total * s, x2: 242, y2: Y0 + total * s, stroke: MAP.dim, 'stroke-width': 0.6, 'stroke-dasharray': '2 2' }));
+  mapText(svg, 150, Y0 + H / 2 + 4, '=', 13, { fill: MAP.dim });
+}
+
+/* ===== CF 階段図（「会計の地図」CF回:「プラスマイナスまで見るとよりわかる」の再現） =====
+   営業(赤)で稼ぎ、投資(オレンジ)・財務(黄)で使い、残りが「増えた現金」(水色の黒枠ボックス)。
+   各活動の境界レベルを水平点線でつなぎ、バー内に +/− を大きく表示する ===== */
+function drawCFStairs(svg, cf, opts) {
+  opts = opts || {}; const mini = !!opts.mini;
+  svg.innerHTML = '';
+  svg.setAttribute('viewBox', '0 0 300 175');
+  const op = cf.operating, inv = cf.investing, fin = cf.financing;
+  const levels = [0, op, op + inv, op + inv + fin];
+  const net = levels[3];
+  const vmax = Math.max.apply(null, levels), vmin = Math.min.apply(null, levels);
+  const H = 130, Y0 = 14, s = H / Math.max(vmax - vmin, 1);
+  function yOf(v) { return Y0 + (vmax - v) * s; }
+  const CF_COLORS = { '営業': '#f2aaa5', '投資': '#f5c98f', '財務': '#f5ef9b' };
+  const cols = [['営業', 0, op], ['投資', op, op + inv], ['財務', op + inv, net]];
+  const bw = 56, gap = 14, x0 = 78; /* 左端は「増えた現金」ボックス用に空ける */
+  cols.forEach(function (c, i) {
+    const label = c[0], from = c[1], to = c[2];
+    const delta = to - from;
+    const x = x0 + i * (bw + gap);
+    const yTop = yOf(Math.max(from, to)), h = Math.max(Math.abs(delta) * s, 1.2);
+    const r = svgEl('rect', { x: x, y: yTop, width: bw, height: h, fill: CF_COLORS[label], stroke: MAP.ink, 'stroke-width': 1.2 });
+    svg.appendChild(r);
+    attachDesc(r, label, mini);
+    /* バー内に +/− を大きく表示（原図準拠） */
+    if (h >= 16) mapText(svg, x + bw / 2, yTop + h / 2 + 5, delta >= 0 ? '＋' : '−', 15);
+    /* 境界レベルの水平点線（バーの右端から次のバーまで + バー上下端） */
+    svg.appendChild(svgEl('line', { x1: x - gap, y1: yOf(from), x2: x + bw, y2: yOf(from), stroke: MAP.dim, 'stroke-width': 0.7, 'stroke-dasharray': '2.5 2' }));
+    /* 活動名（バーの上） */
+    mapText(svg, x + bw / 2, Y0 - 5, label, 8);
+    if (!mini) mapText(svg, x + bw / 2, yTop + h + 10, (delta >= 0 ? '+' : '') + delta.toLocaleString('ja-JP'), 6.5, { weight: '400', fill: '#444' });
+  });
+  /* 最終レベルの点線を左端まで伸ばし、「増えた現金」ボックスを置く */
+  svg.appendChild(svgEl('line', { x1: 8, y1: yOf(net), x2: x0 + 2 * (bw + gap) + bw, y2: yOf(net), stroke: MAP.dim, 'stroke-width': 0.7, 'stroke-dasharray': '2.5 2' }));
+  const boxTop = yOf(Math.max(net, 0)), boxH = Math.max(Math.abs(net) * s, 10);
+  const nb = svgEl('rect', { x: 10, y: boxTop, width: 58, height: boxH, fill: MAP.blue, stroke: MAP.ink, 'stroke-width': 2 });
+  svg.appendChild(nb);
+  attachDesc(nb, '増えた現金', mini);
+  const nLabel = (net >= 0 ? '増えた現金' : '減った現金');
+  if (boxH >= 22) {
+    mapText(svg, 39, boxTop + boxH / 2 - 1, nLabel, 7);
+    mapText(svg, 39, boxTop + boxH / 2 + 8, net.toLocaleString('ja-JP'), 6.5, { weight: '400', fill: '#444' });
+  } else {
+    mapText(svg, 39, boxTop + boxH + 10, nLabel + ' ' + net.toLocaleString('ja-JP'), 7);
+  }
+}
+
+/* ===== CF ブリッジ（紙スタイル）: 期首 → 営業/投資/財務 → 期末（期末は淡赤で強調）。
+   段差をつなぐ点線コネクタで現金残高の推移を追える ===== */
+function drawCFBridgePaper(svg, cf, opts) {
+  opts = opts || {}; const mini = !!opts.mini;
+  svg.innerHTML = '';
+  const W = mini ? 200 : 300, BH = 55, VH = mini ? 70 : 88;
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + VH);
+  const steps = [['期首', cf.cashBegin, 'base'], ['営業', cf.operating, 'delta'], ['投資', cf.investing, 'delta'], ['財務', cf.financing, 'delta'], ['期末', cf.cashEnd, 'end']];
+  const maxAbs = Math.max.apply(null, steps.map(function(s){ return Math.abs(s[1]); }).concat([1]));
+  const w = W / steps.length;
+  svg.appendChild(svgEl('line', { x1: 0, y1: BH, x2: W, y2: BH, stroke: MAP.dim, 'stroke-width': 0.6 }));
+  if (mini) mapText(svg, 2, 9, 'CF', 8, { anchor: 'start', fill: MAP.dim });
+  let cursor = 0, lastLevelY = null, lastRightX = null;
+  steps.forEach(function(s, i) {
+    const label = s[0], val = s[1], kind = s[2];
+    const isAbs = kind !== 'delta';
+    const h = (Math.abs(val) / maxAbs) * 46;
+    const y = isAbs ? BH - h : (val >= 0 ? BH - cursor - h : BH - cursor);
+    /* 期首・期末=現金(水色、BSの現金区分と同色)。3活動は原図の色: 営業=赤系/投資=オレンジ/財務=黄 */
+    const CF_COLORS = { '営業': '#f2aaa5', '投資': '#f5c98f', '財務': '#f5ef9b' };
+    const fill = (kind === 'end' || kind === 'base') ? MAP.blue : (CF_COLORS[label] || MAP.gray);
+    const x1 = i * w + 3, bw = w - 6;
+    const r = svgEl('rect', { x: x1, y: y, width: bw, height: Math.max(h, 1.2), fill: fill, stroke: MAP.ink, 'stroke-width': mini ? 1.1 : 1.3 });
+    svg.appendChild(r);
+    attachDesc(r, label, mini);
+    if (lastRightX != null) svg.appendChild(svgEl('line', { x1: lastRightX, y1: lastLevelY, x2: x1, y2: lastLevelY, stroke: MAP.dim, 'stroke-width': 0.7, 'stroke-dasharray': '2 2' }));
+    if (isAbs) cursor = h; else cursor += (val >= 0 ? h : -h);
+    lastLevelY = BH - cursor;
+    lastRightX = x1 + bw;
+    if (mini) {
+      /* mini でも棒の意味がわかるよう科目名のみ1段で表示 */
+      mapText(svg, i * w + w / 2, 65, label, 7, { weight: '400', fill: '#5b6066' });
+    } else {
+      const t = svgEl('text', { x: i * w + w / 2, y: 64 + (i % 2) * 9, 'text-anchor': 'middle', class: 'fin-detail-label' });
+      t.textContent = label + ' ' + val;
+      svg.appendChild(t);
+    }
+  });
+}
+
+function renderCalendar(data) {
+  const grid = document.getElementById('finGrid');
+  grid.innerHTML = '';
+  data.months.forEach(function(m) {
+    const card = document.createElement('div');
+    card.className = 'fin-card' + (m.empty ? ' fin-card--empty' : '');
+    card.setAttribute('data-month', m.month);
+    card.setAttribute('tabindex', m.empty ? '-1' : '0');
+    const monthNum = parseInt(m.month.split('-')[1], 10);
+    let badgeHtml = '';
+    if (!m.empty && m.yoy != null) {
+      const cls = m.yoy >= 105 ? 'up' : (m.yoy <= 95 ? 'down' : 'flat');
+      const sign = m.yoy >= 100 ? '+' : '';
+      badgeHtml = '<span class="fin-card__badge ' + cls + '">' + sign + (m.yoy - 100) + '%</span>';
+    }
+    card.innerHTML =
+      '<div class="fin-card__head"><span class="fin-card__month">' + monthNum + '月</span>' + badgeHtml + '</div>' +
+      (m.empty
+        ? '<div style="text-align:center;color:var(--text-dim);font-family:var(--font-mono);font-size:0.7rem;padding:16px 0;">データなし</div>'
+        : '<div class="fin-paper fin-card__mini"><svg class="fin-mini-map"></svg><svg class="fin-mini-cf"></svg></div>');
+    grid.appendChild(card);
+    if (!m.empty) {
+      drawUnifiedMap(card.querySelector('.fin-mini-map'), m, { mini: true });
+      drawCFBridgePaper(card.querySelector('.fin-mini-cf'), m.cf, { mini: true });
+      card.addEventListener('click', function() { openModal(m); });
+      card.addEventListener('keydown', function(e) { if (e.key === 'Enter') openModal(m); });
+    }
+  });
+}
+
+function openModal(m) {
+  const modal = document.getElementById('finModal');
+  const content = modal.querySelector('.fin-modal__content');
+  content.innerHTML =
+    '<h2>' + m.month + '</h2>' +
+    '<div class="fin-guide" id="finGuide">' + GUIDE_DEFAULT + '</div>' +
+    '<div class="fin-legend">' +
+      '<span><i class="sw sw--pink"></i>利益 ― PLとBSをつなぐ</span>' +
+      '<span><i class="sw sw--blue"></i>現金 ― BSとCFをつなぐ</span>' +
+    '</div>' +
+    '<h3>BS × PL × CF のつながり</h3>' +
+    '<div class="fin-paper" style="max-width:520px;margin:0 auto;">' +
+      '<svg class="fin-detail-map"></svg>' +
+    '</div>' +
+    '<h3>PL ― 段階利益（利益がどこでどれだけ削られるか）</h3><div class="fin-paper"><svg class="fin-detail-pl-stairs"></svg></div>' +
+    '<h3>PL ― 売上の分解（売上 = 費用 + 純利益）</h3><div class="fin-paper"><svg class="fin-detail-pl"></svg></div>' +
+    '<h3>CF ― 増減の内訳（プラスマイナスで見る）</h3><div class="fin-paper"><svg class="fin-detail-cf-stairs"></svg></div>' +
+    '<h3>CF ― 残高の推移（期首 → 期末）</h3><div class="fin-paper"><svg class="fin-detail-cf"></svg></div>';
+  drawUnifiedMap(content.querySelector('.fin-detail-map'), m, { mini: false });
+  drawPLStairs(content.querySelector('.fin-detail-pl-stairs'), m.pl, { mini: false });
+  drawPLBreakdown(content.querySelector('.fin-detail-pl'), m.pl, { mini: false });
+  drawCFStairs(content.querySelector('.fin-detail-cf-stairs'), m.cf, { mini: false });
+  drawCFBridgePaper(content.querySelector('.fin-detail-cf'), m.cf, { mini: false });
+  modal.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('fin-modal-open');
+}
+document.getElementById('finModal').addEventListener('click', function(e) {
+  if (e.target.id === 'finModal' || e.target.closest('.fin-modal__close')) {
+    document.getElementById('finModal').setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('fin-modal-open');
+  }
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') { document.getElementById('finModal').setAttribute('aria-hidden', 'true'); document.body.classList.remove('fin-modal-open'); }
+});
+</script>
+</body>
+</html>
