@@ -1,7 +1,7 @@
 ---
 name: html
-description: "スレッドの状況・確認事項・図解・画像注釈・画像評価を、self-contained な HTML レポートで可視化するスキル。4 モード: status（チェックリスト＋Yes/No 確認 UI）/ diagram（Mermaid + D3.js フロー図）/ annotate（画像注釈、PNG クリップボード書き出し）/ image-review（画像にスコア+チェックリスト+コメント評価）。生成後は自動で open でブラウザ起動。明示モード指定がなければ会話文脈から自動判定。トリガー: 「HTMLで説明」「HTMLで可視化」「HTMLで確認UI」「画像に丸つけて」「画像を評価したい」「フロー図をHTMLで」「/html」。NOT for HTML→Markdown 変換（vw-docling 参照）、NOT for スキル/エージェント自体のフロー解析（vw-flow-viz 参照）。"
-argument-hint: <mode? status|diagram|annotate|image-review> [path-or-topic]
+description: "スレッドの状況・確認事項・図解・画像注釈・画像評価を、self-contained な HTML レポートで可視化するスキル。4 モード: status（チェックリスト＋Yes/No 確認 UI）/ diagram（Mermaid + D3.js フロー図）/ annotate（画像注釈、PNG クリップボード書き出し）/ image-review（画像にスコア+チェックリスト+コメント評価）。生成後は自動で open でブラウザ起動。明示モード指定がなければ会話文脈から自動判定。`serve` フラグ付きで bun HTTP サーバー＋ホットリロードで配信（moshi servers 自動検出対応）。トリガー: 「HTMLで説明」「HTMLで可視化」「HTMLで確認UI」「画像に丸つけて」「画像を評価したい」「フロー図をHTMLで」「/html」「serve で配信」。NOT for HTML→Markdown 変換（vw-docling 参照）、NOT for スキル/エージェント自体のフロー解析（vw-flow-viz 参照）。"
+argument-hint: <mode? status|diagram|annotate|image-review> [serve] [path-or-topic]
 allowed-tools: Read, Write, Bash, Glob, Grep, AskUserQuestion
 model: opus
 ---
@@ -67,6 +67,17 @@ You are an HTML report generator. Take the current thread context (decisions, op
 | `image-review` | `/html image-review ~/Desktop/mockup.png` |
 
 明示指定があれば自動判定をスキップ。引数が曖昧な場合のみ AskUserQuestion でバッチ確認（1 回のみ）。
+
+### `serve` フラグ（任意モードと併用可）
+
+引数のどこかに `serve` が含まれていれば、生成後に bun HTTP サーバーで配信する。
+全モードと併用可能: `/html status serve`, `/html serve diagram flow` 等。
+
+- bun でローカル HTTP サーバーを起動（ポート 24680）
+- HTML にホットリロード用ポーリングスクリプトを自動注入
+- `open http://localhost:24680` でブラウザ起動
+- `moshi servers` がサーバーを自動検出 → リモート Web プレビュー可能
+- サーバーはバックグラウンドで動作。再生成でファイルが更新されるとブラウザが自動リロード
 
 ## Phase 2: Content Extraction
 
@@ -142,12 +153,45 @@ You are an HTML report generator. Take the current thread context (decisions, op
    - `.brain/report/{YYYY-MM-DD-HHmm}-html-{mode}.html`
    - フォールバック: `$TMPDIR/claude/html/{YYYY-MM-DD-HHmm}-{mode}.html`
 2. `Write` ツールで HTML を保存
-3. **必ず** `open {file_path}` でデフォルトブラウザ起動
+3. **通常モード**（serve フラグなし）:
+   - **必ず** `open {file_path}` でデフォルトブラウザ起動
    - 許可済み: `Bash(open *.html)` / `Bash(open *.png)` / `Bash(open *.pdf)`
    - **`dangerouslyDisableSandbox: true` で実行する**（macOS の `open` は LaunchServices/XPC を使うため、sandbox 内では `NSOSStatusErrorDomain Code=-600` で失敗する。これは経路の制約であり権限の問題ではない）
    - **失敗時のみ**: パスを stdout に出して「ターミナルで open してください」と案内
    - スキップ禁止: 「ユーザーが手動で開く」前提にしない
-4. 結果サマリーを stdout に出力（パスとモード）
+4. **serve モード**（serve フラグあり）:
+   - HTML の `</body>` 直前にホットリロードスクリプトを注入してから保存:
+     ```html
+     <script>
+     (function(){let m=0;setInterval(async()=>{try{const r=await fetch("/_mtime");const d=await r.json();if(m&&d.t!==m)location.reload();m=d.t}catch{}},1000)})();
+     </script>
+     ```
+   - bun サーバースクリプトを `$TMPDIR/claude/html-serve.ts` に書き出し:
+     ```typescript
+     const file = Bun.argv[2];
+     if (!file) { console.error("Usage: bun html-serve.ts <file>"); process.exit(1); }
+     const port = 24680;
+     Bun.serve({
+       port,
+       async fetch(req) {
+         const url = new URL(req.url);
+         if (url.pathname === "/_mtime") {
+           const f = Bun.file(file);
+           const stat = await f.stat();
+           return Response.json({ t: stat.mtimeMs });
+         }
+         return new Response(Bun.file(file), {
+           headers: { "Content-Type": "text/html; charset=utf-8" },
+         });
+       },
+     });
+     console.log(`Serving ${file} at http://localhost:${port}`);
+     ```
+   - `Bash(run_in_background: true)` でサーバー起動: `bun $TMPDIR/claude/html-serve.ts {file_path}`
+   - `open http://localhost:24680` でブラウザ起動
+   - 以降、HTML を再生成（同じパスに `Write`）すればブラウザが自動リロード
+   - サーバー停止は不要（セッション終了 or ユーザーが手動で Ctrl+C）
+5. 結果サマリーを stdout に出力（パスとモード、serve 時はサーバー URL も）
 
 ## Phase 4: Present Results
 
@@ -157,10 +201,12 @@ HTML レポート生成完了
 モード: {status|diagram|annotate}
 タイトル: {title}
 ファイル: {path}
+サーバー: http://localhost:24680（serve モード時のみ）
 
 ブラウザを起動しました。
 - status モード: 設問に回答 → [結果を JSON でコピー] ボタンで Claude に貼り戻し
 - annotate モード: 注釈後 [PNG をクリップボードへ] → Cmd+V でチャットに貼り付け
+- serve モード: ファイル更新で自動リロード。moshi servers で検出可能
 ```
 
 </workflow>
@@ -189,6 +235,15 @@ HTML レポート生成完了
 → /html annotate ~/Desktop/screenshot.png
    出力: .brain/report/2026-05-15-1435-html-annotate.html
    Markerjs2 で丸・矢印・テキスト → [PNG をクリップボード] → Cmd+V で貼り戻し
+```
+
+### 例 4: serve モードで配信
+```
+ユーザー: 状況を HTML で serve して
+→ /html status serve
+   出力: .brain/report/2026-05-15-1440-html-status.html
+   bun サーバー起動 → http://localhost:24680 でブラウザ起動
+   HTML を再生成すると自動リロード。moshi servers で検出可能
 ```
 
 </usage_examples>
