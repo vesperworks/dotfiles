@@ -1,6 +1,33 @@
 # Verification Strategies Reference
 
-検証ループ（Verification Loop）の設計パターン集。Inner Loop の出力品質を保証する。
+Verification ムーブの設計パターン集。ループの出力品質を保証する。
+
+---
+
+## 大原則: Generator/Evaluator 分離（maker–checker）
+
+Verification は5ムーブ中もっともスキップされやすく、スキップすると Nodding Loop（自己承認ループ）になる。以下の3原則をすべての戦略の前提とする:
+
+1. **書いた者に採点させない** — Generator のコンテキストには「なぜそう書いたか」の自己説得が詰まっており、自分の出力を見ても結果でなく経緯を見てしまう。Evaluator は自己説得を持たない別の agent 呼び出しにする（同一コンテキスト内の自問自答は分離にならない）
+2. **Evaluator は壊れている前提で始める** — プロンプトに明記する: 「DO NOT praise. Find what fails. ASSUME: this code is BROKEN until proven otherwise.」
+3. **読むな、動かせ** — コードなら実行、UI なら実際に開いてクリック（Chrome DevTools MCP）、レポートなら根拠と突合。「見た目が正しい」でなく「動いて正しい」で判定する
+
+Evaluator 用プロンプトの骨格:
+
+```
+ROLE: Adversarial reviewer.
+ASSUME: this output is BROKEN until proven otherwise.
+DO NOT praise. Find what fails.
+
+CHECK, in order:
+1. Does it run? (execute, don't read)
+2. Tests: run them, paste real output.
+3. Edge cases the author skipped.
+4. Does behavior match the requirement?
+
+VERDICT: PASS only if every check holds.
+Otherwise REJECT + list each reason.
+```
 
 ---
 
