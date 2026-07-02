@@ -1,15 +1,15 @@
 #!/usr/bin/osascript
 
-# Required parameters:
-# @raycast.schemaVersion 1
-# @raycast.title Type to Siri
-# @raycast.mode silent
+-- Required parameters:
+-- @raycast.schemaVersion 1
+-- @raycast.title Type to Siri
+-- @raycast.mode silent
 
-# Optional parameters:
-# @raycast.icon siri-icon.png
-# @raycast.packageName System
-# @raycast.argument1 { "type": "text", "placeholder": "Siri に伝える内容（空欄でSiri起動のみ）", "optional": true }
-# @raycast.description Siri にテキストを渡す（日本語対応：クリップボード経由ペースト方式）
+-- Optional parameters:
+-- @raycast.icon siri-icon.png
+-- @raycast.packageName System
+-- @raycast.argument1 { "type": "text", "placeholder": "Siri に伝える内容（空欄でSiri起動のみ）", "optional": true }
+-- @raycast.description Siri にテキストを渡す（日本語対応：クリップボード経由ペースト方式）
 
 on run argv
     set promptText to ""

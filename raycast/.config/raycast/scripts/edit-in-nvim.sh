@@ -11,7 +11,11 @@
 
 set -euo pipefail
 
-TMPFILE=$(mktemp "${TMPDIR:-/tmp}/nvim-clipboard-edit.XXXXXX.md")
+# BSD mktemp は XXXXXX がテンプレート末尾にないと展開されないため、
+# サフィックスなしで生成してから .md を付与する
+TMPFILE=$(mktemp "${TMPDIR:-/tmp}/nvim-clipboard-edit.XXXXXX")
+mv "$TMPFILE" "${TMPFILE}.md"
+TMPFILE="${TMPFILE}.md"
 trap 'rm -f "$TMPFILE"' EXIT
 pbpaste >"$TMPFILE"
 
