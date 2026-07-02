@@ -1,8 +1,7 @@
 {
   "cleanupPeriodDays": 90,
   "env": {
-    "ENABLE_TOOL_SEARCH": "true",
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+    "ENABLE_TOOL_SEARCH": "true"
   },
   "attribution": {
     "commit": "",
@@ -18,18 +17,13 @@
       "Edit(src/**)",
       "Edit(docs/**)",
       "Edit(~/Works/**)",
-      "MultiEdit",
-      "LS",
       "Grep",
       "Glob",
-      "TodoRead",
       "TodoWrite",
-      "NotebookRead",
       "NotebookEdit",
-      "Task",
+      "Agent",
       "ExitPlanMode",
       "Skill(*)",
-      "SlashCommand(*)",
       "WebSearch",
       "WebFetch(domain:docs.anthropic.com)",
       "WebFetch(domain:www.anthropic.com)",
@@ -157,6 +151,7 @@
     ],
     "defaultMode": "auto"
   },
+  "model": "sonnet",
   "fallbackModel": [
     "default"
   ],
@@ -174,7 +169,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Write|Edit|MultiEdit",
+        "matcher": "Write|Edit",
         "hooks": [
           {
             "type": "command",
@@ -276,7 +271,7 @@
         ]
       },
       {
-        "matcher": "Write|Edit|MultiEdit",
+        "matcher": "Write|Edit",
         "hooks": [
           {
             "type": "command",
@@ -342,10 +337,9 @@
   "showTurnDuration": true,
   "showMessageTimestamps": true,
   "terminalProgressBarEnabled": true,
-  "teammateMode": "auto",
+  "teammateMode": "in-process",
   "inputNeededNotifEnabled": false,
   "agentPushNotifEnabled": false,
   "skipAutoPermissionPrompt": true,
-  "voiceEnabled": true,
-  "model": "sonnet"
+  "voiceEnabled": true
 }
