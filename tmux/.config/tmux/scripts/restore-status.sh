@@ -18,7 +18,7 @@ tmux set -ga status-right "#(${TMUX_DIR}/plugins/tokyo-night-tmux/src/path-widge
 tmux set -ga status-right "#(${TMUX_DIR}/scripts/git-status-jj.sh #{pane_current_path})"
 tmux set -ga status-right "#(${TMUX_DIR}/scripts/cc-wait-count.sh)"
 tmux set -ga status-right "#(${TMUX_DIR}/plugins/tmux-continuum/scripts/continuum_save.sh)"
-tmux set -g status-interval 15
+tmux set -g status-interval 3 # tmux.conf L51 と同値を維持（WAIT/NEW カウント追従のため）
 
 # Moshi が unbind するキーをデフォルト bind に復元
 tmux bind -T root WheelUpStatus select-window -t :- 2>/dev/null || true
