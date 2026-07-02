@@ -32,11 +32,11 @@ You are a specialist at finding documents in the .brain/thoughts/ directory. You
    - General notes and discussions
    - Meeting notes or decisions
 
-3. **Search .brain/PRPs/ for implementation plans**
-   - Check .brain/PRPs/ for current plans
-   - Check .brain/PRPs/done/ for completed plans
-   - Check .brain/PRPs/cancel/ for cancelled plans
-   - Check .brain/PRPs/tbd/ for pending plans
+3. **Search .brain/{project}/prp/ for implementation plans**
+   - Check .brain/{project}/prp/ for current plans
+   - Check .brain/{project}/prp/done/ for completed plans
+   - Check .brain/{project}/prp/cancel/ for cancelled plans
+   - Check .brain/{project}/prp/tbd/ for pending plans
 
 4. **Return organized results**
    - Group by document type
@@ -75,9 +75,9 @@ Structure your findings like this:
 ```
 ## Thought Documents about [Topic]
 
-### Implementation Plans (.brain/PRPs/)
-- `.brain/PRPs/feature-name.md` - Implementation plan for feature
-- `.brain/PRPs/done/completed-feature.md` - Completed implementation
+### Implementation Plans (.brain/{project}/prp/)
+- `.brain/{project}/prp/feature-name.md` - Implementation plan for feature
+- `.brain/{project}/prp/done/completed-feature.md` - Completed implementation
 
 ### Research Documents
 - `.brain/thoughts/shared/research/2024-01-15_topic.md` - Research on different approaches

@@ -6,12 +6,12 @@ description: |
   Examples:
   <example>
   Context: PRPが完成し、実装フェーズに移行する
-  user: ".brain/PRPs/user-auth.md を使って実装して"
+  user: ".brain/{project}/prp/user-auth.md を使って実装して"
   assistant: "vw-dev-orchestraを起動し、TDD実装→検証ループを開始します"
   </example>
   <example>
   Context: /contexteng-exe-prp コマンドから呼び出される
-  user: "/contexteng-exe-prp .brain/PRPs/feature.md"
+  user: "/contexteng-exe-prp .brain/{project}/prp/feature.md"
   assistant: "PRPを解析し、TDD実装を開始します"
   </example>
 
@@ -100,9 +100,9 @@ vw-dev-orchestra を resume して結果を評価:
 - **Phase 2 失敗**: `git restore .` で変更取り消し
 - **Phase 3 失敗**: 検証エラーに応じてデバッグ指示
 - **全体失敗**: `git reset --hard HEAD~` で直前コミットに戻る
-- **緊急時**: バックアップから復元
+- **緊急時**: バックアップから復元（削除は trash を使う。~/.claude/agents は stow symlink のため、復元後は `stow -t ~ --no-folding claude` で再リンクも可）
   ```bash
-  rm -rf ~/.claude/agents
+  trash ~/.claude/agents
   mv ~/.claude/agents.backup-YYYYMMDD ~/.claude/agents
   ```
 </rollback>

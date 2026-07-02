@@ -15,7 +15,7 @@ The orchestrator will:
 2. Generate PRP(s) using appropriate approach(es) with **SubAgent→Skills pattern**
 3. Each SubAgent references prp-generation Skill for Progressive Disclosure
 4. Evaluate and recommend if multi-mode
-5. Save final PRP to .brain/PRPs/{feature-name}.md
+5. Save final PRP to .brain/{project}/prp/{feature-name}.md ({project} = カレントプロジェクト名。例: dotfiles)
 
 @vw-prp-orchestrator, please generate PRP for: $ARGUMENTS
 

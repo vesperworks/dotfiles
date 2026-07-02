@@ -22,6 +22,10 @@ Location: .brain/thoughts/shared/tasks/{YYYY-MM-DD}-progress-report.md
 
 <workflow>
 
+## Path Convention
+
+`.brain/{project}/prp/` の `{project}` はカレントプロジェクト名（cwd のディレクトリ名。例: dotfiles → `.brain/dotfiles/prp/`）に置き換えて解釈すること。
+
 ## Phase 1: Initial Contact
 
 ### If NO argument provided:
@@ -32,7 +36,7 @@ Analyze entire project status:
 プロジェクト進捗管理を開始します 📊
 
 以下を分析します：
-- .brain/PRPs/の全PRPファイル
+- .brain/{project}/prp/の全PRPファイル
 - 最近のコミット履歴
 - コードベースの実装状況
 
@@ -74,9 +78,9 @@ Use TodoWrite to track analysis tasks:
 ```yaml
 TodoWrite:
   todos:
-    - content: ".brain/PRPs/ディレクトリをスキャン"
+    - content: ".brain/{project}/prp/ディレクトリをスキャン"
       status: "in_progress"
-      activeForm: ".brain/PRPs/ディレクトリをスキャン中"
+      activeForm: ".brain/{project}/prp/ディレクトリをスキャン中"
     - content: "コミット履歴を分析"
       status: "pending"
       activeForm: "コミット履歴を分析中"
@@ -109,13 +113,13 @@ git status
 
 ```
 Task(subagent_type="general-purpose", description="Scan PRPs directory", prompt="""
-You are hl-codebase-locator. Scan the .brain/PRPs/ directory structure.
+You are hl-codebase-locator. Scan the .brain/{project}/prp/ directory structure.
 
 Instructions:
-1. List all PRP files in .brain/PRPs/ (root level)
-2. List all PRP files in .brain/PRPs/done/
-3. List all PRP files in .brain/PRPs/cancel/
-4. List all PRP files in .brain/PRPs/tbd/
+1. List all PRP files in .brain/{project}/prp/ (root level)
+2. List all PRP files in .brain/{project}/prp/done/
+3. List all PRP files in .brain/{project}/prp/cancel/
+4. List all PRP files in .brain/{project}/prp/tbd/
 5. For each root-level PRP, note: filename, title, Success Criteria count (checked vs total)
 
 Return organized list with file paths and brief summaries.
@@ -142,7 +146,7 @@ Task(subagent_type="general-purpose", description="Analyze PRP implementation", 
 You are hl-codebase-analyzer. Analyze PRP implementation status.
 
 Instructions:
-1. For each active PRP (in .brain/PRPs/ root):
+1. For each active PRP (in .brain/{project}/prp/ root):
    - Read the PRP file
    - Extract Success Criteria
    - Search codebase for related implementations
@@ -272,12 +276,12 @@ If user approves, execute:
 
 ```bash
 # ディレクトリが存在しない場合は作成
-mkdir -p .brain/PRPs/done .brain/PRPs/cancel .brain/PRPs/tbd
+mkdir -p .brain/{project}/prp/done .brain/{project}/prp/cancel .brain/{project}/prp/tbd
 
 # PRPを移動
-git mv .brain/PRPs/{PRP-name}.md .brain/PRPs/done/
-git mv .brain/PRPs/{PRP-name}.md .brain/PRPs/cancel/
-git mv .brain/PRPs/{PRP-name}.md .brain/PRPs/tbd/
+git mv .brain/{project}/prp/{PRP-name}.md .brain/{project}/prp/done/
+git mv .brain/{project}/prp/{PRP-name}.md .brain/{project}/prp/cancel/
+git mv .brain/{project}/prp/{PRP-name}.md .brain/{project}/prp/tbd/
 ```
 
 ## Phase 5: Presentation & Iteration

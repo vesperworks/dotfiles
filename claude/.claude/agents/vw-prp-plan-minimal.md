@@ -11,6 +11,7 @@ color: green
 
 ## MUST: Language Requirements
 - **Think in English**: All internal reasoning must be in English
+  - NOTE: グローバル CLAUDE.md「思考は日本語」ルールへの意図的例外（PRP 成果物を英語で生成する品質最適化のため）
 - **Output in English**: Generate PRP in English
 
 ## Approach: Minimalist
