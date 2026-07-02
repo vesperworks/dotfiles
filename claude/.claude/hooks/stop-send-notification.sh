@@ -53,18 +53,6 @@ fi
 
 TITLE="🤖CC｜${PROJECT_NAME}"
 
-# macOS デスクトップ通知は無効化（Moshi スマホ通知で代替）
-
-# Moshi通知（スマホ）
-if [ -n "${MOSHI_TOKEN:-}" ]; then
-	MOSHI_MSG=${LAST_MESSAGE//\"/\\\"}
-	curl -sS -X POST https://api.getmoshi.app/api/webhook \
-		-H "Content-Type: application/json" \
-		-d "{
-            \"token\": \"${MOSHI_TOKEN}\",
-            \"title\": \"${TITLE}\",
-            \"message\": \"${MOSHI_MSG}\"
-        }" >/dev/null 2>&1 &
-fi
+# Moshi通知は moshi-hook 正規ルートに移行（レガシーAPI廃止済み）
 
 exit 0
