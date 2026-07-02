@@ -274,9 +274,9 @@ process_issue() {
 		fi
 	fi
 
-	# Update Iteration
+	# Update Iteration (field may be named "Sprint" etc., fall back to type-based lookup)
 	if [[ -n "$p_iteration" ]]; then
-		field_id=$(find_field_id "$FIELDS_JSON" "Iteration")
+		field_id=$(find_iteration_field_id "$FIELDS_JSON" "Iteration")
 		iteration_id=$(find_iteration_id "$FIELDS_JSON" "Iteration" "$p_iteration")
 		if [[ -n "$field_id" && -n "$iteration_id" ]]; then
 			update_iteration_field "$PROJECT_ID" "$item_id" "$field_id" "$iteration_id" >/dev/null && {
@@ -471,7 +471,7 @@ if [[ -n "$ESTIMATE_VALUE" ]]; then
 fi
 
 if [[ -n "$ITERATION_VALUE" ]]; then
-	field_id=$(find_field_id "$FIELDS_JSON" "Iteration")
+	field_id=$(find_iteration_field_id "$FIELDS_JSON" "Iteration")
 	iteration_id=$(find_iteration_id "$FIELDS_JSON" "Iteration" "$ITERATION_VALUE")
 	if [[ -n "$field_id" && -n "$iteration_id" ]]; then
 		if update_iteration_field "$PROJECT_ID" "$ITEM_ID" "$field_id" "$iteration_id" >/dev/null; then

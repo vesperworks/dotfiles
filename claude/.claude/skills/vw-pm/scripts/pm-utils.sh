@@ -1215,12 +1215,31 @@ find_field_id() {
 	echo "$fields_json" | jq -r --arg fn "$field_name" '.[] | select(.name == $fn) | .id'
 }
 
-# Find iteration ID by title (within a named field)
+# Find the ITERATION-type field ID by name, falling back to type-based lookup
+# when the name doesn't match (e.g. field named "Sprint" instead of "Iteration")
+find_iteration_field_id() {
+	local fields_json="$1" field_name="$2"
+	local id
+	id=$(echo "$fields_json" | jq -r --arg fn "$field_name" '.[] | select(.name == $fn) | .id')
+	if [[ -z "$id" ]]; then
+		id=$(echo "$fields_json" | jq -r '.[] | select(.dataType == "ITERATION") | .id' | head -1)
+	fi
+	echo "$id"
+}
+
+# Find iteration ID by title, falling back to type-based lookup
 find_iteration_id() {
 	local fields_json="$1" field_name="$2" iteration_title="$3"
-	echo "$fields_json" | jq -r --arg fn "$field_name" --arg it "$iteration_title" '
+	local result
+	result=$(echo "$fields_json" | jq -r --arg fn "$field_name" --arg it "$iteration_title" '
     .[] | select(.name == $fn) | .configuration.iterations[]? | select(.title == $it) | .id
-  '
+  ')
+	if [[ -z "$result" ]]; then
+		result=$(echo "$fields_json" | jq -r --arg it "$iteration_title" '
+      .[] | select(.dataType == "ITERATION") | .configuration.iterations[]? | select(.title == $it) | .id
+    ' | head -1)
+	fi
+	echo "$result"
 }
 
 # Look up a project item by issue number (+ optional repo) from a
