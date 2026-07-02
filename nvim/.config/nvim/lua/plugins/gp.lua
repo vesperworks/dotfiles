@@ -1,11 +1,11 @@
 -- ~/.config/nvim/lua/plugins/gp.lua
--- gp.nvim: OpenAI GPT integration with custom prompts
+-- gp.nvim: OpenAI GPT + Ollama local model integration with custom prompts
 
 return {
   "robitx/gp.nvim",
   config = function()
-    -- マーカー挿入＋削除の共通ヘルパー
-    local function with_gp_marker(gp_mod, params, template, marker_emoji)
+    -- マーカー挿入＋削除の共通ヘルパー（agent_name で切り替え可能）
+    local function with_gp_marker(gp_mod, params, template, marker_emoji, agent_name)
       local buf = vim.api.nvim_get_current_buf()
       local end_line = vim.fn.line("'>")
       local marker_id = "gp-marker-" .. os.time() .. "-" .. math.random(1000, 9999)
@@ -27,16 +27,32 @@ return {
         once = true,
       })
 
-      local agent = gp_mod.get_command_agent()
+      local agent = gp_mod.get_command_agent(agent_name)
       gp_mod.Prompt(params, gp_mod.Target.append, agent, template)
     end
 
+    local LOCAL_AGENT = "LocalGemma4"
+
     require("gp").setup({
-      -- 新しいproviders設定形式
       providers = {
         openai = {
           endpoint = "https://api.openai.com/v1/chat/completions",
           secret = os.getenv("OPENAI_API_KEY"),
+        },
+        ollama = {
+          endpoint = "http://localhost:11434/api/chat",
+          secret = "dummy_secret",
+        },
+      },
+
+      agents = {
+        {
+          provider = "ollama",
+          name = "LocalGemma4",
+          chat = false,
+          command = true,
+          model = { model = "gemma4:12b", temperature = 0.4, top_p = 1, think = false },
+          system_prompt = "あなたは日本語テキストの構造化・整理を行うアシスタントです。指示に忠実に従い、指定されたフォーマットで出力してください。",
         },
       },
       
@@ -89,7 +105,7 @@ return {
 ```
 </output_format>]]
 
-          with_gp_marker(gp, params, template, "✨📝")
+          with_gp_marker(gp, params, template, "✨📝", LOCAL_AGENT)
         end,
 
         -- ToDo抽出: 音声文字起こしから実行可能なToDoを抽出（追加）
@@ -135,7 +151,7 @@ return {
 - [ ] タスク内容 ⚠️
 </output_format>]]
 
-          with_gp_marker(gp, params, template, "✅📋")
+          with_gp_marker(gp, params, template, "✅📋", LOCAL_AGENT)
         end,
 
         -- タスク分解: GTDメソッドに基づき25分以内のタスクに分解（追加）
@@ -182,7 +198,7 @@ return {
 - [ ] ⚪️ タスク内容 ⚠️
 </output_format>]]
 
-          with_gp_marker(gp, params, template, "🎯✅")
+          with_gp_marker(gp, params, template, "🎯✅", LOCAL_AGENT)
         end,
 
         -- ツリー化: 文章を階層的に分解・整理（追加）
@@ -224,7 +240,7 @@ return {
 ```
 </output_format>]]
 
-          with_gp_marker(gp, params, template, "🌳📋")
+          with_gp_marker(gp, params, template, "🌳📋", LOCAL_AGENT)
         end,
 
         -- IMEもどき: ローマ字→日本語推定変換（選択範囲を直接置換）
