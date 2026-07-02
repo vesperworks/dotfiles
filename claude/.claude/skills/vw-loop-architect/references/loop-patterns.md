@@ -1,5 +1,17 @@
 # Loop Patterns Reference
 
+実行形式（/loop / Workflow）のテンプレート集。
+**上位の判定は pattern-catalog.md（6協調パターン）で行い、選択後の落とし込みでこのファイルを使う。**
+
+| 協調パターン | 実行形式の目安 |
+|-------------|---------------|
+| Retry Loop | Pattern A |
+| Plan-Execute-Verify | Pattern B（目標型）or A + interval（定期型） |
+| Explore-Narrow | Pattern C（並列探索）or A（小規模逐次） |
+| Human-in-the-Loop | Pattern A/B + 承認ステップ（Workflow 内では AskUserQuestion 不可） |
+| Orchestrator-Workers | Pattern C |
+| Evaluator-Optimiser | Pattern C（generate → judge → 再生成） |
+
 ## Pattern A: /loop (繰り返し型)
 
 単一タスクを定期的または連続的に繰り返す。明確な終了条件がないか、外部イベントを待つケース。
@@ -49,6 +61,7 @@
 | 連続処理（TODO消化等） | なし（self-paced） | 各イテレーションを即座に次へ |
 | 外部状態監視（CI, deploy） | 3m-5m | 状態変化の頻度に合わせる |
 | 定期チェック（PR監視等） | 10m-30m | 低頻度で十分な監視 |
+| 日次・定時（毎朝等） | **/loop 不向き** | セッション常駐が前提のため。cron 系（schedule skill の Cloud Routines / launchd）を使う |
 
 ---
 
@@ -120,6 +133,10 @@ Claude Code に `/goal` コマンドは存在しないため、`/loop` に完了
 
 並列スキャン → 検証 → 統合。多角的な分析や大規模な変換が必要なケース。
 
+**Sonnet 連携の原則**: 全 `agent()` 呼び出しに `model: 'sonnet'` を付ける。Generator（scan/execute）と Evaluator（verify/judge）は別の agent 呼び出しに分離する（maker–checker）。ファイル変更を伴う並列 worker には `isolation: 'worktree'` を付ける。
+
+**実行ランタイム注記**: Workflow スクリプトは Claude Code の Workflow ツールが async コンテキストで実行するため、トップレベルの `await` / `return` が有効。素の Node/ESM として実行・`node --check` すると `Illegal return statement` になるが、それが正常。構文検証したい場合は `export const meta` を `const meta` に変え、全体を `async function wf() { ... }` でラップしてからチェックする。
+
 ### テンプレート
 
 テンプレート内には2種類の ALL CAPS がある:
@@ -174,7 +191,12 @@ const DIMENSIONS = [
   { key: 'dim3', prompt: 'SPECIFIC_TASK_3' },
 ]
 
-// --- Outer Loop: budget-gated execution ---
+// --- budget guard（安全弁: 必須。予算設定時、残量不足なら開始しない） ---
+if (budget.total && budget.remaining() < 50_000) {
+  return { error: 'insufficient token budget', remaining: budget.remaining() }
+}
+
+// --- Outer Loop ---
 phase('PHASE_1_NAME')
 const results = await pipeline(
   DIMENSIONS,
@@ -182,6 +204,7 @@ const results = await pipeline(
     label: `scan:${d.key}`,
     phase: 'PHASE_1_NAME',
     schema: RESULT_SCHEMA,
+    model: 'sonnet',
   }),
   (review, dim) => parallel(
     (review?.findings || []).map(f => () =>
@@ -191,6 +214,7 @@ const results = await pipeline(
           label: `verify:${f.file}`,
           phase: 'PHASE_2_NAME',
           schema: VERDICT_SCHEMA,
+          model: 'sonnet',
         }
       ).then(v => ({ ...f, verdict: v }))
     )
@@ -208,7 +232,7 @@ phase('Report')
 const report = await agent(
   `Synthesize ${confirmed.length} confirmed findings into a prioritized report.
   Findings: ${JSON.stringify(confirmed)}`,
-  { label: 'report', phase: 'Report' }
+  { label: 'report', phase: 'Report', model: 'sonnet' }
 )
 
 return { confirmed, report }
@@ -224,6 +248,7 @@ let dry = 0
 while (budget.total && budget.remaining() > 50_000 && dry < 2) {
   const result = await agent('Find issues not yet in the list...', {
     schema: RESULT_SCHEMA,
+    model: 'sonnet',
   })
   const fresh = (result?.findings || []).filter(f => !seen.has(key(f)))
   if (!fresh.length) { dry++; continue }
@@ -284,6 +309,11 @@ const DIMENSIONS = [
   { key: 'secrets', prompt: 'Find hardcoded secrets, API keys, tokens' },
 ]
 
+// budget guard（安全弁: 必須）
+if (budget.total && budget.remaining() < 50_000) {
+  return { error: 'insufficient token budget', remaining: budget.remaining() }
+}
+
 phase('Scan')
 const results = await pipeline(
   DIMENSIONS,
@@ -291,6 +321,7 @@ const results = await pipeline(
     label: `scan:${d.key}`,
     phase: 'Scan',
     schema: FINDING_SCHEMA,
+    model: 'sonnet',
   }),
   (review, dim) => parallel(
     (review?.findings || []).map(f => () =>
@@ -300,6 +331,7 @@ const results = await pipeline(
           label: `verify:${f.file}:${f.line}`,
           phase: 'Verify',
           schema: VERDICT_SCHEMA,
+          model: 'sonnet',
         }
       ).then(v => ({ ...f, verdict: v }))
     )
@@ -315,7 +347,7 @@ phase('Report')
 const report = await agent(
   `Synthesize ${confirmed.length} confirmed security findings into a prioritized report.
   Findings: ${JSON.stringify(confirmed)}`,
-  { label: 'report', phase: 'Report' }
+  { label: 'report', phase: 'Report', model: 'sonnet' }
 )
 
 return { confirmed, report }
