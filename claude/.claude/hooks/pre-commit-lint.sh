@@ -9,7 +9,9 @@ DEBUG="${CLAUDE_HOOKS_DEBUG:-false}"
 DEBUG_LOG="$HOME/.claude/hooks/debug.log"
 
 debug_log() {
-	[[ "$DEBUG" == "true" ]] && echo "[pre-commit-lint] $1" >>"$DEBUG_LOG"
+	if [[ "$DEBUG" == "true" ]]; then
+		echo "[pre-commit-lint] $1" >>"$DEBUG_LOG"
+	fi
 }
 
 # stdin から JSON を読み取り、コマンドを抽出
@@ -114,7 +116,8 @@ if [[ ${#sh_files[@]} -gt 0 ]]; then
 	debug_log "SH files: ${sh_files[*]}"
 
 	if command -v shellcheck &>/dev/null; then
-		if ! out=$(shellcheck "${sh_files[@]}" 2>&1); then
+		# info/style ではコミットをブロックしない（warning 以上のみゲート）
+		if ! out=$(shellcheck -S warning "${sh_files[@]}" 2>&1); then
 			echo "$out" >&2
 			errors+=("shellcheck failed")
 		fi
