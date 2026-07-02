@@ -1,7 +1,8 @@
 ---
 name: sync
 description: boot（PRP・wip・会話履歴からTaskListを復元）+ harvest（作業ログ・教訓の刈り取り、MEMORY.mdポインタ更新）の2フェーズでセッションのコンテキストを管理する
-allowed-tools: Read, Edit, Write, Glob, Bash(jj log:*), Bash(git log:*), Bash(search-sessions:*), Bash(trash:*), TaskCreate, TaskList, TaskGet, TaskUpdate, AskUserQuestion
+argument-hint: [boot|harvest]
+allowed-tools: Read, Edit, Write, Glob, Bash(jj log:*), Bash(git log:*), Bash(search-sessions:*), Bash(date:*), Bash(trash:*), TaskCreate, TaskList, TaskGet, TaskUpdate, AskUserQuestion
 ---
 
 # Session Boot + Harvest
@@ -20,10 +21,27 @@ allowed-tools: Read, Edit, Write, Glob, Bash(jj log:*), Bash(git log:*), Bash(se
 
 ## Quick Checklist（初期応答で必ず確認）
 
-- [ ] 今回は boot（セッション開始）か harvest（区切り/任意実行）かを判定する
+- [ ] フェーズ判定（下記）に従い boot / harvest を確定する
 - [ ] MEMORY.md / wip-*.md のパスを特定（`~/.claude/projects/{project-slug}/memory/`）
 - [ ] PRP パス（`.brain/*/prp/`）を特定する
 - [ ] 現在の TaskList 状態を取得する
+
+## フェーズ判定
+
+```text
+1. 引数優先: `/vw:sync boot` / `/vw:sync harvest` と明示されたら常にそれに従い、以下は行わない
+2. 無引数の場合はマーカーファイルで判定:
+   マーカー: ~/.claude/projects/{project-slug}/memory/.sync-last（epoch 秒1行のみ）
+   Read で読み、Bash: date +%s の現在時刻との差を計算
+   マーカーが存在しない、または差が 21600 秒（6時間）超 → boot
+   差が 21600 秒以内 → harvest
+3. 矛盾時の確認: タイムスタンプ判定が会話の実態と明らかに矛盾する場合
+   （例: harvest 判定だがこのセッションでまだ何も作業していない）は
+   AskUserQuestion で1回確認する
+4. マーカー更新: boot / harvest どちらのフェーズが完了した際にも、
+   Bash: date +%s の値を Write で .sync-last に上書きする
+   （.sync-last は内部状態のドットファイルであり、MEMORY.md のポインタには載せない）
+```
 
 ---
 
