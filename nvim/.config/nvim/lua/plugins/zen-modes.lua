@@ -54,7 +54,8 @@ return {
       
     end,
     keys = {
-      { "<leader>dp", function() require('dropbar.api').pick() end, desc = "パンくずリストナビ" },
+      -- <leader>dp は gitsigns の Hunkプレビュー（バッファローカル）に奪われるため dn を使用
+      { "<leader>dn", function() require('dropbar.api').pick() end, desc = "パンくずリストナビ" },
     },
   },
 
@@ -104,6 +105,34 @@ return {
     config = function()
       -- render-markdown の heading 背景設定を保存
       local saved_backgrounds = nil
+      -- Zen Mode 中のパディング状態（バッファ単位で記録し、無条件削除を避ける）
+      local zen_padding = { bufnr = nil, count = 0 }
+
+      -- 先頭のパディング行（"·" のみの行）を実在するぶんだけ削除する
+      local function remove_zen_padding(bufnr)
+        if not (bufnr and vim.api.nvim_buf_is_valid(bufnr)) or zen_padding.count == 0 then
+          return
+        end
+        local lines = vim.api.nvim_buf_get_lines(bufnr, 0, zen_padding.count, false)
+        local n = 0
+        for _, l in ipairs(lines) do
+          if l == "·" then n = n + 1 else break end
+        end
+        if n > 0 then
+          vim.api.nvim_buf_set_lines(bufnr, 0, n, false, {})
+        end
+        zen_padding.count = 0
+      end
+
+      -- 保険: Zen Mode 中に保存してもパディングがファイルに混入しないようにする
+      vim.api.nvim_create_autocmd("BufWritePre", {
+        group = vim.api.nvim_create_augroup("ZenPaddingGuard", { clear = true }),
+        callback = function(ev)
+          if ev.buf == zen_padding.bufnr then
+            remove_zen_padding(ev.buf)
+          end
+        end,
+      })
 
       require("zen-mode").setup({
         window = {
@@ -149,7 +178,10 @@ return {
           for i = 1, 30 do
             padding_lines[i] = "·"  -- 薄い記号で識別可能に
           end
-          vim.api.nvim_buf_set_lines(0, 0, 0, false, padding_lines)
+          local bufnr = vim.api.nvim_get_current_buf()
+          vim.api.nvim_buf_set_lines(bufnr, 0, 0, false, padding_lines)
+          zen_padding.bufnr = bufnr
+          zen_padding.count = #padding_lines
           -- カーソルを31行目に移動
           vim.api.nvim_win_set_cursor(0, { 31, 0 })
           -- Alacritty透明度を0.05に変更（IPC経由、symlinkを壊さない）
@@ -167,8 +199,9 @@ return {
             rm.setup({ heading = { backgrounds = saved_backgrounds } })
             saved_backgrounds = nil
           end
-          -- 冒頭の30行を削除
-          vim.api.nvim_buf_set_lines(0, 0, 30, false, {})
+          -- 挿入したパディング行のみ検証付きで削除（本文の誤削除を防ぐ）
+          remove_zen_padding(zen_padding.bufnr)
+          zen_padding.bufnr = nil
           -- Alacritty透明度を0.8に戻す（IPC経由）
           local wid = vim.env.ALACRITTY_WINDOW_ID
           local w_flag = wid and ("-w " .. wid) or "-w -1"
