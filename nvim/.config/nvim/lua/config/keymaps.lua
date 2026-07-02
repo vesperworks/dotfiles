@@ -30,7 +30,8 @@ vim.keymap.set('n', '<leader>ro', function()
     return
   end
   local encoded = path:gsub(' ', '%%20'):gsub('#', '%%23')
-  vim.fn.system('open "raycast://extensions/raycast/file-search/search-files?fallbackText=' .. encoded .. '"')
+  -- argv 形式で渡しシェル解釈を経由させない（特殊文字を含むパスでのインジェクション防止）
+  vim.fn.system({ 'open', 'raycast://extensions/raycast/file-search/search-files?fallbackText=' .. encoded })
 end, { desc = 'Open in Raycast' })
 
 -- ファイルパスをクリップボードにコピー
