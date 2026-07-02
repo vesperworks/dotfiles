@@ -1,12 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 
-# diff-tree.sh — GitHub-style file tree with status colors
+# difftree — GitHub-style file tree with status colors
 # Usage:
-#   diff-tree.sh                    # jj: current change, git: staged+unstaged
-#   diff-tree.sh -r <revset>        # jj: specific revision(s)
-#   diff-tree.sh --from A --to B    # jj/git: range diff
-#   diff-tree.sh HEAD~3..HEAD       # git: range diff
+#   difftree                    # jj: current change, git: staged+unstaged
+#   difftree -r <revset>        # jj: specific revision(s)
+#   difftree --from A --to B    # jj/git: range diff
+#   difftree HEAD~3..HEAD       # git: range diff
 
 # Colors
 COLOR_RESET="\033[0m"
@@ -87,7 +87,7 @@ render_tree() {
   local group_statuses=""
   local group_files=""
   local group_count=0
-  local line status path dir file
+  local status path dir file
 
   while IFS=$'\t' read -r status path; do
     [[ -z "$status" ]] && continue
