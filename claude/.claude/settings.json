@@ -1,7 +1,9 @@
 {
   "cleanupPeriodDays": 90,
   "env": {
-    "ENABLE_TOOL_SEARCH": "true"
+    "ENABLE_TOOL_SEARCH": "true",
+    "CLAUDE_AFK_TIMEOUT_MS": "2147483647",
+    "CLAUDE_CODE_USER_DIALOG_TIMEOUT_MS": "0"
   },
   "attribution": {
     "commit": "",
