@@ -140,15 +140,12 @@ alias tmux-top='~/.config/tmux/scripts/tmux-top.sh'
 alias tmux-top-idle='~/.config/tmux/scripts/tmux-top.sh --idle'
 
 # herdr: AI エージェント用ワークスペースマネージャ（tmux と共存、専用セッション方式）
-# hd: herdr 専用 tmux セッションを作成/切替（Ctrl+Tab で zsh セッションとトグル）
+# hd [dir]: herdr 専用 tmux セッションへ切替（Ctrl+Tab で zsh セッションとトグル）。
+#           dir を渡すと workspace 化（既存なら focus）してから切替
 # hp: zoxide 履歴 + herdr workspace を横断する picker（herdr 内では prefix+t）
+# sesh picker（C-t）の ^h でも選択エントリを herdr に引き継げる
 hd() {
-  if [[ -n "$TMUX" ]]; then
-    tmux has-session -t =herdr 2>/dev/null || tmux new-session -d -s herdr herdr
-    tmux switch-client -t =herdr
-  else
-    tmux new-session -A -s herdr herdr
-  fi
+  ~/.config/herdr/scripts/herdr-open.sh "$@"
 }
 alias hp='~/.config/herdr/scripts/herdr-picker.sh'
 alias herdr-sync='~/.config/herdr/scripts/herdr-sync.sh'
