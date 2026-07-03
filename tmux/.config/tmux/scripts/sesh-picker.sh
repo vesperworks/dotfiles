@@ -6,16 +6,19 @@ set -euo pipefail
 # - Kill session: Ctrl+d on a session
 # - Move current pane to selected session: Ctrl+o
 # - Answer WAITING CC: Ctrl+e で選択肢popup表示, Ctrl+y で Enter送信(yes)
+# - Open in herdr: Ctrl+h で選択エントリの cwd を herdr workspace 化して herdr セッションへ
 
 SESH_SESSIONS=~/.config/tmux/scripts/sesh-sessions.sh
 CC_PREVIEW=~/.config/tmux/scripts/cc-question-preview.sh
 CC_ANSWER=~/.config/tmux/scripts/cc-wait-answer.sh
 CLAUDE_SLEEP=~/.config/tmux/scripts/claude-sleep.sh
 CLAUDE_SLEEP_CONFIRM=~/.config/tmux/scripts/claude-sleep-confirm.sh
+HERDR_OPEN=~/.config/herdr/scripts/herdr-open.sh
 SLEEP_LOG="$HOME/.claude/closed-sessions.jsonl"
 KEY_MARKER="${TMPDIR:-/tmp}/sesh-picker-key-$$-$RANDOM"
 SLEEP_MARKER="${TMPDIR:-/tmp}/sesh-picker-sleep-$$-$RANDOM"
-trap 'rm -f "$KEY_MARKER" "$SLEEP_MARKER"' EXIT
+HERDR_MARKER="${TMPDIR:-/tmp}/sesh-picker-herdr-$$-$RANDOM"
+trap 'rm -f "$KEY_MARKER" "$SLEEP_MARKER" "$HERDR_MARKER"' EXIT
 
 # 💤 Sleep 中セッション（claude kill 済、JSONL 記録あり）
 # 直近24h で sleep されたセッション集合から、今 attach 中のものを除外
@@ -62,7 +65,7 @@ sesh_output_filtered() {
 result=$(sesh_output_filtered -t | fzf-tmux -p 65%,65% \
 	--layout=reverse \
 	--no-sort --ansi --border-label "  sesh " --prompt "  " \
-	--header "${sleep_badge}^a all  ^t tmux  ^x zoxide  ^d kill  ^o move  ^e edit  ^y yes  ^s sleep" \
+	--header "${sleep_badge}^a all  ^t tmux  ^x zoxide  ^d kill  ^o move  ^e edit  ^y yes  ^s sleep  ^h herdr" \
 	--header-first \
 	--padding 0,1 \
 	--print-query \
@@ -77,7 +80,8 @@ result=$(sesh_output_filtered -t | fzf-tmux -p 65%,65% \
 	--bind "ctrl-d:execute-silent(tmux kill-session -t \$(echo {} | awk '{print \$2}'))+change-prompt(  )+reload($SESH_SESSIONS -t)" \
 	--bind "ctrl-e:execute-silent(touch $KEY_MARKER)+accept" \
 	--bind "ctrl-y:execute-silent(tmux send-keys -t \$(echo {} | awk '{print \$2}') Enter)+reload($SESH_SESSIONS -t)" \
-	--bind "ctrl-s:execute-silent(touch $SLEEP_MARKER)+accept") || true # fzf キャンセル (ESC, exit 130) は正常フロー
+	--bind "ctrl-s:execute-silent(touch $SLEEP_MARKER)+accept" \
+	--bind "ctrl-h:execute-silent(touch $HERDR_MARKER)+accept") || true # fzf キャンセル (ESC, exit 130) は正常フロー
 
 # --expect と --print-query の出力:
 # Line 1: query (入力テキスト)
@@ -92,6 +96,12 @@ selection=$(echo "$result" | sed -n '3p')
 if [ -f "$KEY_MARKER" ]; then
 	rm -f "$KEY_MARKER"
 	key="ctrl-e"
+fi
+
+# ctrl-h（herdr で開く）のマーカーファイルチェック
+if [ -f "$HERDR_MARKER" ]; then
+	rm -f "$HERDR_MARKER"
+	key="ctrl-h"
 fi
 
 # ^s: fzf-tmux popup を抜けた後（= fzf-tmux の親 tmux に戻った後）に
@@ -124,6 +134,18 @@ if [ -n "$selection" ]; then
 		# Ctrl+e: popup で選択肢表示
 		tmux display-popup -E -w 60% -h 40% -T " $session — 選択肢 " \
 			"$CC_ANSWER '$session'" || true
+		;;
+	ctrl-h)
+		# Ctrl+h: 選択エントリの cwd を herdr workspace 化して herdr セッションへ。
+		# tmux セッション行ならアクティブペインの cwd、zoxide 行ならそのパスを使う
+		if tmux has-session -t "=$session" 2>/dev/null; then
+			herdr_dir=$(tmux display-message -p -t "$session:" '#{pane_current_path}' 2>/dev/null) || herdr_dir=""
+		else
+			herdr_dir="${session/#\~/$HOME}"
+		fi
+		if [ -n "$herdr_dir" ] && [ -d "$herdr_dir" ] && [ -x "$HERDR_OPEN" ]; then
+			"$HERDR_OPEN" "$herdr_dir" || true
+		fi
 		;;
 	*)
 		# Enter: 通常のセッション接続
