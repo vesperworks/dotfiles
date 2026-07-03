@@ -80,6 +80,12 @@ ALL_SCRIPTS=(
 	grep -qE 'herdr workspace create --cwd' "$SCRIPTS_DIR/herdr-picker.sh"
 }
 
+@test "herdr-picker.sh: tmux セッション移植（tses ソースと ctrl-s バインド）が存在する" {
+	grep -qFx -- '--list-tses)' "$SCRIPTS_DIR/herdr-picker.sh"
+	grep -qE -- '--bind="ctrl-s:' "$SCRIPTS_DIR/herdr-picker.sh"
+	grep -qE 'tses\)' "$SCRIPTS_DIR/herdr-picker.sh"
+}
+
 @test "herdr-picker.sh: fzf バインド ctrl-a / ctrl-w / ctrl-x / ctrl-d が定義されている" {
 	grep -qE -- '--bind="ctrl-a:' "$SCRIPTS_DIR/herdr-picker.sh"
 	grep -qE -- '--bind="ctrl-w:' "$SCRIPTS_DIR/herdr-picker.sh"

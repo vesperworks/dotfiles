@@ -9,15 +9,21 @@
 #   herdr-picker.sh              # picker を起動
 #   herdr-picker.sh --list-all   # 内部用: 全ソースの行を出力（fzf reload 用）
 #   herdr-picker.sh --list-ws    # 内部用: workspace 行のみ
+#   herdr-picker.sh --list-tses  # 内部用: tmux セッション行のみ
 #   herdr-picker.sh --list-dirs  # 内部用: zoxide 行のみ
 #
-# 行フォーマット: "表示テキスト<TAB>種別:データ"
-#   workspace 行: "● label [status]<TAB>ws:<workspace_id>"
-#   zoxide 行:    "~/path/to/dir<TAB>dir:/abs/path/to/dir"
+# 行フォーマット: "表示テキスト<TAB>種別:データ[<TAB>cwd]"
+#   workspace 行:      " label [status]<TAB>ws:<workspace_id>"
+#   tmux セッション行: " name<TAB>tses:<name><TAB>/abs/cwd"（label=セッション名で移植）
+#   zoxide 行:         " ~/path/to/dir<TAB>dir:/abs/path/to/dir"
 #
 # label=basename の契約と共通関数は herdr-common.sh を参照。
+# 例外: tmux セッションの移植は label=セッション名（R1 は herdr でも R1 で出す）。
 
 set -euo pipefail
+
+# herdr の [[keys.command]] pane はログインシェルを経由しないことがあるため PATH を防御
+export PATH="/opt/homebrew/bin:$PATH"
 
 SCRIPT_PATH="${BASH_SOURCE[0]}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -38,9 +44,9 @@ ws_lines() {
 # （awk 内の basename 抽出は label_for_dir と同じ規則）。
 list_dirs() {
 	zoxide query -l 2>/dev/null | head -n "$PICKER_LIMIT" |
-		awk -v home="$HOME" -v labels="$1" '
+		awk -v home="$HOME" -v labels="$(labels_for_awk "$1")" '
       BEGIN {
-        n = split(labels, a, "\n")
+        n = split(labels, a, "\037")
         for (i = 1; i <= n; i++) if (a[i] != "") seen[a[i]] = 1
       }
       {
@@ -53,12 +59,33 @@ list_dirs() {
       }'
 }
 
+# BSD awk は -v に改行入り文字列を渡せないため、label 一覧は \037 区切りに変換して渡す
+labels_for_awk() {
+	printf '%s' "$1" | tr '\n' '\037'
+}
+
+# $1: 既存 workspace の label 一覧。移植済み（label 一致）と herdr セッション自体は除外。
+# sesh が見せる「今の tmux セッション」を herdr へ移植するための本命ソース
+list_tmux_sessions() {
+	tmux list-sessions -F $'#{session_name}\t#{pane_current_path}' 2>/dev/null |
+		awk -F'\t' -v labels="$(labels_for_awk "$1")" '
+      BEGIN {
+        n = split(labels, a, "\037")
+        for (i = 1; i <= n; i++) if (a[i] != "") seen[a[i]] = 1
+      }
+      $1 == "herdr" { next }
+      $1 in seen { next }
+      { printf " %s\ttses:%s\t%s\n", $1, $1, $2 }'
+}
+
 # 各モードとも herdr workspace list（ソケット RPC）は 1 回だけ呼ぶ
 list_all() {
-	local json
+	local json labels
 	json="$(ws_json)"
+	labels="$(ws_labels "$json")"
 	ws_lines "$json"
-	list_dirs "$(ws_labels "$json")"
+	list_tmux_sessions "$labels"
+	list_dirs "$labels"
 }
 
 # --- 内部モード（fzf reload から再帰呼び出しされる） -------------------------
@@ -70,6 +97,10 @@ case "${1:-}" in
 	;;
 --list-ws)
 	ws_lines "$(ws_json)"
+	exit 0
+	;;
+--list-tses)
+	list_tmux_sessions "$(ws_labels "$(ws_json)")"
 	exit 0
 	;;
 --list-dirs)
@@ -88,7 +119,8 @@ if ! initial_json="$(herdr workspace list 2>/dev/null)"; then
 	exit 1
 fi
 
-HEADER='^a all  ^w workspaces  ^x zoxide  ^d close ws'
+# ^t は tmux 層（sesh picker）が横取りするため使えない → セッション絞り込みは ^s
+HEADER='^a all  ^s sessions  ^w workspaces  ^x zoxide  ^d close ws'
 
 close_ws_bind="ctrl-d:execute-silent(printf '%s' {2} | sed -n 's/^ws:\\(.*\\)/\\1/p' | xargs -I% herdr workspace close %)+reload(\"$SCRIPT_PATH\" --list-all)"
 
@@ -111,6 +143,7 @@ result="$(
 		--prompt='  ' \
 		--bind='tab:down,btab:up' \
 		--bind="ctrl-a:reload(\"$SCRIPT_PATH\" --list-all)" \
+		--bind="ctrl-s:reload(\"$SCRIPT_PATH\" --list-tses)" \
 		--bind="ctrl-w:reload(\"$SCRIPT_PATH\" --list-ws)" \
 		--bind="ctrl-x:reload(\"$SCRIPT_PATH\" --list-dirs)" \
 		--bind="$close_ws_bind" ||
@@ -131,6 +164,13 @@ if [[ -n "$selection" ]]; then
 	case "$kind" in
 	ws)
 		herdr workspace focus "$data"
+		;;
+	tses)
+		# tmux セッションの移植: label=セッション名、cwd はそのアクティブペインの値（f3）
+		tses_cwd="$(printf '%s' "$selection" | cut -f3)"
+		if [[ -d "$tses_cwd" ]]; then
+			herdr workspace create --cwd "$tses_cwd" --label "$data" --focus
+		fi
 		;;
 	dir)
 		herdr workspace create --cwd "$data" --label "$(label_for_dir "$data")" --focus

@@ -4,6 +4,7 @@ delivery = "herdr"
 [ui]
 show_agent_labels_on_pane_borders = true
 
+agent_panel_sort = "priority"
 [experimental]
 pane_history = true
 
@@ -28,6 +29,9 @@ close_pane = "prefix+x" # tmux: prefix+x
 zoom = "prefix+z"       # tmux: prefix+z
 # herdr 内蔵 workspace picker（下の herdr-picker.sh ブリッジとは別物）
 workspace_picker = "prefix+w"
+# navigate モード（prefix+w 等で開く）中の workspace 上下移動を vim 風 j/k に
+navigate_workspace_up = "k"
+navigate_workspace_down = "j"
 
 # tmux: C-t / prefix+t（sesh picker）に対応するブリッジコマンド
 [[keys.command]]

@@ -62,6 +62,11 @@ main() {
 		exit 1
 	fi
 
+	# 相対パス（hd . など）を絶対パスへ正規化（label も正しい basename になる）
+	if [[ -n "$dir" ]]; then
+		dir="$(cd "$dir" && pwd)"
+	fi
+
 	ensure_herdr_session
 
 	if [[ -n "$dir" ]] && wait_for_server; then
