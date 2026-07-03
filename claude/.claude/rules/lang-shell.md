@@ -180,8 +180,12 @@ macOS default の `/bin/bash` は 3.2 系で固定されている（Apple は GP
 | `((count++))` + `set -e` | `count=$((count + 1))` |
 | `${var^^}` / `${var,,}`（大小変換、bash 4.0+） | `tr '[:lower:]' '[:upper:]'` |
 | `mapfile` / `readarray`（bash 4.0+） | `while IFS= read -r line` ループ |
+| 全角記号（（）：等）を `$var` に直接隣接させる（bash 3.2 でマルチバイト境界の解釈が壊れ実行時クラッシュ） | `${var}` 形式 + 前後に半角スペース、またはメッセージ内記号を ASCII（`()` `:`）にする |
 
 ### 検証手段
 
 - 環境確認: `/bin/bash --version` が 3.2 の環境で実行
 - `bash -n script.sh` の構文チェックだけでは検出できない（実行時エラーになる）ため、該当機能を意識的に避ける
+- **提出・コミット前に必ず `/bin/bash script.sh` で 1 回実行する**（macOS の `/bin/bash` が
+  3.2 実機）。実行にファイル前提が要る場合は `mktemp -d` で疑似 fixture を作り、
+  正常系 + 検出系の両方を通す。実行出力を自己検証セクションに貼る
