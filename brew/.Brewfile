@@ -23,6 +23,7 @@ brew "zoxide"            # Smarter cd
 
 # --- Shell & Terminal ---
 brew "atuin"             # Shell history
+brew "herdr"             # AI agent workspace manager
 brew "sesh"              # Terminal session manager
 brew "stow"              # Symlink manager
 brew "tmux"              # Terminal multiplexer
