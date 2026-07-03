@@ -11,6 +11,7 @@ CONFIG_FILE="$HERDR_DIR/config.toml"
 ALL_SCRIPTS=(
 	herdr-picker.sh
 	herdr-sync.sh
+	herdr-open.sh
 )
 
 # --- 共通: 存在・実行権限・シェバン・set -euo pipefail --------------------------
@@ -23,6 +24,29 @@ ALL_SCRIPTS=(
 @test "herdr-sync.sh: 存在し実行権限を持つ" {
 	[ -f "$SCRIPTS_DIR/herdr-sync.sh" ]
 	[ -x "$SCRIPTS_DIR/herdr-sync.sh" ]
+}
+
+@test "herdr-open.sh: 存在し実行権限を持つ" {
+	[ -f "$SCRIPTS_DIR/herdr-open.sh" ]
+	[ -x "$SCRIPTS_DIR/herdr-open.sh" ]
+}
+
+@test "herdr-common.sh: 存在し、label_for_dir / ws_json / ws_labels を定義している" {
+	[ -f "$SCRIPTS_DIR/herdr-common.sh" ]
+	grep -qE '^label_for_dir\(\)' "$SCRIPTS_DIR/herdr-common.sh"
+	grep -qE '^ws_json\(\)' "$SCRIPTS_DIR/herdr-common.sh"
+	grep -qE '^ws_labels\(\)' "$SCRIPTS_DIR/herdr-common.sh"
+}
+
+@test "全スクリプトが herdr-common.sh を source している（規則の一元化）" {
+	for f in "${ALL_SCRIPTS[@]}"; do
+		grep -q 'herdr-common.sh' "$SCRIPTS_DIR/$f"
+	done
+}
+
+@test "herdr-open.sh: focus と create --cwd の両分岐が存在する" {
+	grep -qE 'herdr workspace focus' "$SCRIPTS_DIR/herdr-open.sh"
+	grep -qE 'herdr workspace create --cwd' "$SCRIPTS_DIR/herdr-open.sh"
 }
 
 @test "全スクリプトのシェバンが #!/bin/bash である" {
@@ -99,18 +123,15 @@ ALL_SCRIPTS=(
 
 # --- 品質ゲート ----------------------------------------------------------------
 
-@test "shellcheck: herdr-picker.sh を通る" {
-	run shellcheck "$SCRIPTS_DIR/herdr-picker.sh"
-	[ "$status" -eq 0 ]
-}
-
-@test "shellcheck: herdr-sync.sh を通る" {
-	run shellcheck "$SCRIPTS_DIR/herdr-sync.sh"
+@test "shellcheck: 全スクリプト + herdr-common.sh を通る（-x: source 解決）" {
+	# shellcheck の source= 相対パスは CWD 基準のため scripts/ に移動して実行
+	cd "$SCRIPTS_DIR"
+	run shellcheck -x herdr-picker.sh herdr-sync.sh herdr-open.sh herdr-common.sh
 	[ "$status" -eq 0 ]
 }
 
 @test "bash 3.2 非互換構文（declare -A / mapfile / readarray）を含まない" {
 	cd "$SCRIPTS_DIR"
-	run grep -REn 'declare -A|local -n|mapfile|readarray|\$\{[A-Za-z_]+(\^\^|,,)\}' "${ALL_SCRIPTS[@]}"
+	run grep -REn 'declare -A|local -n|mapfile|readarray|\$\{[A-Za-z_]+(\^\^|,,)\}' "${ALL_SCRIPTS[@]}" herdr-common.sh
 	[ "$status" -ne 0 ]
 }

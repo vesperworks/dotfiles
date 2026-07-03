@@ -15,35 +15,22 @@
 #   workspace 行: "● label [status]<TAB>ws:<workspace_id>"
 #   zoxide 行:    "~/path/to/dir<TAB>dir:/abs/path/to/dir"
 #
-# 契約: workspace の同一性判定キーは「label = ディレクトリ basename」（label_for_dir）。
-# herdr API (v0.7.1) の workspace list が cwd を返さないための制約で、
-# herdr-sync.sh と共有する規則。既知の制限: 同名 basename の別ディレクトリは
-# 既存 workspace 扱いになり一覧から除外される。
+# label=basename の契約と共通関数は herdr-common.sh を参照。
 
 set -euo pipefail
 
 SCRIPT_PATH="${BASH_SOURCE[0]}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=herdr-common.sh
+source "$SCRIPT_DIR/herdr-common.sh"
+
 PICKER_LIMIT="${HERDR_PICKER_LIMIT:-50}"
 
 # --- ソース生成 -------------------------------------------------------------
 
-# workspace の label はディレクトリ basename を規則とする（herdr-sync.sh と同じ規則）
-label_for_dir() {
-	printf '%s\n' "${1##*/}"
-}
-
-ws_json() {
-	herdr workspace list 2>/dev/null || true
-}
-
 ws_lines() {
 	printf '%s\n' "$1" |
-		jq -r '.result.workspaces[]? | "● \(.label) [\(.agent_status)]\tws:\(.workspace_id)"' 2>/dev/null || true
-}
-
-ws_labels() {
-	printf '%s\n' "$1" |
-		jq -r '.result.workspaces[]?.label' 2>/dev/null || true
+		jq -r '.result.workspaces[]? | " \(.label) [\(.agent_status)]\tws:\(.workspace_id)"' 2>/dev/null || true
 }
 
 # $1: 既存 workspace の label 一覧（改行区切り）。label と重複する zoxide 候補はスキップ。
@@ -62,7 +49,7 @@ list_dirs() {
         if (base in seen) next
         display = $0
         if (index($0, home) == 1) display = "~" substr($0, length(home) + 1)
-        printf "%s\tdir:%s\n", display, $0
+        printf " %s\tdir:%s\n", display, $0
       }'
 }
 
@@ -101,7 +88,7 @@ if ! initial_json="$(herdr workspace list 2>/dev/null)"; then
 	exit 1
 fi
 
-HEADER='enter: connect | ctrl-a: all | ctrl-w: workspaces | ctrl-x: zoxide | ctrl-d: close ws'
+HEADER='^a all  ^w workspaces  ^x zoxide  ^d close ws'
 
 close_ws_bind="ctrl-d:execute-silent(printf '%s' {2} | sed -n 's/^ws:\\(.*\\)/\\1/p' | xargs -I% herdr workspace close %)+reload(\"$SCRIPT_PATH\" --list-all)"
 
@@ -114,8 +101,15 @@ result="$(
 		--delimiter='\t' \
 		--with-nth=1 \
 		--print-query \
+		--layout=reverse \
+		--no-sort \
+		--border \
+		--border-label '  herdr ' \
+		--padding 0,1 \
 		--header="$HEADER" \
-		--prompt='herdr> ' \
+		--header-first \
+		--prompt='  ' \
+		--bind='tab:down,btab:up' \
 		--bind="ctrl-a:reload(\"$SCRIPT_PATH\" --list-all)" \
 		--bind="ctrl-w:reload(\"$SCRIPT_PATH\" --list-ws)" \
 		--bind="ctrl-x:reload(\"$SCRIPT_PATH\" --list-dirs)" \

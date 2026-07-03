@@ -3,10 +3,10 @@ set -euo pipefail
 # herdr-sync.sh — zoxide 履歴上位 N 件を herdr workspace として一括登録（冪等）。
 # 詳細は -h（print_usage）を参照。
 
-# workspace の label はディレクトリ basename を規則とする（herdr-picker.sh と同じ規則）
-label_for_dir() {
-	printf '%s\n' "${1##*/}"
-}
+# label=basename の契約と共通関数（label_for_dir 等）は herdr-common.sh を参照
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=herdr-common.sh
+source "$SCRIPT_DIR/herdr-common.sh"
 
 print_usage() {
 	cat <<'EOF'
