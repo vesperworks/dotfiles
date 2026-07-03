@@ -135,6 +135,10 @@ You are an HTML report generator. Take the current thread context (decisions, op
 
 共通カラー・タイポ定義: [references/design-system.md](./references/design-system.md)
 
+> **⚠️ テンプレと design-system.md §5/§6 が食い違ったら §5/§6 が勝つ。**
+> テンプレ内のインライン CSS/JS は古い可能性がある。プリセット切替（J/K/N/P）や
+> HUD が動かない場合、ほぼ確実に旧コードを使っている。§5/§6 から貼り直すこと。
+
 ### Step 3.2: Placeholder Replacement
 
 各テンプレ内の `{{...}}` プレースホルダを実データに置換:
@@ -146,6 +150,10 @@ You are an HTML report generator. Take the current thread context (decisions, op
 | `{{SUMMARY}}` | 1〜3 行のサマリー |
 | `{{DATA_JSON}}` | モード別のメインデータ (JSON 文字列、`<script>` 内に埋め込み) |
 | `{{IMAGE_DATA_URL}}` | annotate モード時の画像 data URL |
+
+**置換後の機械検査（必須）**: `grep -c '{{' <出力HTML>` が 0 であることを確認する。
+0 でなければ置換漏れ。ブラウザで開く前に修正する（vw-fin-calendar と同じ検査方式）。
+ただしデータ本文が `{{` を正当に含む場合（検査コマンド自体の引用等）は該当行を目視確認して除外してよい。
 
 ### Step 3.3: Save and Open（必ず自動 open する）
 
