@@ -1,0 +1,36 @@
+[ui.toast]
+delivery = "herdr"
+
+[ui]
+show_agent_labels_on_pane_borders = true
+
+[experimental]
+pane_history = true
+
+[theme]
+name = "catppuccin"
+auto_switch = false
+
+[keys]
+# tmux（prefix C-g）の中に入れ子起動するため、tmux が消費しない ctrl+b を維持。
+# C-g にすると tmux が横取りして herdr に届かない。また prefix リマップ時の警告バグ（herdr Issue #747）も回避。
+prefix = "ctrl+b"
+# 以下、デフォルト同値も自己文書化のため明示する。コメントは tmux 側の対応キー。
+split_horizontal = "prefix+minus" # tmux: prefix+-
+# tmux: prefix+| 相当。herdr の named punctuation に backslash/pipe が無いため prefix+v を使用
+split_vertical = "prefix+v"
+# tmux の C-S-h/j/k/l（vim 風ペイン移動）相当。C-S-* direct は tmux が消費するため prefix 経由
+focus_pane_left = "prefix+h"
+focus_pane_down = "prefix+j"
+focus_pane_up = "prefix+k"
+focus_pane_right = "prefix+l"
+close_pane = "prefix+x" # tmux: prefix+x
+zoom = "prefix+z"       # tmux: prefix+z
+# herdr 内蔵 workspace picker（下の herdr-picker.sh ブリッジとは別物）
+workspace_picker = "prefix+w"
+
+# tmux: C-t / prefix+t（sesh picker）に対応するブリッジコマンド
+[[keys.command]]
+key = "prefix+t"
+type = "pane"
+command = "~/.config/herdr/scripts/herdr-picker.sh"
