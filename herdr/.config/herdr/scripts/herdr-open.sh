@@ -14,6 +14,23 @@ source "$SCRIPT_DIR/herdr-common.sh"
 
 HERDR_TMUX_SESSION="herdr"
 
+# herdr のペイン内から呼ばれたかを祖先プロセスで判定する。
+# herdr ペインの zsh は herdr サーバー（launchd 直下）の子で $TMUX を持たないため、
+# $TMUX 判定では「tmux 外」に誤判定され tmux attach が実行される。すると
+# 「herdr を表示している tmux セッションに herdr の中から attach」する無限ミラーになる。
+is_inside_herdr() {
+	local pid comm
+	pid=$$
+	while [[ -n "$pid" && "$pid" -gt 1 ]]; do
+		comm="$(ps -o comm= -p "$pid" 2>/dev/null | sed 's/^ *//')" || return 1
+		case "$comm" in
+		herdr | */herdr) return 0 ;;
+		esac
+		pid="$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ')"
+	done
+	return 1
+}
+
 # herdr 専用 tmux セッションを確保（無ければ作成 = herdr サーバー/クライアントが立ち上がる）
 ensure_herdr_session() {
 	if ! tmux has-session -t "=$HERDR_TMUX_SESSION" 2>/dev/null; then
@@ -65,6 +82,17 @@ main() {
 	# 相対パス（hd . など）を絶対パスへ正規化（label も正しい basename になる）
 	if [[ -n "$dir" ]]; then
 		dir="$(cd "$dir" && pwd)"
+	fi
+
+	# herdr の中から呼ばれた場合: workspace 操作のみ行い、attach/switch は絶対にしない
+	# （入れ子ミラー防止。詳細は is_inside_herdr のコメント）
+	if is_inside_herdr; then
+		if [[ -n "$dir" ]] && wait_for_server; then
+			open_workspace "$dir"
+		else
+			echo "既に herdr の中にいます（hd <dir> なら workspace を開けます）" >&2
+		fi
+		exit 0
 	fi
 
 	ensure_herdr_session
