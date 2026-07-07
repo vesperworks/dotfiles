@@ -6,7 +6,8 @@ set -euo pipefail
 # - Kill session: Ctrl+d on a session
 # - Move current pane to selected session: Ctrl+o
 # - Answer WAITING CC: Ctrl+e で選択肢popup表示, Ctrl+y で Enter送信(yes)
-# - Open in herdr: Ctrl+h で選択エントリの cwd を herdr workspace 化して herdr セッションへ（tmux セッション行は label をセッション名に継承）
+# - Open in herdr: Ctrl+h で選択エントリを herdr へ（tmux セッション行は herdr-migrate.sh で
+#   走行中 claude セッションごと真の移植、無ければ herdr-open.sh で label 継承のみ）
 
 SESH_SESSIONS=~/.config/tmux/scripts/sesh-sessions.sh
 CC_PREVIEW=~/.config/tmux/scripts/cc-question-preview.sh
@@ -14,6 +15,7 @@ CC_ANSWER=~/.config/tmux/scripts/cc-wait-answer.sh
 CLAUDE_SLEEP=~/.config/tmux/scripts/claude-sleep.sh
 CLAUDE_SLEEP_CONFIRM=~/.config/tmux/scripts/claude-sleep-confirm.sh
 HERDR_OPEN=~/.config/herdr/scripts/herdr-open.sh
+HERDR_MIGRATE=~/.config/herdr/scripts/herdr-migrate.sh
 SLEEP_LOG="$HOME/.claude/closed-sessions.jsonl"
 KEY_MARKER="${TMPDIR:-/tmp}/sesh-picker-key-$$-$RANDOM"
 SLEEP_MARKER="${TMPDIR:-/tmp}/sesh-picker-sleep-$$-$RANDOM"
@@ -136,20 +138,23 @@ if [ -n "$selection" ]; then
 			"$CC_ANSWER '$session'" || true
 		;;
 	ctrl-h)
-		# Ctrl+h: 選択エントリの cwd を herdr workspace 化して herdr セッションへ。
-		# tmux セッション行ならアクティブペインの cwd を使い、label はセッション名を継承する。
+		# Ctrl+h: 選択エントリを herdr へ。
+		# tmux セッション行は herdr-migrate.sh で「真の移植」（走行中 claude セッションの
+		# 継承を含む、PRP-027 Phase 2）。herdr-migrate.sh が無ければ従来の herdr-open.sh
+		# （ラベル継承のみ、Phase 1）にフォールバックする。
 		# zoxide 行はそのパスのみ渡す（label は herdr-open.sh 側で basename にフォールバック）
-		herdr_label=""
 		if tmux has-session -t "=$session" 2>/dev/null; then
-			herdr_dir=$(tmux display-message -p -t "$session:" '#{pane_current_path}' 2>/dev/null) || herdr_dir=""
-			herdr_label="$session"
+			if [ -x "$HERDR_MIGRATE" ]; then
+				"$HERDR_MIGRATE" "$session" || true
+			elif [ -x "$HERDR_OPEN" ]; then
+				herdr_dir=$(tmux display-message -p -t "$session:" '#{pane_current_path}' 2>/dev/null) || herdr_dir=""
+				if [ -n "$herdr_dir" ] && [ -d "$herdr_dir" ]; then
+					"$HERDR_OPEN" "$herdr_dir" "$session" || true
+				fi
+			fi
 		else
 			herdr_dir="${session/#\~/$HOME}"
-		fi
-		if [ -n "$herdr_dir" ] && [ -d "$herdr_dir" ] && [ -x "$HERDR_OPEN" ]; then
-			if [ -n "$herdr_label" ]; then
-				"$HERDR_OPEN" "$herdr_dir" "$herdr_label" || true
-			else
+			if [ -n "$herdr_dir" ] && [ -d "$herdr_dir" ] && [ -x "$HERDR_OPEN" ]; then
 				"$HERDR_OPEN" "$herdr_dir" || true
 			fi
 		fi

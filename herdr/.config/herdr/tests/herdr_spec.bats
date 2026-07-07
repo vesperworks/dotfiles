@@ -12,6 +12,7 @@ ALL_SCRIPTS=(
 	herdr-picker.sh
 	herdr-sync.sh
 	herdr-open.sh
+	herdr-migrate.sh
 )
 
 # --- 共通: 存在・実行権限・シェバン・set -euo pipefail --------------------------
@@ -29,6 +30,11 @@ ALL_SCRIPTS=(
 @test "herdr-open.sh: 存在し実行権限を持つ" {
 	[ -f "$SCRIPTS_DIR/herdr-open.sh" ]
 	[ -x "$SCRIPTS_DIR/herdr-open.sh" ]
+}
+
+@test "herdr-migrate.sh: 存在し実行権限を持つ" {
+	[ -f "$SCRIPTS_DIR/herdr-migrate.sh" ]
+	[ -x "$SCRIPTS_DIR/herdr-migrate.sh" ]
 }
 
 @test "herdr-common.sh: 存在し、label_for_dir / ws_json / ws_labels を定義している" {
@@ -58,6 +64,33 @@ ALL_SCRIPTS=(
 	# is_inside_herdr 分岐と通常分岐の両方で label を引き継ぐこと
 	count=$(grep -cE 'open_workspace "\$dir" "\$label"' "$SCRIPTS_DIR/herdr-open.sh")
 	[ "$count" -eq 2 ]
+}
+
+@test "herdr-migrate.sh: claude 判定の正規表現（バージョン番号形式）が存在する（PRP-027 Phase 2）" {
+	grep -qF 'CLAUDE_VERSION_PATTERN=' "$SCRIPTS_DIR/herdr-migrate.sh"
+	grep -qF '^[0-9]+\.[0-9]+\.[0-9]+$' "$SCRIPTS_DIR/herdr-migrate.sh"
+	grep -qF '[[ "$cmd" =~ $CLAUDE_VERSION_PATTERN ]]' "$SCRIPTS_DIR/herdr-migrate.sh"
+}
+
+@test "herdr-migrate.sh: remain-on-exit の設定と復元（trap 経由）が存在する（PRP-027 Phase 2）" {
+	grep -qF 'tmux set-option -t "$session:" remain-on-exit on' "$SCRIPTS_DIR/herdr-migrate.sh"
+	grep -qF 'restore_remain_on_exit "$session"' "$SCRIPTS_DIR/herdr-migrate.sh"
+	grep -qF 'trap "restore_remain_on_exit' "$SCRIPTS_DIR/herdr-migrate.sh"
+	grep -qF 'tmux set-option -u -t "$session:" remain-on-exit' "$SCRIPTS_DIR/herdr-migrate.sh"
+}
+
+@test "herdr-migrate.sh: busy ガード（esc to interrupt）が存在する（PRP-027 Phase 2）" {
+	grep -qF "BUSY_MARKER='esc to interrupt'" "$SCRIPTS_DIR/herdr-migrate.sh"
+	grep -qF 'grep -qi "$BUSY_MARKER"' "$SCRIPTS_DIR/herdr-migrate.sh"
+}
+
+@test "herdr-migrate.sh: workspace_id / resume uuid の jq パースが存在する（PRP-027 Phase 2）" {
+	grep -qF '.result.workspace.workspace_id' "$SCRIPTS_DIR/herdr-migrate.sh"
+	grep -qF "grep -oE 'claude --resume [0-9a-f-]{36}'" "$SCRIPTS_DIR/herdr-migrate.sh"
+}
+
+@test "herdr-migrate.sh: claude でなければ herdr-open.sh にフォールバックする（PRP-027 Phase 2）" {
+	grep -qF 'exec "$HERDR_OPEN" "$cwd" "$session"' "$SCRIPTS_DIR/herdr-migrate.sh"
 }
 
 @test "全スクリプトのシェバンが #!/bin/bash である" {
@@ -152,7 +185,7 @@ ALL_SCRIPTS=(
 @test "shellcheck: 全スクリプト + herdr-common.sh を通る（-x: source 解決）" {
 	# shellcheck の source= 相対パスは CWD 基準のため scripts/ に移動して実行
 	cd "$SCRIPTS_DIR"
-	run shellcheck -x herdr-picker.sh herdr-sync.sh herdr-open.sh herdr-common.sh
+	run shellcheck -x herdr-picker.sh herdr-sync.sh herdr-open.sh herdr-migrate.sh herdr-common.sh
 	[ "$status" -eq 0 ]
 }
 
