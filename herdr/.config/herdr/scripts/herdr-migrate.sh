@@ -27,6 +27,14 @@ EXIT_POLL_MAX=15
 WS_ID=""
 ROOT_PANE_ID=""
 
+# 診断ログ（picker の run-shell 文脈では stderr が見えないため必須）
+MIGRATE_LOG="$HOME/.cache/herdr-migrate.log"
+
+log() {
+	mkdir -p "$(dirname "$MIGRATE_LOG")" 2>/dev/null || true
+	printf '%s %s\n' "$(date '+%Y-%m-%dT%H:%M:%S')" "$*" >>"$MIGRATE_LOG" 2>/dev/null || true
+}
+
 # claude の実行ファイルパス（--resume 起動に使う）
 claude_bin() {
 	command -v claude 2>/dev/null || printf '%s\n' "$HOME/.local/bin/claude"
@@ -99,6 +107,7 @@ restore_remain_on_exit() {
 # 理由をユーザーに通知して中止する（何も破壊しない）
 abort_migration() {
 	local reason="$1"
+	log "ABORT: $reason"
 	tmux display-message "herdr 移植中止: $reason" 2>/dev/null || true
 	exit 1
 }
@@ -159,18 +168,26 @@ main() {
 
 	local uuid=""
 	uuid="$(parse_resume_uuid "$session")"
+	log "session=$session cmd=$cmd cwd=$cwd uuid=${uuid:-<empty>}"
 
 	ensure_workspace "$cwd" "$session"
+	log "WS_ID=${WS_ID:-<empty>} ROOT_PANE_ID=${ROOT_PANE_ID:-<empty>}"
 	if [ -z "$WS_ID" ]; then
+		log "ERROR: workspace 確保失敗"
 		echo "Error: herdr workspace の確保に失敗しました" >&2
 		exit 1
 	fi
 
 	local claude_path=""
+	local start_json=""
 	if [ -n "$uuid" ]; then
 		claude_path="$(claude_bin)"
-		herdr agent start "$session" --cwd "$cwd" --workspace "$WS_ID" --no-focus \
-			-- "$claude_path" --resume "$uuid" >/dev/null
+		start_json="$(herdr agent start "$session" --cwd "$cwd" --workspace "$WS_ID" --no-focus \
+			-- "$claude_path" --resume "$uuid" 2>&1)" || {
+			log "ERROR: agent start 失敗: $start_json"
+			abort_migration "herdr agent start が失敗しました（詳細: $MIGRATE_LOG）"
+		}
+		log "agent start OK: $start_json"
 	else
 		# claude は終了したが resume 案内が出なかった = bg アタッチビュー等。
 		# 自動 attach は CLI 非対応のため、agent view を開いて attach 誘導する
@@ -178,7 +195,12 @@ main() {
 			ROOT_PANE_ID="$(pane_list_first "$WS_ID")"
 		fi
 		if [ -n "$ROOT_PANE_ID" ]; then
-			herdr pane run "$ROOT_PANE_ID" "claude agents" >/dev/null
+			# 作成直後の pane は zsh 起動中で入力を取りこぼすため、少し待ってから送る
+			sleep 2
+			herdr pane run "$ROOT_PANE_ID" "claude agents" >/dev/null || log "WARN: pane run 失敗"
+			log "bg 誘導: pane run 'claude agents' → $ROOT_PANE_ID"
+		else
+			log "WARN: bg 誘導先の pane が見つからない"
 		fi
 	fi
 
