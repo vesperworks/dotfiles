@@ -102,9 +102,13 @@ if [[ ${#ts_files[@]} -gt 0 ]]; then
 		fi
 	fi
 
-	# tsc（tsconfig.json がある場合のみ）
-	if [[ -f "$project_root/tsconfig.json" ]]; then
-		if ! out=$(cd "$project_root" && npx tsc --noEmit 2>&1); then
+	# tsc（tsconfig.json があり、かつローカルに tsc が実在する場合のみ）
+	# --no-install が無いと、typescript 未導入の workspace ルート（tsc は
+	# サブパッケージ側にのみある構成）で npx がレジストリの偽 "tsc" パッケージを
+	# 引いて常に失敗し、コミットが恒久ブロックされる
+	if [[ -f "$project_root/tsconfig.json" ]] &&
+		(cd "$project_root" && npx --no-install tsc --version &>/dev/null); then
+		if ! out=$(cd "$project_root" && npx --no-install tsc --noEmit 2>&1); then
 			echo "$out" >&2
 			errors+=("tsc --noEmit failed")
 		fi
