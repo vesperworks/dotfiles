@@ -87,10 +87,9 @@
 @./rules/security-rules.md
 @./rules/quality-standards.md
 @./rules/coding-conventions.md
-@./rules/lang-typescript.md
-@./rules/lang-python.md
-@./rules/lang-lua.md
-@./rules/lang-shell.md
+
+言語別ルール（lang-typescript / lang-python / lang-lua / lang-shell）は
+`~/.claude/rules/` の paths frontmatter により、該当言語のファイルを扱うときだけ自動ロードされる。
 
 ## commit規則
 
