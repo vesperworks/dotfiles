@@ -97,7 +97,8 @@
       "Bash(search-sessions:*)",
       "Bash(open *.html)",
       "Bash(open *.png)",
-      "Bash(open *.pdf)"
+      "Bash(open *.pdf)",
+      "Bash(sed:*)"
     ],
     "deny": [
       "Bash(rm -rf:*)",
@@ -147,7 +148,6 @@
       "Bash(jj git push:*)",
       "Bash(cp:*)",
       "Bash(mv:*)",
-      "Bash(sed:*)",
       "Bash(export:*)",
       "Bash(tmux split-window:*)",
       "Bash(bun remove:*)",
@@ -161,26 +161,35 @@
   "fallbackModel": [
     "default"
   ],
+  "skillOverrides": {
+    "build-persona": "off",
+    "orchestration": "off",
+    "vercel-react-best-practices": "off",
+    "vw-harness-review": "off",
+    "web-renderer-test": "off",
+    "writing-docs": "off",
+    "html-md-equivalence": "off"
+  },
   "hooks": {
     "SessionStart": [
       {
         "hooks": [
           {
-            "async": true,
+            "type": "command",
             "command": "'/opt/homebrew/bin/moshi-hook' claude-hook",
-            "type": "command"
+            "async": true
           }
         ]
       },
       {
+        "matcher": "*",
         "hooks": [
           {
+            "type": "command",
             "command": "bash ~/.claude/hooks/herdr-agent-state.sh session",
-            "timeout": 10,
-            "type": "command"
+            "timeout": 10
           }
-        ],
-        "matcher": "*"
+        ]
       }
     ],
     "SessionEnd": [
@@ -522,14 +531,5 @@
   "inputNeededNotifEnabled": false,
   "agentPushNotifEnabled": false,
   "skipAutoPermissionPrompt": true,
-  "voiceEnabled": true,
-  "skillOverrides": {
-    "build-persona": "off",
-    "orchestration": "off",
-    "vercel-react-best-practices": "off",
-    "vw-harness-review": "off",
-    "web-renderer-test": "off",
-    "writing-docs": "off",
-    "html-md-equivalence": "off"
-  }
+  "voiceEnabled": true
 }
