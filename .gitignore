@@ -66,6 +66,7 @@ nvim/.config/nvim/PRPs/
 nvim/.config/nvim/thoughts/
 nvim/.config/nvim/logs.md
 nvim/.config/nvim/logcompact.md
+nvim/.config/nvim/*.log
 nvim/.config/nvim/tmp/
 nvim/.config/nvim/CLAUDE.md
 nvim/.config/nvim/CONTINUITY.md
