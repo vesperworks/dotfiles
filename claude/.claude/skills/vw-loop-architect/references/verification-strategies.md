@@ -211,6 +211,59 @@ present it to the user for approval before taking action.
 
 ---
 
+## Strategy 5: Stop-judge（停止判定の第三者分離）
+
+maker–checker は三者構成。Generator（作る）/ Evaluator（品質に No と言う）/ **stop-judge（「完了したか」だけを判定する fresh model）**。完了条件の判定に LLM の判断が入る場合、完了宣言を Generator にさせると「もう十分できた」と自己申告して早期終了する。
+
+### 適用条件
+
+- 完了条件が機械検証（テスト・lint・数値）で判定**できない**場合のみ。
+  機械検証で判定できる場合は測定コマンドが stop-judge を兼ねるため、このストラテジーは不要
+- Evaluator の PASS を stop 条件に流用しない（Evaluator は品質判定、stop-judge は完了判定 — 責務が違う。品質が PASS でも「対象がまだ残っている」なら完了ではない）
+
+### 実装パターン
+
+**In Workflow（最終段に stop-judge を挟む）:**
+```javascript
+const STOP_SCHEMA = {
+  type: 'object',
+  properties: {
+    done: { type: 'boolean' },
+    remaining: { type: 'string' },
+  },
+  required: ['done', 'remaining'],
+}
+
+// 完了判定は作業モデルと別の fresh model（コンテキストを共有しない・model も変える）
+const stop = await agent(
+  `Judge ONLY whether this stop condition holds. Do not evaluate quality.
+  STOP CONDITION: ${STOP_CONDITION}
+  CURRENT STATE: ${JSON.stringify(state)}
+  If uncertain, done=false.`,
+  { label: 'stop-judge', schema: STOP_SCHEMA, model: 'haiku' }
+)
+if (!stop?.done) { /* 次ラウンドへ */ }
+```
+
+**In /loop prompt（Workflow を使わない場合の次善策）:**
+```
+完了判定: 「完了」と宣言する前に、作業コンテキストを持たない視点で
+完了条件チェックリストを1項目ずつ検査し、全項目の根拠（コマンド出力）を引用する。
+根拠を引用できない項目が1つでもあれば完了と宣言しない。
+```
+
+### モデルスワップの指針
+
+同一モデル+新指示は盲点を引き継ぐ。判定系エージェントはモデルを変えるのも有効:
+
+| 役割 | 推奨モデル | 理由 |
+|------|-----------|------|
+| Generator | sonnet | 作業の主力 |
+| Evaluator | sonnet（別呼び出し）or opus | 品質判定。重要度が高ければ opus |
+| stop-judge | haiku | 条件成立の真偽判定のみ。軽量で十分・安価 |
+
+---
+
 ## 組み合わせガイド
 
 複数の検証戦略を組み合わせることで、品質を段階的に高められる。
