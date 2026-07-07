@@ -25,6 +25,14 @@ ALL_SCRIPTS=(
 	[ "$status" -ne 0 ]
 }
 
+@test "sesh-picker.sh: ctrl-h は tmux セッション行でのみ label（セッション名）を herdr-open.sh に渡す（PRP-027 Phase 1）" {
+	# tmux has-session 分岐内でのみ herdr_label をセッション名で設定する
+	grep -qE 'herdr_label="\$session"' "$SCRIPTS_DIR/sesh-picker.sh"
+	# label ありなら第2引数付き、無ければ従来通り第1引数のみで呼ぶ
+	grep -qE '"\$HERDR_OPEN" "\$herdr_dir" "\$herdr_label" \|\| true' "$SCRIPTS_DIR/sesh-picker.sh"
+	grep -qE '"\$HERDR_OPEN" "\$herdr_dir" \|\| true' "$SCRIPTS_DIR/sesh-picker.sh"
+}
+
 @test "sanitize_name: 危険文字を _ に変換する" {
 	source "$SCRIPTS_DIR/cc-common.sh"
 	result=$(sanitize_name 'a b/c$d')

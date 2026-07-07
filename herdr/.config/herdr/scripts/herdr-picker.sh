@@ -166,10 +166,20 @@ if [[ -n "$selection" ]]; then
 		herdr workspace focus "$data"
 		;;
 	tses)
-		# tmux セッションの移植: label=セッション名、cwd はそのアクティブペインの値（f3）
+		# tmux セッションの移植: label=セッション名、cwd はそのアクティブペインの値（f3）。
+		# 同名 label の workspace が既に存在すれば focus、無ければ create（重複 create の穴を防ぐ）
 		tses_cwd="$(printf '%s' "$selection" | cut -f3)"
 		if [[ -d "$tses_cwd" ]]; then
-			herdr workspace create --cwd "$tses_cwd" --label "$data" --focus
+			tses_json="$(ws_json)"
+			if ws_labels "$tses_json" | grep -Fxq "$data"; then
+				tses_ws_id="$(printf '%s\n' "$tses_json" | jq -r --arg l "$data" \
+					'.result.workspaces[]? | select(.label == $l) | .workspace_id' 2>/dev/null | head -1)"
+				if [[ -n "$tses_ws_id" ]]; then
+					herdr workspace focus "$tses_ws_id"
+				fi
+			else
+				herdr workspace create --cwd "$tses_cwd" --label "$data" --focus
+			fi
 		fi
 		;;
 	dir)

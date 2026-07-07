@@ -3,10 +3,11 @@ set -euo pipefail
 # herdr-open.sh — ディレクトリを herdr workspace として開き、herdr 専用 tmux セッションへスイッチする
 #
 # 使い方:
-#   herdr-open.sh          # workspace 操作なしで herdr セッションへスイッチのみ
-#   herdr-open.sh <dir>    # dir を workspace 化（同名 label が既存なら focus）してスイッチ
+#   herdr-open.sh                 # workspace 操作なしで herdr セッションへスイッチのみ
+#   herdr-open.sh <dir>           # dir を workspace 化（同名 label が既存なら focus）してスイッチ。label は dir の basename
+#   herdr-open.sh <dir> <label>   # label を明示指定して workspace 化（省略時は basename にフォールバック）
 #
-# 呼び出し元: sesh picker の ^h（引き継ぎ）と zsh の hd()
+# 呼び出し元: sesh picker の ^h（引き継ぎ、セッション名を label として渡す）と zsh の hd()
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=herdr-common.sh
@@ -51,8 +52,10 @@ wait_for_server() {
 }
 
 open_workspace() {
-	local dir="$1" label json ws_id
-	label="$(label_for_dir "$dir")"
+	local dir="$1" label="${2:-}" json ws_id
+	if [[ -z "$label" ]]; then
+		label="$(label_for_dir "$dir")"
+	fi
 	json="$(ws_json)"
 	if ws_labels "$json" | grep -Fxq "$label"; then
 		# 既存 workspace を focus（label → workspace_id 解決）
@@ -67,7 +70,7 @@ open_workspace() {
 }
 
 main() {
-	local dir="${1:-}"
+	local dir="${1:-}" label="${2:-}"
 
 	if ! command -v tmux >/dev/null 2>&1; then
 		echo "Error: tmux が見つかりません" >&2
@@ -88,7 +91,7 @@ main() {
 	# （入れ子ミラー防止。詳細は is_inside_herdr のコメント）
 	if is_inside_herdr; then
 		if [[ -n "$dir" ]] && wait_for_server; then
-			open_workspace "$dir"
+			open_workspace "$dir" "$label"
 		else
 			echo "既に herdr の中にいます（hd <dir> なら workspace を開けます）" >&2
 		fi
@@ -98,7 +101,7 @@ main() {
 	ensure_herdr_session
 
 	if [[ -n "$dir" ]] && wait_for_server; then
-		open_workspace "$dir"
+		open_workspace "$dir" "$label"
 	fi
 
 	# herdr セッションへスイッチ（tmux 内なら switch、外なら attach）

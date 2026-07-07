@@ -49,6 +49,17 @@ ALL_SCRIPTS=(
 	grep -qE 'herdr workspace create --cwd' "$SCRIPTS_DIR/herdr-open.sh"
 }
 
+@test "herdr-open.sh: open_workspace は label 第2引数を受け取り、省略時は label_for_dir にフォールバックする（PRP-027 Phase 1）" {
+	grep -qE 'label="\$\{2:-\}"' "$SCRIPTS_DIR/herdr-open.sh"
+	grep -qE 'label="\$\(label_for_dir "\$dir"\)"' "$SCRIPTS_DIR/herdr-open.sh"
+}
+
+@test "herdr-open.sh: main が第2引数（label）を open_workspace に渡す（PRP-027 Phase 1）" {
+	# is_inside_herdr 分岐と通常分岐の両方で label を引き継ぐこと
+	count=$(grep -cE 'open_workspace "\$dir" "\$label"' "$SCRIPTS_DIR/herdr-open.sh")
+	[ "$count" -eq 2 ]
+}
+
 @test "全スクリプトのシェバンが #!/bin/bash である" {
 	for f in "${ALL_SCRIPTS[@]}"; do
 		head -1 "$SCRIPTS_DIR/$f" | grep -qFx '#!/bin/bash'
@@ -84,6 +95,15 @@ ALL_SCRIPTS=(
 	grep -qFx -- '--list-tses)' "$SCRIPTS_DIR/herdr-picker.sh"
 	grep -qE -- '--bind="ctrl-s:' "$SCRIPTS_DIR/herdr-picker.sh"
 	grep -qE 'tses\)' "$SCRIPTS_DIR/herdr-picker.sh"
+}
+
+@test "herdr-picker.sh: tses ケースは同名 label 存在時に focus、無ければ create する（重複 create の穴を防ぐ、PRP-027 Phase 1）" {
+	# tses) ブロックだけを抽出して focus/create の両分岐を確認する
+	run awk '/^\ttses\)/{flag=1} flag{print} /^\t\t;;/{if(flag){exit}}' "$SCRIPTS_DIR/herdr-picker.sh"
+	[ "$status" -eq 0 ]
+	echo "$output" | grep -qE 'ws_labels "\$tses_json"'
+	echo "$output" | grep -qE 'herdr workspace focus "\$tses_ws_id"'
+	echo "$output" | grep -qE 'herdr workspace create --cwd "\$tses_cwd" --label "\$data" --focus'
 }
 
 @test "herdr-picker.sh: fzf バインド ctrl-a / ctrl-w / ctrl-x / ctrl-d が定義されている" {

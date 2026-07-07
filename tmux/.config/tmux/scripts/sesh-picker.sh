@@ -6,7 +6,7 @@ set -euo pipefail
 # - Kill session: Ctrl+d on a session
 # - Move current pane to selected session: Ctrl+o
 # - Answer WAITING CC: Ctrl+e で選択肢popup表示, Ctrl+y で Enter送信(yes)
-# - Open in herdr: Ctrl+h で選択エントリの cwd を herdr workspace 化して herdr セッションへ
+# - Open in herdr: Ctrl+h で選択エントリの cwd を herdr workspace 化して herdr セッションへ（tmux セッション行は label をセッション名に継承）
 
 SESH_SESSIONS=~/.config/tmux/scripts/sesh-sessions.sh
 CC_PREVIEW=~/.config/tmux/scripts/cc-question-preview.sh
@@ -137,14 +137,21 @@ if [ -n "$selection" ]; then
 		;;
 	ctrl-h)
 		# Ctrl+h: 選択エントリの cwd を herdr workspace 化して herdr セッションへ。
-		# tmux セッション行ならアクティブペインの cwd、zoxide 行ならそのパスを使う
+		# tmux セッション行ならアクティブペインの cwd を使い、label はセッション名を継承する。
+		# zoxide 行はそのパスのみ渡す（label は herdr-open.sh 側で basename にフォールバック）
+		herdr_label=""
 		if tmux has-session -t "=$session" 2>/dev/null; then
 			herdr_dir=$(tmux display-message -p -t "$session:" '#{pane_current_path}' 2>/dev/null) || herdr_dir=""
+			herdr_label="$session"
 		else
 			herdr_dir="${session/#\~/$HOME}"
 		fi
 		if [ -n "$herdr_dir" ] && [ -d "$herdr_dir" ] && [ -x "$HERDR_OPEN" ]; then
-			"$HERDR_OPEN" "$herdr_dir" || true
+			if [ -n "$herdr_label" ]; then
+				"$HERDR_OPEN" "$herdr_dir" "$herdr_label" || true
+			else
+				"$HERDR_OPEN" "$herdr_dir" || true
+			fi
 		fi
 		;;
 	*)
