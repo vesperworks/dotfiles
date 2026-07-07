@@ -26,12 +26,14 @@ cd ~/dotfiles
 | `ghostty` | `~/.config/ghostty/` | Terminal |
 | `alacritty` | `~/.config/alacritty/` | Terminal |
 | `tmux` | `~/.config/tmux/` | Terminal multiplexer |
+| `herdr` | `~/.config/herdr/` | [herdr](https://github.com/ogulcancelik/herdr) session manager (config + scripts) |
 | `nvim` | `~/.config/nvim/` | Neovim (vw.* plugin series) |
 | `aerospace` | `~/.config/aerospace/` | Tiling window manager |
 | `sketchybar` | `~/.config/sketchybar/` | Status bar |
 | `borders` | `~/.config/borders/` | Window borders |
 | `yazi` | `~/.config/yazi/` | File manager |
 | `raycast` | `~/.config/raycast/` | Raycast script commands |
+| `karabiner` | `~/.config/karabiner/` | Keyboard remapping |
 
 ## Codex (template-only)
 
