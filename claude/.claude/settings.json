@@ -1,344 +1,14 @@
 {
-  "advisorModel": "sonnet",
-  "agentPushNotifEnabled": false,
-  "alwaysThinkingEnabled": true,
+  "cleanupPeriodDays": 90,
+  "env": {
+    "ENABLE_TOOL_SEARCH": "true",
+    "CLAUDE_AFK_TIMEOUT_MS": "2147483647",
+    "CLAUDE_CODE_USER_DIALOG_TIMEOUT_MS": "0"
+  },
   "attribution": {
     "commit": "",
     "pr": ""
   },
-  "autoCompactEnabled": false,
-  "autoMemoryEnabled": true,
-  "cleanupPeriodDays": 90,
-  "editorMode": "vim",
-  "effortLevel": "high",
-  "enabledPlugins": {
-    "code-review@claude-code-plugins": true,
-    "commit-commands@claude-code-plugins": true,
-    "document-skills@anthropic-agent-skills": true,
-    "frontend-design@claude-code-plugins": true
-  },
-  "env": {
-    "CLAUDE_AFK_TIMEOUT_MS": "2147483647",
-    "CLAUDE_CODE_USER_DIALOG_TIMEOUT_MS": "0",
-    "ENABLE_TOOL_SEARCH": "true"
-  },
-  "extraKnownMarketplaces": {
-    "anthropic-agent-skills": {
-      "source": {
-        "repo": "anthropics/skills",
-        "source": "github"
-      }
-    }
-  },
-  "fallbackModel": [
-    "default"
-  ],
-  "fastModePerSessionOptIn": true,
-  "feedbackSurveyRate": 0,
-  "fileCheckpointingEnabled": true,
-  "hooks": {
-    "PermissionRequest": [
-      {
-        "hooks": [
-          {
-            "async": false,
-            "command": "'/opt/homebrew/bin/moshi-hook' claude-hook",
-            "type": "command"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "command": "if [ -x \"$HOME/.orca/agent-hooks/claude-hook.sh\" ]; then /bin/sh \"$HOME/.orca/agent-hooks/claude-hook.sh\"; fi",
-            "timeout": 10,
-            "type": "command"
-          }
-        ],
-        "matcher": "*"
-      }
-    ],
-    "PostToolUse": [
-      {
-        "hooks": [
-          {
-            "command": "~/.claude/hooks/auto-format.sh",
-            "type": "command"
-          }
-        ],
-        "matcher": "Write|Edit"
-      },
-      {
-        "hooks": [
-          {
-            "async": true,
-            "command": "'/opt/homebrew/bin/moshi-hook' claude-hook",
-            "type": "command"
-          }
-        ],
-        "matcher": "AskUserQuestion"
-      },
-      {
-        "hooks": [
-          {
-            "async": true,
-            "command": "'/opt/homebrew/bin/moshi-hook' claude-hook",
-            "type": "command"
-          }
-        ],
-        "matcher": "ExitPlanMode"
-      },
-      {
-        "hooks": [
-          {
-            "command": "if [ -x \"$HOME/.orca/agent-hooks/claude-hook.sh\" ]; then /bin/sh \"$HOME/.orca/agent-hooks/claude-hook.sh\"; fi",
-            "timeout": 10,
-            "type": "command"
-          }
-        ],
-        "matcher": "*"
-      }
-    ],
-    "PostToolUseFailure": [
-      {
-        "hooks": [
-          {
-            "command": "if [ -x \"$HOME/.orca/agent-hooks/claude-hook.sh\" ]; then /bin/sh \"$HOME/.orca/agent-hooks/claude-hook.sh\"; fi",
-            "timeout": 10,
-            "type": "command"
-          }
-        ],
-        "matcher": "*"
-      }
-    ],
-    "PreToolUse": [
-      {
-        "hooks": [
-          {
-            "command": "~/.claude/hooks/remove-index-lock.sh",
-            "if": "Bash(jj *)",
-            "type": "command"
-          },
-          {
-            "command": "~/.claude/hooks/remove-index-lock.sh",
-            "if": "Bash(git *)",
-            "type": "command"
-          },
-          {
-            "command": "~/.claude/hooks/block-dangerous-commands.sh",
-            "type": "command"
-          },
-          {
-            "command": "~/.claude/hooks/pre-commit-message-lint.sh",
-            "if": "Bash(git commit *)",
-            "type": "command"
-          },
-          {
-            "command": "~/.claude/hooks/pre-commit-message-lint.sh",
-            "if": "Bash(jj commit *)",
-            "type": "command"
-          },
-          {
-            "command": "~/.claude/hooks/pre-commit-message-lint.sh",
-            "if": "Bash(jj split *)",
-            "type": "command"
-          },
-          {
-            "command": "~/.claude/hooks/pre-commit-message-lint.sh",
-            "if": "Bash(jj describe *)",
-            "type": "command"
-          },
-          {
-            "command": "~/.claude/scripts/command-logger.sh",
-            "type": "command"
-          },
-          {
-            "command": "~/.claude/hooks/pre-commit-lint.sh",
-            "if": "Bash(git commit *)",
-            "timeout": 60,
-            "type": "command"
-          },
-          {
-            "command": "~/.claude/hooks/pre-commit-lint.sh",
-            "if": "Bash(jj commit *)",
-            "timeout": 60,
-            "type": "command"
-          },
-          {
-            "command": "~/.claude/hooks/pre-commit-lint.sh",
-            "if": "Bash(jj split *)",
-            "timeout": 60,
-            "type": "command"
-          },
-          {
-            "command": "~/.claude/hooks/pre-commit-lint.sh",
-            "if": "Bash(jj describe *)",
-            "timeout": 60,
-            "type": "command"
-          },
-          {
-            "command": "~/.claude/hooks/pre-commit-sensitive-check.sh",
-            "if": "Bash(git commit *)",
-            "type": "command"
-          },
-          {
-            "command": "~/.claude/hooks/pre-commit-sensitive-check.sh",
-            "if": "Bash(jj commit *)",
-            "type": "command"
-          },
-          {
-            "command": "~/.claude/hooks/pre-commit-sensitive-check.sh",
-            "if": "Bash(jj split *)",
-            "type": "command"
-          },
-          {
-            "command": "~/.claude/hooks/pre-commit-sensitive-check.sh",
-            "if": "Bash(jj describe *)",
-            "type": "command"
-          },
-          {
-            "command": "~/.claude/hooks/pre-checkpoint-simplify.sh",
-            "type": "command"
-          }
-        ],
-        "matcher": "Bash"
-      },
-      {
-        "hooks": [
-          {
-            "command": "~/.claude/hooks/protect-sensitive-files.sh",
-            "type": "command"
-          }
-        ],
-        "matcher": "Write|Edit"
-      },
-      {
-        "hooks": [
-          {
-            "async": true,
-            "command": "'/opt/homebrew/bin/moshi-hook' claude-hook",
-            "type": "command"
-          }
-        ],
-        "matcher": "AskUserQuestion"
-      },
-      {
-        "hooks": [
-          {
-            "async": true,
-            "command": "'/opt/homebrew/bin/moshi-hook' claude-hook",
-            "type": "command"
-          }
-        ],
-        "matcher": "ExitPlanMode"
-      },
-      {
-        "hooks": [
-          {
-            "command": "if [ -x \"$HOME/.orca/agent-hooks/claude-hook.sh\" ]; then /bin/sh \"$HOME/.orca/agent-hooks/claude-hook.sh\"; fi",
-            "timeout": 10,
-            "type": "command"
-          }
-        ],
-        "matcher": "*"
-      }
-    ],
-    "SessionEnd": [
-      {
-        "hooks": [
-          {
-            "async": true,
-            "command": "'/opt/homebrew/bin/moshi-hook' claude-hook",
-            "type": "command"
-          }
-        ]
-      }
-    ],
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "async": true,
-            "command": "'/opt/homebrew/bin/moshi-hook' claude-hook",
-            "type": "command"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "command": "bash ~/.claude/hooks/herdr-agent-state.sh session",
-            "timeout": 10,
-            "type": "command"
-          }
-        ],
-        "matcher": "*"
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "command": "~/.claude/hooks/stop-send-notification.sh",
-            "type": "command"
-          }
-        ],
-        "matcher": ""
-      },
-      {
-        "hooks": [
-          {
-            "async": true,
-            "command": "'/opt/homebrew/bin/moshi-hook' claude-hook",
-            "type": "command"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "command": "if [ -x \"$HOME/.orca/agent-hooks/claude-hook.sh\" ]; then /bin/sh \"$HOME/.orca/agent-hooks/claude-hook.sh\"; fi",
-            "timeout": 10,
-            "type": "command"
-          }
-        ]
-      }
-    ],
-    "StopFailure": [
-      {
-        "hooks": [
-          {
-            "command": "if [ -x \"$HOME/.orca/agent-hooks/claude-hook.sh\" ]; then /bin/sh \"$HOME/.orca/agent-hooks/claude-hook.sh\"; fi",
-            "timeout": 10,
-            "type": "command"
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "async": true,
-            "command": "'/opt/homebrew/bin/moshi-hook' claude-hook",
-            "type": "command"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "command": "if [ -x \"$HOME/.orca/agent-hooks/claude-hook.sh\" ]; then /bin/sh \"$HOME/.orca/agent-hooks/claude-hook.sh\"; fi",
-            "timeout": 10,
-            "type": "command"
-          }
-        ]
-      }
-    ]
-  },
-  "inputNeededNotifEnabled": false,
-  "language": "Japanese",
-  "model": "sonnet",
   "permissions": {
     "allow": [
       "Read(**)",
@@ -429,26 +99,6 @@
       "Bash(open *.png)",
       "Bash(open *.pdf)"
     ],
-    "ask": [
-      "Bash(gh issue delete:*)",
-      "Bash(gh project item-delete:*)",
-      "Bash(git push:*)",
-      "Bash(git commit:*)",
-      "Bash(git branch:*)",
-      "Bash(gh pr merge:*)",
-      "Bash(gh pr create:*)",
-      "Bash(jj git push:*)",
-      "Bash(cp:*)",
-      "Bash(mv:*)",
-      "Bash(sed:*)",
-      "Bash(export:*)",
-      "Bash(tmux split-window:*)",
-      "Bash(bun remove:*)",
-      "Bash(deno uninstall:*)",
-      "Bash(pnpm remove:*)",
-      "Bash(pnpm rm:*)"
-    ],
-    "defaultMode": "auto",
     "deny": [
       "Bash(rm -rf:*)",
       "Bash(rm -r *)",
@@ -485,41 +135,401 @@
       "Read(*.pem)",
       "Read(*.key)",
       "Write(.env*)"
+    ],
+    "ask": [
+      "Bash(gh issue delete:*)",
+      "Bash(gh project item-delete:*)",
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(git branch:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(gh pr create:*)",
+      "Bash(jj git push:*)",
+      "Bash(cp:*)",
+      "Bash(mv:*)",
+      "Bash(sed:*)",
+      "Bash(export:*)",
+      "Bash(tmux split-window:*)",
+      "Bash(bun remove:*)",
+      "Bash(deno uninstall:*)",
+      "Bash(pnpm remove:*)",
+      "Bash(pnpm rm:*)"
+    ],
+    "defaultMode": "auto"
+  },
+  "model": "fable",
+  "fallbackModel": [
+    "default"
+  ],
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "async": true,
+            "command": "'/opt/homebrew/bin/moshi-hook' claude-hook",
+            "type": "command"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "command": "bash ~/.claude/hooks/herdr-agent-state.sh session",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/opt/homebrew/bin/moshi-hook' claude-hook",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/opt/homebrew/bin/moshi-hook' claude-hook",
+            "async": true
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -x \"$HOME/.orca/agent-hooks/claude-hook.sh\" ]; then /bin/sh \"$HOME/.orca/agent-hooks/claude-hook.sh\"; fi",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/opt/homebrew/bin/moshi-hook' claude-hook",
+            "async": false
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -x \"$HOME/.orca/agent-hooks/claude-hook.sh\" ]; then /bin/sh \"$HOME/.orca/agent-hooks/claude-hook.sh\"; fi",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/stop-send-notification.sh"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/opt/homebrew/bin/moshi-hook' claude-hook",
+            "async": true
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -x \"$HOME/.orca/agent-hooks/claude-hook.sh\" ]; then /bin/sh \"$HOME/.orca/agent-hooks/claude-hook.sh\"; fi",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/auto-format.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "AskUserQuestion",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/opt/homebrew/bin/moshi-hook' claude-hook",
+            "async": true
+          }
+        ]
+      },
+      {
+        "matcher": "ExitPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/opt/homebrew/bin/moshi-hook' claude-hook",
+            "async": true
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -x \"$HOME/.orca/agent-hooks/claude-hook.sh\" ]; then /bin/sh \"$HOME/.orca/agent-hooks/claude-hook.sh\"; fi",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/remove-index-lock.sh",
+            "if": "Bash(jj *)"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/remove-index-lock.sh",
+            "if": "Bash(git *)"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/block-dangerous-commands.sh"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/pre-commit-message-lint.sh",
+            "if": "Bash(git commit *)"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/pre-commit-message-lint.sh",
+            "if": "Bash(jj commit *)"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/pre-commit-message-lint.sh",
+            "if": "Bash(jj split *)"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/pre-commit-message-lint.sh",
+            "if": "Bash(jj describe *)"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/scripts/command-logger.sh"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/pre-commit-lint.sh",
+            "if": "Bash(git commit *)",
+            "timeout": 60
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/pre-commit-lint.sh",
+            "if": "Bash(jj commit *)",
+            "timeout": 60
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/pre-commit-lint.sh",
+            "if": "Bash(jj split *)",
+            "timeout": 60
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/pre-commit-lint.sh",
+            "if": "Bash(jj describe *)",
+            "timeout": 60
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/pre-commit-sensitive-check.sh",
+            "if": "Bash(git commit *)"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/pre-commit-sensitive-check.sh",
+            "if": "Bash(jj commit *)"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/pre-commit-sensitive-check.sh",
+            "if": "Bash(jj split *)"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/pre-commit-sensitive-check.sh",
+            "if": "Bash(jj describe *)"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/pre-checkpoint-simplify.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/protect-sensitive-files.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "AskUserQuestion",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/opt/homebrew/bin/moshi-hook' claude-hook",
+            "async": true
+          }
+        ]
+      },
+      {
+        "matcher": "ExitPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/opt/homebrew/bin/moshi-hook' claude-hook",
+            "async": true
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -x \"$HOME/.orca/agent-hooks/claude-hook.sh\" ]; then /bin/sh \"$HOME/.orca/agent-hooks/claude-hook.sh\"; fi",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "StopFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -x \"$HOME/.orca/agent-hooks/claude-hook.sh\" ]; then /bin/sh \"$HOME/.orca/agent-hooks/claude-hook.sh\"; fi",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -x \"$HOME/.orca/agent-hooks/claude-hook.sh\" ]; then /bin/sh \"$HOME/.orca/agent-hooks/claude-hook.sh\"; fi",
+            "timeout": 10
+          }
+        ]
+      }
     ]
   },
-  "preferredNotifChannel": "terminal_bell",
-  "sandbox": {
-    "autoAllowBashIfSandboxed": true,
-    "enabled": true,
-    "excludedCommands": [
-      "gh",
-      "jj"
+  "worktree": {
+    "symlinkDirectories": [
+      "node_modules",
+      ".cache"
     ],
+    "baseRef": "fresh"
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "claude-powerline"
+  },
+  "enabledPlugins": {
+    "commit-commands@claude-code-plugins": false,
+    "code-review@claude-code-plugins": false,
+    "frontend-design@claude-code-plugins": true,
+    "document-skills@anthropic-agent-skills": true
+  },
+  "extraKnownMarketplaces": {
+    "anthropic-agent-skills": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/skills"
+      }
+    }
+  },
+  "language": "Japanese",
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true,
     "network": {
       "allowedDomains": [
         "readwise.io",
         "*.readwise.io"
       ]
-    }
-  },
-  "showMessageTimestamps": true,
-  "showThinkingSummaries": true,
-  "showTurnDuration": true,
-  "skipAutoPermissionPrompt": true,
-  "skipWorkflowUsageWarning": true,
-  "statusLine": {
-    "command": "claude-powerline",
-    "type": "command"
-  },
-  "teammateMode": "in-process",
-  "terminalProgressBarEnabled": true,
-  "theme": "dark-daltonized",
-  "tui": "fullscreen",
-  "voiceEnabled": true,
-  "worktree": {
-    "symlinkDirectories": [
-      "node_modules",
-      ".cache"
+    },
+    "excludedCommands": [
+      "gh",
+      "jj"
     ]
+  },
+  "feedbackSurveyRate": 0,
+  "alwaysThinkingEnabled": true,
+  "effortLevel": "high",
+  "advisorModel": "fable",
+  "fastModePerSessionOptIn": true,
+  "tui": "fullscreen",
+  "autoMemoryEnabled": true,
+  "showThinkingSummaries": true,
+  "skipWorkflowUsageWarning": true,
+  "theme": "dark-daltonized",
+  "editorMode": "vim",
+  "preferredNotifChannel": "terminal_bell",
+  "autoCompactEnabled": false,
+  "fileCheckpointingEnabled": true,
+  "showTurnDuration": true,
+  "showMessageTimestamps": true,
+  "terminalProgressBarEnabled": true,
+  "teammateMode": "in-process",
+  "inputNeededNotifEnabled": false,
+  "agentPushNotifEnabled": false,
+  "skipAutoPermissionPrompt": true,
+  "voiceEnabled": true,
+  "skillOverrides": {
+    "build-persona": "off",
+    "orchestration": "off",
+    "vercel-react-best-practices": "off",
+    "vw-harness-review": "off",
+    "web-renderer-test": "off",
+    "writing-docs": "off",
+    "html-md-equivalence": "off"
   }
 }
