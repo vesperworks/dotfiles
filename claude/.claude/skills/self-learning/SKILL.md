@@ -1,6 +1,6 @@
 ---
 name: self-learning
-description: 会話中のミスや修正を汎用ルールに変換し、CLAUDE.mdまたは.claude/rules/に永続化する。Use when the user corrects a mistake, asks to remember a rule, or wants to learn from errors. Specializes in rule generalization, duplicate detection, and optimal storage location selection. NOT for general notetaking (use vw-note skill) and NOT for code documentation (use codebase-exploration).
+description: 再発したミスを汎用ルールに変換し、CLAUDE.mdまたは.claude/rules/（全セッション常時強制）に昇格・永続化する。Use when a mistake recurs despite an existing memory lesson, or the user explicitly asks to make something a standing rule. 1回目の教訓は /vw:sync harvest が memory（想起ベース）に保存するので本スキルは使わない — ハーネス肥大を防ぐため、昇格は「memory では効かなかった実績」があるものに限る。Specializes in rule generalization, duplicate detection, and optimal storage location selection. NOT for first-time lessons (use /vw:sync harvest), NOT for general notetaking (use vw-note skill) and NOT for code documentation (use codebase-exploration).
 ---
 
 # Self-Learning Skill

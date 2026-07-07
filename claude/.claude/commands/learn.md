@@ -1,5 +1,5 @@
 ---
-description: 'Learn from mistakes and save rules: /learn (会話履歴から検出) or /learn "correction" (直接指定)'
+description: '再発ミスをCLAUDE.md/rulesの常時強制ルールに昇格: /learn (会話履歴から検出) or /learn "correction" (直接指定)。memoryに教訓があるのに同じミスが再発したときだけ使う（1回目の教訓は /vw:sync harvest がmemoryに保存する）'
 argument-hint: [correction]
 allowed-tools: Read, Write, Edit, Glob, Grep, AskUserQuestion
 ---

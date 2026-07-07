@@ -1,6 +1,6 @@
 ---
 name: sync
-description: boot（PRP・wip・会話履歴からTaskListを復元）+ harvest（作業ログ・教訓の刈り取り、MEMORY.mdポインタ更新）の2フェーズでセッションのコンテキストを管理する
+description: boot（PRP・wip・会話履歴からTaskListを復元）+ harvest（作業ログ・教訓の刈り取り、MEMORY.mdポインタ更新）の2フェーズでセッションのコンテキストを管理する。教訓の保存先はmemory（想起ベース・軽量）— 日常の教訓はこれだけでよく、同じミスが再発したときのみ /learn でルール昇格する
 argument-hint: [boot|harvest]
 allowed-tools: Read, Edit, Write, Glob, Bash(jj log:*), Bash(git log:*), Bash(search-sessions:*), Bash(date:*), Bash(trash:*), TaskCreate, TaskList, TaskGet, TaskUpdate, AskUserQuestion
 ---
