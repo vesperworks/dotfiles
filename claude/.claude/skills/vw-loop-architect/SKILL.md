@@ -262,13 +262,44 @@ LOOP_EOF
 
 ### 5.4 ループ構造図
 
-`/html` skill を diagram モードで呼び出す（全パターン共通）:
+**ループ構造の可視化には必ず本 SKILL 専用の Loop Stack テンプレートを使う**（swyx の Loopcraft stack 由来、入れ子の角丸ボックス + 右上コーナー手前で境界線が矢印に分岐する構造。全パターン共通）。html skill の Mermaid/D3 diagram モードとは別物で、html skill 自体は変更しない — 設計の中で DAG・シーケンス図・関係図等の**別種の可視化が必要な場合は、通常通り `Skill(skill: "html", args: "diagram ...")` の該当サブモード（flow/sequence/graph/sankey）を使う**。Loop Stack はループの入れ子構造専用。
 
-1. 5ムーブ環（Discovery → Handoff → Verification → Persistence → Scheduling → 次ターン）と Generator ⇄ Evaluator 対、停止条件・人間の扉の位置を Mermaid flowchart にする
-2. 呼び出し:
+1. `~/.claude/skills/vw-loop-architect/references/loopstack-template.html`（stow symlink）を Read する。CSS/JS は固定（境界線=矢印の SVG 自動レイアウトを含む）、コンテンツのみ `{{...}}` プレースホルダ
+2. 5ムーブ・Generator/Evaluator・停止条件・人間の扉を、外側→内側の順で Loop Stack の階層にマッピングする（該当しない層は省略してよい、YAGNI）:
+   - **最外殻（data-level 0）Oversight Loop**: 人間チェックポイント（Keep one door open）。exit は常に「yours to call」
+   - **System Loop（data-level 1）**: Scheduling ムーブ（次のターンを自動で回す仕組み）。exit は circuit breaker / 最大イテレーション到達
+   - **Product/Goal Loop（data-level 2、目標達成型のみ）**: 測定可能なゴールに向けた繰り返し。定期実行型（Pattern A）等、目標達成の概念がない設計では省略可
+   - **Task Loop**: 1イテレーション = Generator → Evaluator（maker-checker）。`chip-row` に具体例を入れてよい（例: `generate fix → evaluator: REFUTE 試行 → verdict: real ✓`）
+   - **最内殻 Execution Loop**: 1ターン = 5ムーブ一周。`chip-row` に実コマンド例を入れてよい
+   - `data-level` は 0〜4 の5色分のみ定義済み。5階層を超える設計は作らない（YAGNI で層を削るか、隣接する層を統合する）
+3. 各層の HTML は以下の構造を入れ子にする（`{N}` は data-level、色は CSS が `data-level` から自動決定するので指定不要）:
+   ```html
+   <div class="loop" data-level="{N}">
+     <svg class="loop-border-svg" aria-hidden="true"><path class="border-path"/><line class="arrow-line"/><polygon class="arrowhead"/></svg>
+     <div class="loop-exit-overlay">
+       <div class="exit-label">exit: <b>{EXIT_CONDITION}</b></div>
+     </div>
+     <div class="loop-head">
+       <div class="loop-label-group">
+         <div class="loop-label">{LOOP_NAME}</div>
+         <div class="loop-desc">{LOOP_DESC}</div>
+       </div>
+     </div>
+     <!-- 具体例がある層のみ、0〜複数回 -->
+     <div class="chip-row">
+       <span class="chip">{step1}</span><span class="chip-arrow">→</span>
+       <span class="chip">{step2}</span><span class="chip-arrow">→</span>
+       <span class="chip result">{result}</span>
+     </div>
+     <div class="loop-inner">
+       <!-- 1つ内側の .loop をここに再帰的にネスト。最内殻では loop-inner ごと省略 -->
+     </div>
+   </div>
    ```
-   Skill(skill: "html", args: "diagram モードで以下のループ構造図を描画してください:\n\n```mermaid\n<組み立てた Mermaid コード>\n```")
-   ```
+4. テンプレートのプレースホルダを埋める: `{{TITLE}}`（設計名/お題スラッグ）・`{{GEN_DATE}}`・`{{SUMMARY}}`（この設計固有の1〜3行要約）・`{{LOOPSTACK_TITLE}}`（例: `THE LOOP STACK — {設計名} 5-move theory`）・`{{LOOP_LEVELS}}`（手順3で組み立てた入れ子 HTML 全体）・`{{CREDIT_LINE}}`（例: `after swyx's Loopcraft stack, mapped onto {設計名}'s 5-move theory (Steinberger/Cherny/Osmani, Loop Engineering 2026)`）・`{{EXPORT_FILENAME}}`
+5. 出力先: `.brain/{project}/loop-designs/{YYYY-MM-DD}-{slug}-diagram.html`（5.1 の設計書 Markdown と同じディレクトリ・同じ日付・スラッグ）に Write する
+6. **機械検査必須**: `grep -c '{{' <出力ファイル>` が 0 であることを確認する（vw-fin-calendar / html skill と同じ検査方式）。0 でなければ置換漏れなので開く前に修正する
+7. `open {path}` でブラウザ起動する（`dangerouslyDisableSandbox: true` — macOS の `open` は sandbox 内で `NSOSStatusErrorDomain -600` になるため。経路の制約であり権限の問題ではない）
 
 ### 5.5 コスト見積もり（概算）
 
