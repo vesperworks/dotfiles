@@ -104,6 +104,7 @@ Output and STOP:
 
 ### If argument provided:
 
+0. **曖昧度チェック**: お題から Goal（成功基準）と Verification（完成判定の方法）のどちらも読み取れない場合は、`/vw-grill` を先に回して spec.md を固めることを提案する（vw-grill の spec.md はそのまま本 Phase の入力として使える。決定事項表の G/V がシグナル判定の材料になる）。ユーザーが grill を不要と言ったらそのまま進む
 1. Read `~/.claude/skills/vw-loop-architect/references/pattern-catalog.md`（stow symlink。判定マトリクスと5ムーブテンプレート）
 2. お題からシグナル S1〜S6 を判定（不明なシグナルのみ AskUserQuestion で1回確認）
 3. pattern-catalog.md の**判定手順（ゲート方式）**に従う — シグナルの独立加算はしない。✕ 除外 → ◎ 全充足のゲート判定 → 典型例マッチ昇格 → 順位付け。上位3パターンを推奨確率つきで提示:
