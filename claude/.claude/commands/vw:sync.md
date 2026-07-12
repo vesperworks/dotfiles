@@ -1,6 +1,6 @@
 ---
 name: sync
-description: boot（PRP・wip・会話履歴からTaskListを復元）+ harvest（作業ログ・教訓の刈り取り、MEMORY.mdポインタ更新）の2フェーズでセッションのコンテキストを管理する
+description: boot（PRP・wip・会話履歴からTaskListを復元）+ harvest（作業ログ・教訓の刈り取り、MEMORY.mdポインタ更新）の2フェーズでセッションのコンテキストを管理する。教訓の保存先はmemory（想起ベース・軽量）— 日常の教訓はこれだけでよく、同じミスが再発したときのみ /learn でルール昇格する
 argument-hint: [boot|harvest]
 allowed-tools: Read, Edit, Write, Glob, Bash(jj log:*), Bash(git log:*), Bash(search-sessions:*), Bash(date:*), Bash(trash:*), TaskCreate, TaskList, TaskGet, TaskUpdate, AskUserQuestion
 ---
@@ -184,6 +184,9 @@ IF wip-<topic>.md の作業が完了しコミット済み:
 #### 保存判定基準（必須）
 
 - **1ファイル1教訓**、先頭（frontmatter の description）に1行サマリーを置く
+- 保存に迷ったら次の2条件で機械判定する: (a) ユーザーの明示的な修正/承認があったか、
+  (b) git log・コード・既存 memory のどれでも確認できない事実か。両方 YES のときだけ保存。
+  片方でも NO なら「保存見送り: 理由」を Harvest Report に書く（黙って捨てない）
 - 修正（corrections）・確認済みアプローチ（confirmed approaches）の両方を対象とし、**「なぜ重要か」を必ず含めて**記録する
 - repo（git log / コード / PRP done/）やチャット履歴に**既に記録済みの事実は保存しない**
 - 新規作成より**既存ノートの更新を優先**する（重複を作らない）
@@ -193,6 +196,16 @@ IF wip-<topic>.md の作業が完了しコミット済み:
 ### 2-D: MEMORY.md ポインタ更新
 
 MEMORY.md への操作は**ポインタ（1行）の追加・更新・削除のみ**。残タスクの詳細や完了 changelog は書き込まない。
+
+#### 突合チェック（harvest のたびに実施）
+
+```text
+1. Glob("~/.claude/projects/{project-slug}/memory/*.md") と MEMORY.md のポインタを両方向で突合する
+2. ポインタ孤児（ファイルはあるがポインタがない）を発見したら:
+   → 勝手に trash せず、「ポインタ復活 / reference 化 / 削除」の3択を AskUserQuestion で提案
+3. 死にポインタ（ポインタはあるがファイルがない）を発見したら:
+   → MEMORY.md から該当行を削除して Harvest Report に記録
+```
 
 ```text
 IF lesson ファイルを新規作成/更新した:

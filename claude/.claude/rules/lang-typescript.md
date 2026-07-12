@@ -1,3 +1,12 @@
+---
+paths:
+  - "**/*.ts"
+  - "**/*.tsx"
+  - "**/*.js"
+  - "**/*.jsx"
+  - "**/package.json"
+---
+
 # TypeScript/Node.js プロジェクト
 
 ## パッケージマネージャ

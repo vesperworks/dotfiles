@@ -139,6 +139,17 @@ alias tailscale="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
 alias tmux-top='~/.config/tmux/scripts/tmux-top.sh'
 alias tmux-top-idle='~/.config/tmux/scripts/tmux-top.sh --idle'
 
+# herdr: AI エージェント用ワークスペースマネージャ（tmux と共存、専用セッション方式）
+# hd [dir]: herdr 専用 tmux セッションへ切替（Ctrl+Tab で zsh セッションとトグル）。
+#           dir を渡すと workspace 化（既存なら focus）してから切替
+# hp: zoxide 履歴 + herdr workspace を横断する picker（herdr 内では prefix+t）
+# sesh picker（C-t）の ^h でも選択エントリを herdr に引き継げる
+hd() {
+  ~/.config/herdr/scripts/herdr-open.sh "$@"
+}
+alias hp='~/.config/herdr/scripts/herdr-picker.sh'
+alias herdr-sync='~/.config/herdr/scripts/herdr-sync.sh'
+
 # claude-sleep / wake: detached + idle な claude プロセスをスリープ（=kill）/ 復帰
 # Claude のセッション履歴は ~/.claude/projects/ に保存され続けるので、スリープ後も
 # claude-wake で文脈ロスゼロで復帰可能

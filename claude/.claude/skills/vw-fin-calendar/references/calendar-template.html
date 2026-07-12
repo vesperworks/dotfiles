@@ -72,9 +72,13 @@ body.grid-on .guides { opacity: 1; }
 .fin-calendar { grid-column: 1 / -1; }
 .fin-year-nav { display: flex; align-items: center; gap: 12px; font-family: var(--font-mono); margin-bottom: var(--lh); }
 .fin-unit { margin-left: auto; color: var(--text-muted); font-size: 0.75rem; }
-.fin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--gutter); max-height: 78vh; overflow-y: auto; padding-right: 8px; scroll-behavior: smooth; }
-@media (max-width: 1100px) { .fin-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 700px) { .fin-grid { grid-template-columns: 1fr; } }
+.fin-grid { display: block; max-height: 78vh; overflow-y: auto; padding-right: 8px; scroll-behavior: smooth; }
+.fin-quarter { margin-bottom: calc(var(--lh) * 1.5); }
+.fin-quarter:last-child { margin-bottom: 0; }
+.fin-quarter__head { font-family: var(--font-mono); font-weight: 700; font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; padding-bottom: 6px; margin-bottom: 12px; border-bottom: 1px solid var(--border); }
+.fin-quarter__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--gutter); }
+@media (max-width: 1100px) { .fin-quarter__grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 700px) { .fin-quarter__grid { grid-template-columns: 1fr; } }
 .fin-card { background: var(--surface); border: 1px solid var(--border); padding: 12px; cursor: pointer; transition: border-color 0.15s, transform 0.15s; }
 .fin-card:hover, .fin-card:focus-visible { border-color: var(--accent); transform: translateY(-2px); outline: none; }
 .fin-card--empty { opacity: 0.35; cursor: default; }
@@ -109,6 +113,26 @@ body.grid-on .guides { opacity: 1; }
 .fin-legend .sw { display: inline-block; width: 16px; height: 11px; border: 1.5px solid #111315; margin-right: 6px; vertical-align: -1px; }
 .fin-legend .sw--pink { background: #f6c3c3; }
 .fin-legend .sw--blue { background: #bcd9f0; border-style: dashed; border-width: 1.2px; }
+
+/* fin-timeline (複数期間比較ビュー) */
+.fin-view-toggle { display: flex; gap: 4px; margin-left: 16px; }
+.fin-view-toggle button { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.04em; padding: 4px 10px; border: 1px solid var(--border-accent); background: var(--surface); color: var(--text-muted); cursor: pointer; }
+.fin-view-toggle button:hover { border-color: var(--accent); color: var(--accent); }
+.fin-view-toggle button[aria-pressed="true"] { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+.fin-timeline { display: none; }
+.fin-timeline--active { display: block; }
+.fin-timeline .fin-paper svg { width: 100%; height: auto; display: block; }
+.fin-timeline__table { width: 100%; border-collapse: collapse; margin-top: var(--lh); font-family: var(--font-mono); font-size: 0.8rem; }
+.fin-timeline__table caption { text-align: left; color: var(--text-muted); font-size: 0.7rem; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+.fin-timeline__table th, .fin-timeline__table td { border: 1px solid var(--border); padding: 6px 10px; text-align: right; }
+.fin-timeline__table th:first-child, .fin-timeline__table td:first-child { text-align: left; }
+.fin-timeline__table thead th { background: var(--surface); color: var(--text-muted); font-weight: 400; }
+.fin-color-sw { display: inline-block; width: 9px; height: 9px; border: 1px solid #111315; margin-right: 5px; vertical-align: 1px; }
+.fin-timeline__table td[data-fin-label] { cursor: help; }
+.fin-cell--hl { background: var(--accent-dim) !important; font-weight: 700; }
+.fin-timeline__narrative { margin-top: var(--lh); background: var(--surface); border-left: 3px solid var(--cyan); padding: 12px var(--gutter); font-size: 0.88rem; line-height: var(--lh); }
+/* タイムラインの .fin-guide はモーダル内と違いページの通常フロー内にあるため、sticky を打ち消す（付けたままだとページスクロールでヘッダーに張り付いてしまう） */
+.fin-timeline .fin-guide { position: static; margin-bottom: var(--lh); }
 </style>
 </head>
 <body>
@@ -133,6 +157,10 @@ body.grid-on .guides { opacity: 1; }
           <button id="yearPrev" aria-label="前年度">‹</button>
           <span id="yearLabel">{{FISCAL_YEAR}}年度</span>
           <button id="yearNext" aria-label="翌年度">›</button>
+          <div class="fin-view-toggle" id="finViewToggle" style="display:none;">
+            <button type="button" data-view="calendar" aria-pressed="true">カレンダー</button>
+            <button type="button" data-view="timeline" aria-pressed="false">推移</button>
+          </div>
           <span class="fin-unit">単位: {{UNIT}}</span>
         </div>
         <div class="fin-legend">
@@ -140,6 +168,12 @@ body.grid-on .guides { opacity: 1; }
           <span><i class="sw sw--blue"></i>現金 ― BSとCFをつなぐ（資産の中の現金の増減がCF）</span>
         </div>
         <div class="fin-grid" id="finGrid"></div>
+        <div class="fin-timeline" id="finTimeline">
+          <div class="fin-guide" id="finTimelineGuide"></div>
+          <div class="fin-paper"><svg class="fin-timeline-chart"></svg></div>
+          <table class="fin-timeline__table" id="finTimelineTable"></table>
+          <div class="fin-timeline__narrative" id="finTimelineNarrative"></div>
+        </div>
       </div>
 
       <div class="footer">
@@ -218,6 +252,7 @@ function toast(msg, kind = 'ok') {
         case 'g': case 'G': document.body.classList.toggle('grid-on'); toast(document.body.classList.contains('grid-on') ? 'Grid ON' : 'Grid OFF'); break;
         case 'e': case 'E': exportStatic(); break; } });
     renderCalendar(FIN_DATA);
+    renderTimeline(FIN_DATA);
   });
 })();
 
@@ -227,6 +262,16 @@ function svgEl(tag, attrs) { const el = document.createElementNS(NS, tag); for (
 /* ===== 「会計の地図」スタイル定数: 図解は常に白い紙 + 黒枠線、利益のみ淡赤ハイライト ===== */
 /* 3表のつながりを示す色: pink=利益(PL⇔BS) / blue=現金(BS⇔CF)。同じ色 = 同じお金 */
 const MAP = { ink: '#111315', paper: '#ffffff', pink: '#f6c3c3', pinkDeep: '#f0a4a4', blue: '#bcd9f0', red: '#e57373', dim: '#8a8a8a', gray: '#ececec', sw: 1.4 };
+/* BS推移タイムライン専用の費目カラー。「＋のお金（資産・純資産＝自分の取り分）」と
+   「－のお金（負債＝返済義務があるもの）」で2つの Hue に分け、同じグループ内は濃淡（流動＝濃い/固定＝薄い）で表現する。
+   モーダルの pink(利益)/blue(現金) とは別文脈なので混同しない色を使う */
+const BS_COLORS = {
+  '流動資産': '#6fc2a0',  // ＋グループ（緑系Hue）: 濃
+  '純資産': '#9edcc0',    // ＋グループ（緑系Hue）: 中間 — 資産と同じ性質（返済義務なし）を色でも示す
+  '固定資産': '#d6f0e3',  // ＋グループ（緑系Hue）: 薄
+  '流動負債': '#e8a462',  // －グループ（オレンジ系Hue）: 濃
+  '固定負債': '#f7dcb8'   // －グループ（オレンジ系Hue）: 薄
+};
 const JP_FONT = "'Noto Sans JP','Inter',sans-serif";
 
 /* ===== 費目説明辞書（マウスオーバーでガイドバーに表示） ===== */
@@ -252,16 +297,20 @@ const DESC = {
   '投資': '設備や資産への投資で増減した現金。「未来のために投資できてるか？」— 成長中の会社ではマイナスが普通。',
   '財務': '借入・返済・配当など、資金調達まわりで増減した現金。「お金を新たに借りたりしたか？」',
   '期末': '月の終わりに残った現金。翌月の期首残高につながる。',
-  '増えた現金': '営業・投資・財務の3つの増減を合計した、この月に増えた（減った）現金。BSの現金に積み上がっていく。'
+  '増えた現金': '営業・投資・財務の3つの増減を合計した、この月に増えた（減った）現金。BSの現金に積み上がっていく。',
+  '流動資産': '1年以内に現金化される資産。現金・売掛金・棚卸資産など。',
+  '固定資産': '1年を超えて使い続ける資産。建物・設備・のれんなど。',
+  '流動負債': '1年以内に返済・支払いが必要な負債。買掛金や短期借入金など。',
+  '固定負債': '1年を超えて返済する負債。長期借入金や社債など。'
 };
 const GUIDE_DEFAULT = '<span class="fin-guide__hint">図のブロックにカーソルを乗せると、その費目の説明がここに表示されます</span>';
 
-function setGuide(label) {
-  const g = document.getElementById('finGuide');
+function setGuide(label, guideId) {
+  const g = document.getElementById(guideId || 'finGuide');
   if (g) g.innerHTML = '<strong>' + label + '</strong> ― ' + (DESC[label] || '');
 }
-function resetGuide() {
-  const g = document.getElementById('finGuide');
+function resetGuide(guideId) {
+  const g = document.getElementById(guideId || 'finGuide');
   if (g) g.innerHTML = GUIDE_DEFAULT;
 }
 
@@ -276,31 +325,49 @@ const LINK_GROUP = {
   '損失': ['損失', '純利益']
 };
 
-function highlightGroup(label, on) {
+/* SVG要素は枠線を太くして強調、HTML要素（テーブルセル等）はクラス付与で強調する。
+   root を「チャート＋テーブルを両方含む共通の親」にすれば、同じラベルの SVG/HTML 要素が同時にハイライトされる */
+function highlightGroup(label, on, root) {
   const group = LINK_GROUP[label] || [label];
-  const root = document.querySelector('.fin-modal__content');
   if (!root) return;
   group.forEach(function (l) {
     root.querySelectorAll('[data-fin-label="' + l + '"]').forEach(function (el) {
-      let base = el.getAttribute('data-sw');
-      if (!base) { base = el.getAttribute('stroke-width') || '1'; el.setAttribute('data-sw', base); }
-      el.setAttribute('stroke-width', on ? String(parseFloat(base) + 1.3) : base);
+      if (el.namespaceURI === NS) {
+        let base = el.getAttribute('data-sw');
+        if (!base) { base = el.getAttribute('stroke-width') || '1'; el.setAttribute('data-sw', base); }
+        el.setAttribute('stroke-width', on ? String(parseFloat(base) + 1.3) : base);
+      } else {
+        el.classList.toggle('fin-cell--hl', on);
+      }
     });
   });
 }
 
-/* ブロックにホバー説明を付ける。detail（モーダル内）ではガイドバー連動+連携先の同時強調、
-   mini ではブラウザ標準ツールチップ（SVG title）のみ */
-function attachDesc(el, label, mini) {
+/* ブロックにホバー説明を付ける。detail（モーダル内 / タイムラインビュー）ではガイドバー連動+
+   連携先の同時強調、mini ではブラウザ標準ツールチップ（SVG title）のみ。
+   opts.root / opts.guideId を渡すとモーダル以外のコンテナ（タイムラインビュー等）でも同じ体験を再現できる */
+function attachDesc(el, label, mini, opts) {
   if (!DESC[label]) return;
+  opts = opts || {};
   el.setAttribute('data-fin-label', label);
   const title = document.createElementNS(NS, 'title');
   title.textContent = label + ': ' + DESC[label];
   el.appendChild(title);
   if (mini) return;
+  const root = opts.root || document.querySelector('.fin-modal__content');
+  const guideId = opts.guideId;
   el.style.cursor = 'help';
-  el.addEventListener('mouseenter', function () { highlightGroup(label, true); setGuide(label); });
-  el.addEventListener('mouseleave', function () { highlightGroup(label, false); resetGuide(); });
+  el.addEventListener('mouseenter', function () { highlightGroup(label, true, root); setGuide(label, guideId); });
+  el.addEventListener('mouseleave', function () { highlightGroup(label, false, root); resetGuide(guideId); });
+}
+
+/* attachDesc の HTML 要素版（テーブルセル用）。SVG title の代わりにネイティブ title 属性でツールチップを出す */
+function attachTableDesc(el, label, root, guideId) {
+  if (!DESC[label]) return;
+  el.title = label + ': ' + DESC[label];
+  el.style.cursor = 'help';
+  el.addEventListener('mouseenter', function () { highlightGroup(label, true, root); setGuide(label, guideId); });
+  el.addEventListener('mouseleave', function () { highlightGroup(label, false, root); resetGuide(guideId); });
 }
 
 function mapText(svg, x, y, str, size, opts) {
@@ -600,34 +667,169 @@ function drawCFBridgePaper(svg, cf, opts) {
   });
 }
 
+/* ===== BS 推移スタックバー（複数期間比較タイムラインビュー） =====
+   期間ごとに資産棒（下=流動資産/上=固定資産）と負債純資産棒（下=流動負債/中=固定負債/上=純資産）を
+   横並びにし、全期間共通スケールで比較する。配色は drawUnifiedMap と同じ白紙+黒枠線
+   （区分の塗り分けのみ MAP.gray を使用、色数を増やさない） ===== */
+function drawBSTimeline(svg, periods) {
+  svg.innerHTML = '';
+  const n = periods.length;
+  const barW = 46, pairGap = 6, groupGap = 30;
+  const groupW = barW * 2 + pairGap;
+  const W = 10 + n * groupW + (n - 1) * groupGap + 10;
+  const H = 210, Y0 = 22, chartH = 148, baseY = Y0 + chartH;
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  const maxTotal = Math.max.apply(null, periods.map(function (p) {
+    return Math.max(p.bs.totalAssets, p.bs.totalLiabilities + p.bs.equity);
+  }).concat([1]));
+  const s = chartH / maxTotal;
+  const fs = 7.5;
+
+  function seg(x, yTop, h, label, val) {
+    const rect = svgEl('rect', { x: x, y: yTop, width: barW, height: Math.max(h, 1), fill: BS_COLORS[label], stroke: MAP.ink, 'stroke-width': MAP.sw });
+    svg.appendChild(rect);
+    attachDesc(rect, label, false, { root: document.getElementById('finTimeline'), guideId: 'finTimelineGuide' });
+    if (h >= fs * 2.6) {
+      mapText(svg, x + barW / 2, yTop + h / 2 - 1, label, fs);
+      mapText(svg, x + barW / 2, yTop + h / 2 + fs + 1, val.toLocaleString('ja-JP'), fs - 1.5, { weight: '400', fill: '#444' });
+    }
+  }
+
+  periods.forEach(function (p, i) {
+    const bs = p.bs;
+    const gx = 10 + i * (groupW + groupGap);
+    const bx = gx + barW + pairGap;
+    const groupCenterX = gx + groupW / 2;
+
+    let ay = baseY;
+    ay -= bs.currentAssets * s;
+    seg(gx, ay, bs.currentAssets * s, '流動資産', bs.currentAssets);
+    ay -= bs.fixedAssets * s;
+    seg(gx, ay, bs.fixedAssets * s, '固定資産', bs.fixedAssets);
+
+    let by = baseY;
+    by -= bs.currentLiabilities * s;
+    seg(bx, by, bs.currentLiabilities * s, '流動負債', bs.currentLiabilities);
+    by -= bs.fixedLiabilities * s;
+    seg(bx, by, bs.fixedLiabilities * s, '固定負債', bs.fixedLiabilities);
+    by -= bs.equity * s;
+    seg(bx, by, bs.equity * s, '純資産', bs.equity);
+
+    mapText(svg, gx + barW / 2, baseY - bs.totalAssets * s - 4, bs.totalAssets.toLocaleString('ja-JP'), fs, { weight: '400', fill: '#444' });
+    mapText(svg, bx + barW / 2, baseY - (bs.totalLiabilities + bs.equity) * s - 4, (bs.totalLiabilities + bs.equity).toLocaleString('ja-JP'), fs, { weight: '400', fill: '#444' });
+
+    mapText(svg, groupCenterX, baseY + 14, p.label, fs + 0.5);
+    mapText(svg, gx + barW / 2, baseY + 24, '資産', fs - 1, { fill: MAP.dim });
+    mapText(svg, bx + barW / 2, baseY + 24, '負債・純資産', fs - 1, { fill: MAP.dim });
+  });
+}
+
+/* 列と費目ラベルの対応。資産合計は費目色を持たない集計列なのでホバー対象外 */
+const TIMELINE_TABLE_COLS = [
+  { key: 'currentAssets', label: '流動資産' },
+  { key: 'fixedAssets', label: '固定資産' },
+  { key: 'totalAssets', label: '資産合計' },
+  { key: 'currentLiabilities', label: '流動負債' },
+  { key: 'fixedLiabilities', label: '固定負債' },
+  { key: 'equity', label: '純資産' }
+];
+
+function renderTimelineTable(periods) {
+  const table = document.getElementById('finTimelineTable');
+  let headHtml = '<th>決算期</th>';
+  TIMELINE_TABLE_COLS.forEach(function (c) {
+    const sw = BS_COLORS[c.label] ? '<i class="fin-color-sw" style="background:' + BS_COLORS[c.label] + '"></i>' : '';
+    headHtml += '<th>' + sw + c.label + '</th>';
+  });
+  let html = '<caption>期別BS内訳（単位: ' + (FIN_DATA.unit || '') + '）</caption>' +
+    '<thead><tr>' + headHtml + '</tr></thead><tbody>';
+  periods.forEach(function (p) {
+    const bs = p.bs;
+    html += '<tr><td>' + p.label + '</td>';
+    TIMELINE_TABLE_COLS.forEach(function (c) {
+      const attr = BS_COLORS[c.label] ? ' data-fin-label="' + c.label + '"' : '';
+      html += '<td' + attr + '>' + bs[c.key].toLocaleString('ja-JP') + '</td>';
+    });
+    html += '</tr>';
+  });
+  table.innerHTML = html + '</tbody>';
+
+  const root = document.getElementById('finTimeline');
+  table.querySelectorAll('td[data-fin-label]').forEach(function (td) {
+    attachTableDesc(td, td.getAttribute('data-fin-label'), root, 'finTimelineGuide');
+  });
+}
+
+function renderTimeline(data) {
+  const toggle = document.getElementById('finViewToggle');
+  if (!data.periods || !data.periods.length) { toggle.style.display = 'none'; return; }
+  toggle.style.display = '';
+  document.getElementById('finTimelineGuide').innerHTML = GUIDE_DEFAULT;
+  drawBSTimeline(document.querySelector('.fin-timeline-chart'), data.periods);
+  renderTimelineTable(data.periods);
+  document.getElementById('finTimelineNarrative').textContent = data.timelineSummary || '';
+  toggle.querySelectorAll('button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const view = btn.getAttribute('data-view');
+      toggle.querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-pressed', String(b === btn)); });
+      document.getElementById('finGrid').style.display = view === 'calendar' ? '' : 'none';
+      document.getElementById('finTimeline').classList.toggle('fin-timeline--active', view === 'timeline');
+    });
+  });
+}
+
+function buildMonthCard(m) {
+  const card = document.createElement('div');
+  card.className = 'fin-card' + (m.empty ? ' fin-card--empty' : '');
+  card.setAttribute('data-month', m.month);
+  card.setAttribute('tabindex', m.empty ? '-1' : '0');
+  const monthNum = parseInt(m.month.split('-')[1], 10);
+  let badgeHtml = '';
+  if (!m.empty && m.yoy != null) {
+    const cls = m.yoy >= 105 ? 'up' : (m.yoy <= 95 ? 'down' : 'flat');
+    const sign = m.yoy >= 100 ? '+' : '';
+    badgeHtml = '<span class="fin-card__badge ' + cls + '">' + sign + (m.yoy - 100) + '%</span>';
+  }
+  card.innerHTML =
+    '<div class="fin-card__head"><span class="fin-card__month">' + monthNum + '月</span>' + badgeHtml + '</div>' +
+    (m.empty
+      ? '<div style="text-align:center;color:var(--text-dim);font-family:var(--font-mono);font-size:0.7rem;padding:16px 0;">データなし</div>'
+      : '<div class="fin-paper fin-card__mini"><svg class="fin-mini-map"></svg><svg class="fin-mini-cf"></svg></div>');
+  return card;
+}
+
+/* data.months（会計年度の開始月を起点とした12ヶ月の配列順）を3ヶ月ずつ Q1〜Q4 にグルーピングして表示する。
+   四半期の区切りは配列の並び順のみに依存し、実際の月番号や決算月からは計算しない
+   （会計年度の開始月は諸表により異なるため、テンプレート側では判定しない） */
 function renderCalendar(data) {
   const grid = document.getElementById('finGrid');
   grid.innerHTML = '';
-  data.months.forEach(function(m) {
-    const card = document.createElement('div');
-    card.className = 'fin-card' + (m.empty ? ' fin-card--empty' : '');
-    card.setAttribute('data-month', m.month);
-    card.setAttribute('tabindex', m.empty ? '-1' : '0');
-    const monthNum = parseInt(m.month.split('-')[1], 10);
-    let badgeHtml = '';
-    if (!m.empty && m.yoy != null) {
-      const cls = m.yoy >= 105 ? 'up' : (m.yoy <= 95 ? 'down' : 'flat');
-      const sign = m.yoy >= 100 ? '+' : '';
-      badgeHtml = '<span class="fin-card__badge ' + cls + '">' + sign + (m.yoy - 100) + '%</span>';
-    }
-    card.innerHTML =
-      '<div class="fin-card__head"><span class="fin-card__month">' + monthNum + '月</span>' + badgeHtml + '</div>' +
-      (m.empty
-        ? '<div style="text-align:center;color:var(--text-dim);font-family:var(--font-mono);font-size:0.7rem;padding:16px 0;">データなし</div>'
-        : '<div class="fin-paper fin-card__mini"><svg class="fin-mini-map"></svg><svg class="fin-mini-cf"></svg></div>');
-    grid.appendChild(card);
-    if (!m.empty) {
-      drawUnifiedMap(card.querySelector('.fin-mini-map'), m, { mini: true });
-      drawCFBridgePaper(card.querySelector('.fin-mini-cf'), m.cf, { mini: true });
-      card.addEventListener('click', function() { openModal(m); });
-      card.addEventListener('keydown', function(e) { if (e.key === 'Enter') openModal(m); });
-    }
-  });
+  for (let qi = 0; qi < 4; qi++) {
+    const qMonths = data.months.slice(qi * 3, qi * 3 + 3);
+    if (!qMonths.length) continue;
+    const section = document.createElement('div');
+    section.className = 'fin-quarter';
+    const startNum = parseInt(qMonths[0].month.split('-')[1], 10);
+    const endNum = parseInt(qMonths[qMonths.length - 1].month.split('-')[1], 10);
+    const head = document.createElement('div');
+    head.className = 'fin-quarter__head';
+    head.textContent = 'Q' + (qi + 1) + '  ' + startNum + '月 – ' + endNum + '月';
+    section.appendChild(head);
+    const qGrid = document.createElement('div');
+    qGrid.className = 'fin-quarter__grid';
+    section.appendChild(qGrid);
+    qMonths.forEach(function (m) {
+      const card = buildMonthCard(m);
+      qGrid.appendChild(card);
+      if (!m.empty) {
+        drawUnifiedMap(card.querySelector('.fin-mini-map'), m, { mini: true });
+        drawCFBridgePaper(card.querySelector('.fin-mini-cf'), m.cf, { mini: true });
+        card.addEventListener('click', function () { openModal(m); });
+        card.addEventListener('keydown', function (e) { if (e.key === 'Enter') openModal(m); });
+      }
+    });
+    grid.appendChild(section);
+  }
 }
 
 function openModal(m) {

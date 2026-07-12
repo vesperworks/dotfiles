@@ -146,8 +146,12 @@ check_sensitive_info() {
 		fi
 
 		# Check for absolute paths (/Users/xxx or /home/xxx)
-		if grep -qnE "(/Users/|/home/)[^/]+" "$file" 2>/dev/null; then
-			grep -nE "(/Users/|/home/)[^/]+" "$file" 2>/dev/null | head -5
+		# プレースホルダ例示パス（xxx/username/user/yourname/alice/bob/alex/example/foo）は除外
+		# （実ユーザー名の検出は上の username チェックが独立して担保する）
+		path_matches=$(grep -nE "(/Users/|/home/)[^/]+" "$file" 2>/dev/null |
+			grep -viE '/(Users|home)/(xxx|username|user|yourname|alice|bob|alex|example|foo)([/[:space:]"'"'"'`).,;:]|$)' || true)
+		if [[ -n "$path_matches" ]]; then
+			echo "$path_matches" | head -5
 			echo "TYPE:absolute_path:FILE:$file"
 			found=1
 		fi

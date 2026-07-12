@@ -25,6 +25,17 @@ ALL_SCRIPTS=(
 	[ "$status" -ne 0 ]
 }
 
+@test "sesh-picker.sh: ctrl-h は tmux セッション行で herdr-migrate.sh を優先し、無ければ herdr-open.sh にフォールバックする（PRP-027 Phase 2）" {
+	grep -qF 'HERDR_MIGRATE=' "$SCRIPTS_DIR/sesh-picker.sh"
+	# tmux セッション行: herdr-migrate.sh が実行可能ならそちらへ委譲（セッション名ごと渡す）
+	grep -qF '[ -x "$HERDR_MIGRATE" ]' "$SCRIPTS_DIR/sesh-picker.sh"
+	grep -qF '"$HERDR_MIGRATE" "$session" || true' "$SCRIPTS_DIR/sesh-picker.sh"
+	# フォールバック: herdr-migrate.sh が無ければ label（セッション名）付きで herdr-open.sh を呼ぶ
+	grep -qF '"$HERDR_OPEN" "$herdr_dir" "$session" || true' "$SCRIPTS_DIR/sesh-picker.sh"
+	# zoxide 行は従来通り第1引数のみで herdr-open.sh を呼ぶ
+	grep -qF '"$HERDR_OPEN" "$herdr_dir" || true' "$SCRIPTS_DIR/sesh-picker.sh"
+}
+
 @test "sanitize_name: 危険文字を _ に変換する" {
 	source "$SCRIPTS_DIR/cc-common.sh"
 	result=$(sanitize_name 'a b/c$d')
